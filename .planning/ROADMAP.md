@@ -171,7 +171,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Project Scaffold + Dev Infrastructure | 3/3 | Complete   | 2026-06-03 |
+| 1. Project Scaffold + Dev Infrastructure | 3/3 | Complete    | 2026-06-03 |
 | 2. PTY Core + Terminal Fidelity | 0/TBD | Not started | - |
 | 3. Multi-Session + Session Lifecycle | 0/TBD | Not started | - |
 | 4. Session Identity + Sidebar UI | 0/TBD | Not started | - |
