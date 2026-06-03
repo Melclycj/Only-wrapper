@@ -31,7 +31,12 @@ findings:
   warning: 7
   info: 4
   total: 13
-status: issues_found
+status: remediated
+remediation:
+  resolved: [CR-01, CR-02]
+  resolved_commits: [cfc2f34, 40a4785]
+  deferred: [WR-01, WR-02, WR-03, WR-04, WR-05, WR-06, WR-07]
+  note: Both criticals fixed and verified (8/8 unit tests, node-pty ban proven, eslint clean). 7 warnings deferred to a follow-up / secure-phase.
 ---
 
 # Phase 1: Code Review Report
@@ -44,6 +49,14 @@ status: issues_found
 ## Summary
 
 This phase establishes the Electron process split, the branded-identity contract, and the dev/security tooling. The core invariants the phase advertises (contextIsolation/sandbox/nodeIntegration, branded `LogicalId`, contextBridge exposing only `getVersion`) are *present in the source*, but several of the **guarantees are not actually enforced by the tests or tooling that claim to enforce them**. The most serious problems are a security-guard test that validates a mock instead of the real preload surface (so a real leak would pass green), and an ESLint renderer import-ban that does not cover `node-pty` even though the phase brief names `node-pty` as a banned import. There are also missing Electron hardening handlers (no navigation/window-open guard, no CSP) and unhandled promise rejections in the main and renderer entry points. Dependency pins have drifted from the versions documented in CLAUDE.md.
+
+## Remediation (2026-06-04)
+
+Both criticals fixed before phase completion; the 7 warnings are deferred to a follow-up.
+
+- **CR-01 — RESOLVED** (`cfc2f34`): `security.guard.test.ts` now imports the real `src/preload/index.ts` with `electron` mocked (`vi.hoisted` + `vi.mock`) and asserts the `contextBridge.exposeInMainWorld` surface is exactly `EXPECTED_API_KEYS` with no `ipcRenderer` leak. Verified: adding raw electron access to the real preload now fails the test (8/8 unit tests pass).
+- **CR-02 — RESOLVED** (`40a4785`): `node-pty` added to the renderer and shared `no-restricted-imports` bans (proven via an ephemeral probe that now fails lint). Also fixed a latent gap: a global `ignores` block (`.vite/out/dist/coverage`) so `npm run lint` no longer fails on generated build bundles.
+- **Deferred (WR-01..WR-07):** navigation/window-open guard, CSP, unhandled promise rejections, IPC input-validation pattern, and CLAUDE.md dependency-pin drift. Tracked here for a follow-up or `/gsd-secure-phase`.
 
 ## Critical Issues
 
