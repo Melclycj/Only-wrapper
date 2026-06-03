@@ -1,6 +1,7 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
+import { buildWebPreferences } from './window-config';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -11,12 +12,7 @@ function createWindow(): void {
   const win = new BrowserWindow({
     width: 1200,
     height: 800,
-    webPreferences: {
-      contextIsolation: true, // REQUIRED — default since v12
-      nodeIntegration: false, // REQUIRED — never enable
-      sandbox: true, // REQUIRED — default since v20; explicit for D-07 guard test
-      preload: path.join(__dirname, '../preload/index.js'),
-    },
+    webPreferences: buildWebPreferences(path.join(__dirname, '../preload/index.js')),
   });
 
   // Load renderer
