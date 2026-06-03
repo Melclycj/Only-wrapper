@@ -101,13 +101,39 @@ Populated during roadmap creation. Each v1 requirement maps to exactly one phase
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (all v1 IDENT/SESS/NAV/TERM/PERS/PKG requirements) | TBD — assigned by roadmapper | Pending |
+| IDENT-01 | Phase 1: Project Scaffold + Dev Infrastructure | Pending |
+| IDENT-02 | Phase 1: Project Scaffold + Dev Infrastructure | Pending |
+| IDENT-03 | Phase 4: Session Identity + Sidebar UI | Pending |
+| SESS-01 | Phase 4: Session Identity + Sidebar UI | Pending |
+| SESS-02 | Phase 4: Session Identity + Sidebar UI | Pending |
+| SESS-03 | Phase 4: Session Identity + Sidebar UI | Pending |
+| SESS-04 | Phase 4: Session Identity + Sidebar UI | Pending |
+| NAV-01 | Phase 4: Session Identity + Sidebar UI | Pending |
+| NAV-02 | Phase 4: Session Identity + Sidebar UI | Pending |
+| NAV-03 | Phase 4: Session Identity + Sidebar UI | Pending |
+| NAV-04 | Phase 5: Persistence + Shell Discovery | Pending |
+| NAV-05 | Phase 4: Session Identity + Sidebar UI | Pending |
+| TERM-01 | Phase 2: PTY Core + Terminal Fidelity | Pending |
+| TERM-02 | Phase 2: PTY Core + Terminal Fidelity | Pending |
+| TERM-03 | Phase 2: PTY Core + Terminal Fidelity | Pending |
+| TERM-04 | Phase 2: PTY Core + Terminal Fidelity | Pending |
+| TERM-05 | Phase 3: Multi-Session + Session Lifecycle | Pending |
+| TERM-06 | Phase 3: Multi-Session + Session Lifecycle | Pending |
+| TERM-07 | Phase 3: Multi-Session + Session Lifecycle | Pending |
+| TERM-08 | Phase 3: Multi-Session + Session Lifecycle | Pending |
+| TERM-09 | Phase 6: Robustness + Flow-Control Polish | Pending |
+| TERM-10 | Phase 7: Terminal Search + Scrollback Config | Pending |
+| TERM-11 | Phase 7: Terminal Search + Scrollback Config | Pending |
+| TERM-12 | Phase 6: Robustness + Flow-Control Polish | Pending |
+| PERS-01 | Phase 5: Persistence + Shell Discovery | Pending |
+| PERS-02 | Phase 5: Persistence + Shell Discovery | Pending |
+| PKG-01 | Phase 8: Cross-Platform Packaging | Pending |
 
 **Coverage:**
 - v1 requirements: 27 total
-- Mapped to phases: 0 (pending roadmap)
-- Unmapped: 27 ⚠️
+- Mapped to phases: 27 ✓
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-06-03*
-*Last updated: 2026-06-03 after initial definition*
+*Last updated: 2026-06-03 — traceability table populated by roadmapper; all 27 v1 requirements mapped*
