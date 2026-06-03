@@ -1,14 +1,29 @@
-// Wave 0 failing stub — covers SC3 and D-07 (threats T-1-01, T-1-04)
-// These tests INTENTIONALLY FAIL RED until Plan 03 implements:
-//   - src/main/window-config.ts (buildWebPreferences, EXPECTED_API_KEYS)
+// Security guard — covers SC3 and D-07 (threats T-1-01, T-1-04).
+// Two layers of REAL coverage:
+//   1. buildWebPreferences() returns the locked-down webPreferences (D-07).
+//   2. The ACTUAL preload (src/preload/index.ts) is imported with 'electron' mocked,
+//      and we assert the contextBridge surface it registers is EXACTLY EXPECTED_API_KEYS.
+//      => Adding ipcRenderer or any extra key to the real preload fails this test (CR-01).
 //
-// The guard test does NOT use 'electron' module (RESEARCH Pitfall 4):
-// BrowserWindow is a main-process Electron API; Vitest runs in Node env without Electron.
-// Instead, buildWebPreferences() is extracted as a pure function in window-config.ts and
-// imported directly — no Electron process needed.
+// window-config.ts is electron-free, so it imports directly in the Node/Vitest env.
+// The preload imports 'electron'; we mock it (vi.hoisted spy must exist before the
+// hoisted vi.mock factory runs) and import the preload for its exposeInMainWorld side effect.
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { buildWebPreferences, EXPECTED_API_KEYS } from '../../main/window-config';
+
+const { exposeInMainWorld, invoke } = vi.hoisted(() => ({
+  exposeInMainWorld: vi.fn(),
+  invoke: vi.fn(),
+}));
+
+vi.mock('electron', () => ({
+  contextBridge: { exposeInMainWorld },
+  ipcRenderer: { invoke },
+}));
+
+// Side-effect import: executes contextBridge.exposeInMainWorld('api', api) once at load.
+import '../../preload/index';
 
 describe('Electron security config (D-07, SC3)', () => {
   it('webPreferences has contextIsolation:true, nodeIntegration:false, sandbox:true', () => {
@@ -22,21 +37,17 @@ describe('Electron security config (D-07, SC3)', () => {
     const prefs = buildWebPreferences('/path/to/preload.js');
     expect(prefs.preload).toBe('/path/to/preload.js');
   });
+});
 
-  it('window.api surface exposes only documented methods (SC3 — contextBridge is the only surface)', () => {
-    // Contract test: the actual preload exposes the same key set as EXPECTED_API_KEYS.
-    // A regression that adds raw electron access would show up here.
-    const mockApi: Record<string, unknown> = {};
-    for (const key of EXPECTED_API_KEYS) {
-      mockApi[key] = async () => '1.0.0';
-    }
+describe('preload contextBridge surface (SC3 — asserts the REAL preload)', () => {
+  it('registers exactly one bridge, named "api"', () => {
+    expect(exposeInMainWorld).toHaveBeenCalledTimes(1);
+    expect(exposeInMainWorld.mock.calls[0][0]).toBe('api');
+  });
 
-    expect(Object.keys(mockApi)).toEqual(expect.arrayContaining([...EXPECTED_API_KEYS]));
-
-    // No extra keys beyond EXPECTED_API_KEYS
-    const unexpectedKeys = Object.keys(mockApi).filter(
-      (k) => !(EXPECTED_API_KEYS as readonly string[]).includes(k),
-    );
-    expect(unexpectedKeys).toHaveLength(0);
+  it('exposes exactly EXPECTED_API_KEYS — no ipcRenderer or extra keys leak through', () => {
+    const exposed = exposeInMainWorld.mock.calls[0][1] as Record<string, unknown>;
+    expect(Object.keys(exposed).sort()).toEqual([...EXPECTED_API_KEYS].sort());
+    expect(exposed).not.toHaveProperty('ipcRenderer');
   });
 });
