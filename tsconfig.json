@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "commonjs",
+    "lib": ["ESNext", "DOM"],
+    "allowJs": false,
+    "skipLibCheck": true,
+    "strict": true,
+    "noImplicitAny": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "sourceMap": true,
+    "outDir": "dist",
+    "jsx": "react-jsx",
+    "types": ["node"]
+  },
+  "include": ["src", "tests", "forge.config.ts", "vite.*.config.ts", "eslint.config.ts", "vitest.config.ts", "wdio.conf.ts"]
+}
