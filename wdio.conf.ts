@@ -1,22 +1,30 @@
-import type { Options } from '@wdio/types';
+/// <reference types="@wdio/electron-service" />
+/// <reference types="@wdio/mocha-framework" />
 
 // Boot smoke test harness using @wdio/electron-service (D-09)
 // @wdio/electron-service auto-detects Electron Forge output paths at out/{appName}-{OS}-{arch}
 // https://webdriver.io/docs/desktop-testing/electron/
-export const config: Options.Testrunner = {
+// WebdriverIO.Config (vs Options.Testrunner) is the service-augmented config
+// type that includes `capabilities` and `wdio:electronServiceOptions`.
+export const config: WebdriverIO.Config = {
   runner: 'local',
   specs: ['./tests/smoke/**/*.smoke.test.ts'],
   maxInstances: 1,
-  services: [
-    [
-      'electron',
-      {
-        // Electron Forge auto-detection: out/just-wrapper-darwin-arm64/Just-Wrapper.app etc.
-        // appEntryPoint only needed if auto-detection fails:
-        // appEntryPoint: '.vite/build/main.js',
+  // The `electron` service requires at least one capability declaring
+  // browserName: 'electron'. Forge auto-detection scans ./out, but Forge
+  // names the bundle after productName ("Just-Wrapper"), so we pin
+  // appBinaryPath explicitly to make the smoke run deterministic across
+  // platforms/arches.
+  capabilities: [
+    {
+      browserName: 'electron',
+      'wdio:electronServiceOptions': {
+        appBinaryPath:
+          './out/Just-Wrapper-darwin-arm64/Just-Wrapper.app/Contents/MacOS/Just-Wrapper',
       },
-    ],
+    },
   ],
+  services: ['electron'],
   framework: 'mocha',
   reporters: ['spec'],
   mochaOpts: {

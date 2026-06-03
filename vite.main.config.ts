@@ -6,6 +6,10 @@ export default defineConfig({
   build: {
     lib: {
       entry: 'src/main/index.ts',
+      // package.json "main" expects .vite/build/main.js — force that output
+      // filename. (Default Vite lib naming would derive it from the package
+      // name, which Forge's packager cannot find.)
+      fileName: () => 'main.js',
       formats: ['cjs'],
     },
     rollupOptions: {
