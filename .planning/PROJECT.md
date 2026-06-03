@@ -2,9 +2,9 @@
 
 ## What This Is
 
-A local Windows desktop app that wraps multiple **real, PTY-backed terminal sessions** behind a clean side-tab interface. Each session has a stable identity (custom name + icon + status) and can be switched to instantly without killing its running process. It is built for coding-agent workflows — running tools like `claude --rc`, `codex`, REPLs, and dev servers across different projects, each in its own clearly-labeled session.
+A cross-platform local desktop app (Windows + macOS) that wraps multiple **real, PTY-backed terminal sessions** behind a clean side-tab interface. Each session has a stable identity (custom name + icon + status) and can be switched to instantly without killing its running process. It is built for coding-agent workflows — running tools like `claude --rc`, `codex`, REPLs, and dev servers across different projects, each in its own clearly-labeled session.
 
-It is **not** a new shell and **not** a full terminal replacement. It is a session *manager* that sits on top of the user's existing shells (PowerShell, CMD, Git Bash, WSL).
+It is **not** a new shell and **not** a full terminal replacement. It is a session *manager* that sits on top of the user's existing shells (PowerShell, CMD, Git Bash, WSL on Windows; zsh, bash on macOS).
 
 ## Core Value
 
@@ -31,7 +31,8 @@ It is **not** a new shell and **not** a full terminal replacement. It is a sessi
 - [ ] Stop and restart a session (new process ID, same logical session ID); show status (not started / running / stopped / exited / error)
 - [ ] Persist session metadata locally (ID, name, icon, cwd, shell, startup command, order, last active) and restore profiles on app reopen
 - [ ] Persist user's session order in the sidebar
-- [ ] Package as a local Windows desktop app
+- [ ] Platform-aware shell selection (PowerShell/CMD/Git Bash/WSL on Windows; zsh/bash on macOS) and path handling
+- [ ] Package as a local desktop app for both Windows and macOS from one codebase
 
 ### Out of Scope
 
@@ -50,15 +51,15 @@ It is **not** a new shell and **not** a full terminal replacement. It is a sessi
 ## Context
 
 - **Use case:** Managing many concurrent coding-agent and dev sessions (e.g. `claude --rc`, `codex`, `npm run dev`) across multiple projects, each needing a distinct, recognizable identity so the user never loses track of which session is which.
-- **Development vs. target environment:** This planning session runs on macOS, but the **primary dev machine and the only MVP target is Windows**. PTY behavior relies on Windows ConPTY; native modules (e.g. `node-pty`) must be built for Windows. The actual app build/test happens on Windows.
-- **Shells to support:** PowerShell, CMD, Git Bash, WSL — the user picks per session.
+- **Development & target environment:** Cross-platform (Windows + macOS). Development and testing happen natively on macOS (the machine in hand), and the same codebase runs on the user's Windows machine. This is deliberate: the Core Value is terminal fidelity, and it must be testable where it's built. `node-pty` abstracts the OS PTY (ConPTY on Windows, forkpty on macOS) behind one API, so the terminal core is single-codepath; platform differences live at the edges (shell list, paths, packaging, native rebuilds).
+- **Shells to support:** PowerShell, CMD, Git Bash, WSL on Windows; zsh, bash on macOS — the user picks per session, defaults are platform-aware.
 - **Identity model is foundational:** three distinct concepts must never be conflated — logical session ID (stable, app-level), terminal process ID (temporary PTY/process), and user-visible identity (name + icon + status).
 - **Canonical validation scenario** (Section 8 of the spec): create a session `Name: Parlour Claude RC`, `Icon: 🛋️`, `Path: D:/Project/Ongoing/Marketing-parlour-room`, `Command: claude --rc`, then interact with it inside the app exactly like a native terminal. Also: open a normal shell session, `cd` freely, and launch `codex` / `claude --rc` from any accessible folder.
 
 ## Constraints
 
-- **Platform**: Windows only for MVP — PTY layer must use ConPTY; native PTY modules built for Windows. No macOS/Linux target yet.
-- **Tech stack**: Desktop framework (Electron vs. Tauri) deferred to the research phase, which will recommend with rationale. Terminal rendering expected via a mature emulator (e.g. xterm.js). PTY via a real pseudo-terminal layer (e.g. node-pty/ConPTY), not command-capture.
+- **Platform**: Cross-platform — Windows + macOS from a single codebase. PTY layer must work via ConPTY on Windows and forkpty on macOS (e.g. `node-pty`, which abstracts both). Linux is not a target but should not be actively precluded. Code must stay OS-agnostic except at explicit platform-aware edges (shell defaults, path handling, packaging).
+- **Tech stack**: Desktop framework (Electron vs. Tauri) deferred to the research phase, which will recommend with rationale — cross-platform packaging quality is now a selection criterion. Terminal rendering expected via a mature emulator (e.g. xterm.js). PTY via a real cross-platform pseudo-terminal layer (e.g. node-pty), not command-capture.
 - **Persistence**: Local-only. No cloud, no remote services, no telemetry. Session metadata stored on disk.
 - **Packaging**: Simple local desktop packaging — installable/runnable Windows app, no app-store or distribution pipeline required for MVP.
 - **Architecture**: Logical session ID must be decoupled from PTY process ID; restarting a process must preserve the logical ID.
@@ -69,7 +70,7 @@ It is **not** a new shell and **not** a full terminal replacement. It is a sessi
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Target Windows only for MVP | User's primary dev machine is Windows; spec is Windows-flavored (D:/, PowerShell, WSL). Avoids cross-platform PTY abstraction cost now. | — Pending |
+| Cross-platform (Windows + macOS) | Dev/test happens on macOS but the user's primary machine is Windows; fidelity (Core Value) must be testable where it's built. `node-pty` already abstracts ConPTY vs forkpty, so the cost is modest and confined to the edges. | — Pending |
 | Core Value = real terminal fidelity | Hosting `claude --rc`, `codex`, vim, ssh, REPLs correctly is the whole point; a fake/captured terminal would be useless. | — Pending |
 | Real PTY layer (not run→capture→return) | Interactive programs require a live pseudo-terminal; one-shot execution can't support them. | — Pending |
 | Decouple logical session ID from process ID | Identity must survive restarts, renames, and tab switches; process IDs are inherently temporary. | — Pending |
@@ -94,4 +95,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-03 after initialization*
+*Last updated: 2026-06-03 after initialization (platform set to cross-platform Windows + macOS)*
