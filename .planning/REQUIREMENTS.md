@@ -9,8 +9,8 @@ Requirements for the initial release. Derived from the user's FR-01–FR-21 spec
 
 ### Session Identity
 
-- [ ] **IDENT-01**: Each session has a stable internal session ID that does not change on rename, icon change, process restart, tab switch, startup-command change, or future browser-metadata linking (FR-01)
-- [ ] **IDENT-02**: The logical session ID (stable, app-level) is stored and tracked separately from the terminal process/PID (temporary, per-spawn) (FR-02)
+- [x] **IDENT-01**: Each session has a stable internal session ID that does not change on rename, icon change, process restart, tab switch, startup-command change, or future browser-metadata linking (FR-01)
+- [x] **IDENT-02**: The logical session ID (stable, app-level) is stored and tracked separately from the terminal process/PID (temporary, per-spawn) (FR-02)
 - [ ] **IDENT-03**: Each session has a user-visible identity (name + icon + status) shown in both the sidebar and the session header (FR-03)
 
 ### Session Management
@@ -101,8 +101,8 @@ Populated during roadmap creation. Each v1 requirement maps to exactly one phase
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| IDENT-01 | Phase 1: Project Scaffold + Dev Infrastructure | Pending |
-| IDENT-02 | Phase 1: Project Scaffold + Dev Infrastructure | Pending |
+| IDENT-01 | Phase 1: Project Scaffold + Dev Infrastructure | Complete |
+| IDENT-02 | Phase 1: Project Scaffold + Dev Infrastructure | Complete |
 | IDENT-03 | Phase 4: Session Identity + Sidebar UI | Pending |
 | SESS-01 | Phase 4: Session Identity + Sidebar UI | Pending |
 | SESS-02 | Phase 4: Session Identity + Sidebar UI | Pending |
@@ -130,6 +130,7 @@ Populated during roadmap creation. Each v1 requirement maps to exactly one phase
 | PKG-01 | Phase 8: Cross-Platform Packaging | Pending |
 
 **Coverage:**
+
 - v1 requirements: 27 total
 - Mapped to phases: 27 ✓
 - Unmapped: 0 ✓
