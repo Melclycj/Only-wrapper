@@ -33,7 +33,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. `SessionRecord` type in `shared/types.ts` has `logicalId: string` (UUID) and `ptyPid?: number` as distinct fields; no code in the codebase conflates them
   3. `contextBridge.exposeInMainWorld` is the only bridge between renderer and main; no raw `ipcRenderer` is accessible in renderer code
   4. `@electron/rebuild` runs as a postinstall hook and completes without error on the developer's macOS machine
-**Plans:** TBD
+**Plans:** 3 plans
+Plans:
+- [ ] 01-01-PLAN.md — Scaffold + tooling + Wave 0 test stubs (Electron 36.9.5 pin, ESLint D-06, Vitest/WDIO harnesses, postinstall electron-rebuild SC4)
+- [ ] 01-02-PLAN.md — Shared identity contract (branded LogicalId, SessionRecord D-01..D-04, api-types; identity guard GREEN — IDENT-01/02)
+- [ ] 01-03-PLAN.md — Secure process-split walking-skeleton slice (webPreferences D-07, contextBridge-only SC3, blank renderer round-trip; boot smoke GREEN SC1)
 
 ### Phase 2: PTY Core + Terminal Fidelity
 **Goal:** A user can open the app and interact with a single real terminal session exactly as they would in a native terminal — interactive programs, control characters, colors, resize, and the canonical `claude --rc` scenario all work. This is the Core Value proof.
@@ -135,7 +139,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Project Scaffold + Dev Infrastructure | 0/TBD | Not started | - |
+| 1. Project Scaffold + Dev Infrastructure | 0/3 | Not started | - |
 | 2. PTY Core + Terminal Fidelity | 0/TBD | Not started | - |
 | 3. Multi-Session + Session Lifecycle | 0/TBD | Not started | - |
 | 4. Session Identity + Sidebar UI | 0/TBD | Not started | - |
