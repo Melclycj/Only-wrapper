@@ -13,7 +13,7 @@ Just-Wrapper is built from the inside out: the Core Value (real terminal fidelit
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Project Scaffold + Dev Infrastructure** - Electron+Vite+TypeScript skeleton with security config, contextBridge, shared types, and logicalId/ptyPid data model established
+- [x] **Phase 1: Project Scaffold + Dev Infrastructure** - Electron+Vite+TypeScript skeleton with security config, contextBridge, shared types, and logicalId/ptyPid data model established (completed 2026-06-03)
 - [ ] **Phase 2: PTY Core + Terminal Fidelity** - Single real PTY session with full keyboard, ANSI, resize, flow control, Unicode, and fidelity validated via `claude --rc` / `vim` / Python REPL
 - [ ] **Phase 3: Multi-Session + Session Lifecycle** - N concurrent PTY sessions with ring-buffer replay, CSS show/hide tab panels, stop/restart, and the session status state machine
 - [ ] **Phase 4: Session Identity + Sidebar UI** - Full sidebar (icon + name + status badge, expanded/collapsed), session creation form, rename/re-icon, and keyboard session-switching shortcuts
@@ -37,7 +37,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. `contextBridge.exposeInMainWorld` is the only bridge between renderer and main; no raw `ipcRenderer` is accessible in renderer code
   4. `@electron/rebuild` runs as a postinstall hook and completes without error on the developer's macOS machine
 
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 **Wave 1**
 
 - [x] 01-01-PLAN.md — Scaffold + tooling + Wave 0 test stubs (Electron 36.9.5 pin, ESLint D-06, Vitest/WDIO harnesses, postinstall electron-rebuild SC4)
@@ -48,7 +48,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 01-03-PLAN.md — Secure process-split walking-skeleton slice (webPreferences D-07, contextBridge-only SC3, blank renderer round-trip; boot smoke GREEN SC1)
+- [x] 01-03-PLAN.md — Secure process-split walking-skeleton slice (webPreferences D-07, contextBridge-only SC3, blank renderer round-trip; boot smoke GREEN SC1)
 
 ### Phase 2: PTY Core + Terminal Fidelity
 
@@ -171,7 +171,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Project Scaffold + Dev Infrastructure | 2/3 | In Progress|  |
+| 1. Project Scaffold + Dev Infrastructure | 3/3 | Complete   | 2026-06-03 |
 | 2. PTY Core + Terminal Fidelity | 0/TBD | Not started | - |
 | 3. Multi-Session + Session Lifecycle | 0/TBD | Not started | - |
 | 4. Session Identity + Sidebar UI | 0/TBD | Not started | - |
