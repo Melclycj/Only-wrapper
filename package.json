@@ -1,0 +1,48 @@
+{
+  "name": "just-wrapper",
+  "productName": "Just-Wrapper",
+  "version": "0.1.0",
+  "description": "Local terminal session manager — PTY-backed sessions with stable identity",
+  "main": ".vite/build/main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron-forge start",
+    "package": "electron-forge package",
+    "make": "electron-forge make",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "test:unit": "vitest run",
+    "test:smoke": "wdio run wdio.conf.ts",
+    "test": "npm run test:unit && npm run test:smoke",
+    "postinstall": "electron-rebuild -f"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@electron-forge/cli": "7.11.2",
+    "@electron-forge/maker-deb": "7.11.2",
+    "@electron-forge/maker-rpm": "7.11.2",
+    "@electron-forge/maker-squirrel": "7.11.2",
+    "@electron-forge/maker-zip": "7.11.2",
+    "@electron-forge/plugin-auto-unpack-natives": "7.11.2",
+    "@electron-forge/plugin-vite": "7.11.2",
+    "@electron/rebuild": "4.0.4",
+    "@types/react": "19.2.16",
+    "@types/react-dom": "19.2.3",
+    "electron": "36.9.5",
+    "eslint": "10.4.1",
+    "eslint-config-prettier": "10.1.8",
+    "prettier": "3.8.3",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.60.1",
+    "vitest": "4.1.8",
+    "@wdio/electron-service": "10.0.0"
+  },
+  "dependencies": {
+    "electron-squirrel-startup": "1.0.1",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "uuid": "14.0.0"
+  }
+}
