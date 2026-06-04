@@ -15,6 +15,7 @@
 
 import { useEffect, useRef } from 'react';
 import type { LogicalId } from '../shared/types';
+import { createWatermark } from '../shared/flow-control';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
@@ -156,14 +157,30 @@ export function TerminalPane(): React.JSX.Element {
         //    PTY above FLOW_HIGH and resume it once term.write callbacks have
         //    drained the queue below FLOW_LOW. No bytes are dropped — pause only
         //    stops the source; buffered chunks are still parsed and resumed.
-        let watermark = 0;
+        //
+        //    CR-02: track an explicit `paused` edge and toggle ONLY on the
+        //    transition. Pausing/resuming on the rising/falling edge (and never
+        //    while already in that state) eliminates the lost-resume deadlock and
+        //    the resume spam: ptyResume is sent exactly once, only when we are
+        //    actually paused AND the parse queue has drained below LOW. The
+        //    pause check runs SYNCHRONOUSLY before queuing (add then test); the
+        //    resume check runs in the write callback after the chunk is parsed
+        //    (drain then test) — so a stale resume can never overtake a pause.
+        const watermark = createWatermark(FLOW_HIGH, FLOW_LOW);
+        let paused = false;
         offData = window.api.onPtyData(id, (data) => {
-          watermark += data.length;
+          watermark.add(data.length);
+          if (!paused && watermark.shouldPause()) {
+            paused = true;
+            window.api.ptyPause(id);
+          }
           term.write(data, () => {
-            watermark = Math.max(watermark - data.length, 0);
-            if (watermark < FLOW_LOW) window.api.ptyResume(id);
+            watermark.drain(data.length);
+            if (paused && watermark.shouldResume()) {
+              paused = false;
+              window.api.ptyResume(id);
+            }
           });
-          if (watermark > FLOW_HIGH) window.api.ptyPause(id);
         });
 
         // 8. Passive exit notice (D-04) — no auto-restart.
