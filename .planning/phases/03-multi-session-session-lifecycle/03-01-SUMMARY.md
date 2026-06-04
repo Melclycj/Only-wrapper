@@ -52,7 +52,7 @@ patterns-established:
   - "Pattern 5 (pty:status broadcast): setStatus() updates record + sends pty:status, mirroring onData send-target"
   - "Pattern 6 (startup injection): settle-delay off first output, write cmd+CR once, never log the text"
 
-requirements-completed: [TERM-05, TERM-06, TERM-07, TERM-08]
+requirements-completed: [TERM-06, TERM-07, TERM-08]  # TERM-05 descoped at verify (deferred)
 
 # Metrics
 duration: 56min

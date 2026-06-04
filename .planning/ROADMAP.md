@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Project Scaffold + Dev Infrastructure** - Electron+Vite+TypeScript skeleton with security config, contextBridge, shared types, and logicalId/ptyPid data model established (completed 2026-06-03)
 - [x] **Phase 2: PTY Core + Terminal Fidelity** - Single real PTY session with full keyboard, ANSI, resize, flow control, Unicode, and fidelity validated via `claude --rc` / `vim` / Python REPL (completed 2026-06-04)
-- [ ] **Phase 3: Multi-Session + Session Lifecycle** - N concurrent PTY sessions with ring-buffer replay, CSS show/hide tab panels, stop/restart, and the session status state machine
+- [x] **Phase 3: Multi-Session + Session Lifecycle** - N concurrent PTY sessions with ring-buffer replay, CSS show/hide tab panels, stop/restart, and the session status state machine (completed 2026-06-04)
 - [ ] **Phase 4: Session Identity + Sidebar UI** - Full sidebar (icon + name + status badge, expanded/collapsed), session creation form, rename/re-icon, and keyboard session-switching shortcuts
 - [ ] **Phase 5: Persistence + Shell Discovery** - Session profiles saved to disk and restored on reopen (always not_started), platform-aware shell resolver, and sidebar order persistence
 - [ ] **Phase 6: Robustness + Flow-Control Polish** - HIGH/LOW watermark backpressure, spawn/cwd error handling, waiting-for-input heuristic, alt-screen reset, and session header quick controls
@@ -97,7 +97,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. Each session shows one of five statuses — not started / running / stopped / exited / error — and the badge updates correctly on every state transition
   5. ~~A session configured with an optional startup command executes automatically~~ — **DEFERRED** (TERM-05 descoped from Phase 3; the startupCommand field persists for the Phase 4 form, auto-run revisited later).
 
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 **UI hint:** yes
 
 **Wave 1**
@@ -110,7 +110,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 3** *(blocked on Wave 2 — has checkpoint)*
 
-- [ ] 03-03-PLAN.md — Lifecycle slice: stop/restart controls + '— restarted HH:MM —' separator + blocking human-verify fidelity checkpoint (TERM-07)
+- [x] 03-03-PLAN.md — Lifecycle slice: stop/restart controls + '— restarted HH:MM —' separator + blocking human-verify fidelity checkpoint (TERM-07)
 
 ### Phase 4: Session Identity + Sidebar UI
 
@@ -201,7 +201,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 |-------|----------------|--------|-----------|
 | 1. Project Scaffold + Dev Infrastructure | 3/3 | Complete    | 2026-06-03 |
 | 2. PTY Core + Terminal Fidelity | 4/4 | Complete    | 2026-06-04 |
-| 3. Multi-Session + Session Lifecycle | 1/3 | In Progress|  |
+| 3. Multi-Session + Session Lifecycle | 3/3 | Complete   | 2026-06-04 |
 | 4. Session Identity + Sidebar UI | 0/TBD | Not started | - |
 | 5. Persistence + Shell Discovery | 0/TBD | Not started | - |
 | 6. Robustness + Flow-Control Polish | 0/TBD | Not started | - |

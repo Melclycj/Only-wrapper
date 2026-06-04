@@ -48,7 +48,7 @@ key-decisions:
   - "Disambiguated the shared data-session-id in the xterm-driver: pane reads scope to .session-view[...], sidebar-row clicks to .sidebar-row[...] (both the terminal pane and the sidebar row carry the same id — a bare attribute selector returned the wrong element)."
   - "startup-command E2E left RED — it is 03-03 scope (the directly-created PTY needs a SessionManager-rendered pane; the create-with-startup-command UI path lands in 03-03). The plan's verify list requires only multi-session-keepalive."
 
-requirements-completed: [TERM-05, TERM-06, TERM-07, TERM-08]
+requirements-completed: [TERM-06, TERM-07, TERM-08]  # TERM-05 descoped at verify (deferred)
 
 # Metrics
 duration: 13min
