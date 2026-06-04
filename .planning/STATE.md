@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 3 context gathered
-last_updated: "2026-06-04T11:42:39.552Z"
-last_activity: 2026-06-04 -- Phase 03 execution started
+stopped_at: Completed 03-02-PLAN.md
+last_updated: "2026-06-04T11:59:15Z"
+last_activity: 2026-06-04 -- Completed 03-02 (multi-session renderer slice)
 progress:
   total_phases: 8
   completed_phases: 2
   total_plans: 10
-  completed_plans: 8
-  percent: 25
+  completed_plans: 9
+  percent: 28
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-06-03)
 ## Current Position
 
 Phase: 03 (multi-session-session-lifecycle) — EXECUTING
-Plan: 2 of 3
-Status: Ready to execute
-Last activity: 2026-06-04 -- Phase 03 execution started
+Plan: 3 of 3
+Status: 03-02 complete — multi-session renderer slice landed; ready for 03-03 (lifecycle controls)
+Last activity: 2026-06-04 -- Completed 03-02 (multi-session renderer slice)
 
-Progress: [██████████] 100% (Phase 2 plans)
+Progress: [██████░░░░] 67% (Phase 3 plans: 2/3)
 
 ## Performance Metrics
 
@@ -60,6 +60,7 @@ Progress: [██████████] 100% (Phase 2 plans)
 | Phase 02 P03 | ~22min | 3 tasks | 9 files |
 | Phase 02 P04 | ~12min | 3 tasks | 1 file |
 | Phase 03 P01 | 56min | 3 tasks | 9 files |
+| Phase 03 P02 | 13min | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -84,6 +85,11 @@ Recent decisions affecting current work:
 - [Phase ?]: 03-01: listSessions source of truth lives in MAIN (Phase 5 lowdb is a drop-in)
 - [Phase ?]: 03-01: restart orchestrated in main (stop then await exit then create-with-id); same logicalId, new ptyPid
 - [Phase ?]: 03-01: dead sessions kept in the Map with alive:false (record retained, pty handle dropped)
+- [Phase 03-02]: SessionManager is the SOLE ptyCreate spawn owner; SessionView is a controlled view bound to a prop id and never spawns (one PTY per add — T-03-09, proven by session-manager.spawn.test.ts)
+- [Phase 03-02]: WebGL attached to the ACTIVE session only, disposed on deactivate (≤16-context cap); hidden panes keep their xterm + buffer with NO GPU context
+- [Phase 03-02]: Hide panes via visibility:hidden / off-screen (NOT display:none — fit()/proposeDimensions() no-op on display:none); re-fit + ptyResize on activate
+- [Phase 03-02]: addSession spawn path lives in a pure React/xterm-free module (session-add.ts) so the no-double-spawn invariant unit-tests in the Node env without jsdom
+- [Phase 03-02]: E2E reads the active pane via window.__sessionTerms[id].buffer (WebGL/canvas active pane has no .xterm-rows); driver scopes pane reads to .session-view[...] / row clicks to .sidebar-row[...]
 
 ### Pending Todos
 
@@ -102,6 +108,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-04T11:42:20.727Z
-Stopped at: Phase 3 context gathered
-Resume file: .planning/phases/03-multi-session-session-lifecycle/03-CONTEXT.md
+Last session: 2026-06-04T11:59:15Z
+Stopped at: Completed 03-02-PLAN.md (multi-session renderer slice)
+Resume file: None

@@ -97,7 +97,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. Each session shows one of five statuses — not started / running / stopped / exited / error — and the badge updates correctly on every state transition
   5. A session configured with an optional startup command executes that command automatically after the PTY spawns
 
-**Plans:** 1/3 plans executed
+**Plans:** 2/3 plans executed
 **UI hint:** yes
 
 **Wave 1**
@@ -106,7 +106,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 2** *(blocked on Wave 1)*
 
-- [ ] 03-02-PLAN.md — Multi-session renderer slice: 4 preload methods (guard GREEN) + SessionView (instance-per-session, WebGL-on-active, keep-alive) + SessionManager + basic DESIGN.md Sidebar + status-colors; keep-alive E2E GREEN (TERM-06, TERM-08 display)
+- [x] 03-02-PLAN.md — Multi-session renderer slice: 4 preload methods (guard GREEN) + SessionView (instance-per-session, WebGL-on-active, keep-alive) + SessionManager + basic DESIGN.md Sidebar + status-colors; keep-alive E2E GREEN (TERM-06, TERM-08 display)
 
 **Wave 3** *(blocked on Wave 2 — has checkpoint)*
 
