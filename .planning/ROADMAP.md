@@ -14,7 +14,7 @@ Just-Wrapper is built from the inside out: the Core Value (real terminal fidelit
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Project Scaffold + Dev Infrastructure** - Electron+Vite+TypeScript skeleton with security config, contextBridge, shared types, and logicalId/ptyPid data model established (completed 2026-06-03)
-- [ ] **Phase 2: PTY Core + Terminal Fidelity** - Single real PTY session with full keyboard, ANSI, resize, flow control, Unicode, and fidelity validated via `claude --rc` / `vim` / Python REPL
+- [x] **Phase 2: PTY Core + Terminal Fidelity** - Single real PTY session with full keyboard, ANSI, resize, flow control, Unicode, and fidelity validated via `claude --rc` / `vim` / Python REPL (completed 2026-06-04)
 - [ ] **Phase 3: Multi-Session + Session Lifecycle** - N concurrent PTY sessions with ring-buffer replay, CSS show/hide tab panels, stop/restart, and the session status state machine
 - [ ] **Phase 4: Session Identity + Sidebar UI** - Full sidebar (icon + name + status badge, expanded/collapsed), session creation form, rename/re-icon, and keyboard session-switching shortcuts
 - [ ] **Phase 5: Persistence + Shell Discovery** - Session profiles saved to disk and restored on reopen (always not_started), platform-aware shell resolver, and sidebar order persistence
@@ -64,7 +64,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. `echo $TERM` inside the session returns `xterm-256color`; truecolor output renders correctly; CJK characters and emoji occupy the correct cell widths (htop borders intact)
   5. `cat` of a large file (50 MB+) does not freeze the UI or drop output; keyboard input remains responsive during high-throughput output
 
-**Plans:** 3/4 plans executed
+**Plans:** 4/4 plans complete
 **UI hint:** yes
 
 **Wave 1**
@@ -81,7 +81,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 4** *(blocked on Wave 3)*
 
-- [ ] 02-04-PLAN.md — Fidelity layers: flow-control watermark (throughput smoke GREEN) + copy/paste + bracketed paste + human-verify fidelity checkpoint
+- [x] 02-04-PLAN.md — Fidelity layers: flow-control watermark (throughput smoke GREEN) + copy/paste + bracketed paste + human-verify fidelity checkpoint
 
 ### Phase 3: Multi-Session + Session Lifecycle
 
@@ -188,7 +188,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Project Scaffold + Dev Infrastructure | 3/3 | Complete    | 2026-06-03 |
-| 2. PTY Core + Terminal Fidelity | 1/4 | In Progress|  |
+| 2. PTY Core + Terminal Fidelity | 4/4 | Complete   | 2026-06-04 |
 | 3. Multi-Session + Session Lifecycle | 0/TBD | Not started | - |
 | 4. Session Identity + Sidebar UI | 0/TBD | Not started | - |
 | 5. Persistence + Shell Discovery | 0/TBD | Not started | - |

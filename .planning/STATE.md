@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: 02-04 code complete — PAUSED at checkpoint:human-verify (Task 3, blocking)
-last_updated: "2026-06-04T16:40:00.000Z"
-last_activity: 2026-06-04 -- 02-04 flow-control watermark + copy/paste committed; awaiting human fidelity verification
+stopped_at: 02-04 complete — all Phase 2 plans done; pending phase-level verification
+last_updated: "2026-06-04T17:05:00.000Z"
+last_activity: 2026-06-04 -- 02-04 SUMMARY written; human-verify checkpoint approved; Phase 2 plans 4/4 complete
 progress:
   total_phases: 8
   completed_phases: 1
   total_plans: 7
-  completed_plans: 6
-  percent: 19
+  completed_plans: 7
+  percent: 22
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-06-03)
 
 ## Current Position
 
-Phase: 02 (pty-core-terminal-fidelity) — EXECUTING
-Plan: 4 of 4 — code tasks complete, PAUSED at checkpoint:human-verify (blocking)
-Status: 02-04 Tasks 1-2 committed (047e0e9 flow-control watermark SC5, e7efe77 copy/paste + bracketed paste SC2/D-03). Automated pre-checks GREEN: tsc 0, lint 0, 24/24 unit, 4/4 E2E smoke (boot, roundtrip SC1/SC4, resize SC3, throughput SC5). Task 3 is a blocking human-verify gate — awaiting human approval of native fidelity (vim/python/ssh/htop/truecolor/CJK/paste). SUMMARY deferred until post-approval.
-Last activity: 2026-06-04 -- 02-04 flow-control + copy/paste committed; awaiting human fidelity verification
+Phase: 02 (pty-core-terminal-fidelity) — plans complete, pending phase verification
+Plan: 4 of 4 — COMPLETE (all tasks done; human-verify checkpoint approved)
+Status: 02-04 complete. Tasks 1-2 committed (047e0e9 flow-control watermark SC5, e7efe77 copy/paste + bracketed paste SC2/D-03); Task 3 human-verify checkpoint approved on automated evidence. SUMMARY written (f967e8c). Phase-2 SC1-SC5 all satisfied; TERM-01/02/03/04 complete across plans 02-01..02-04. Automated suite GREEN against the real packaged app (tsc 0, lint 0, 24/24 unit, 4/4 E2E). Next: phase-level verification, then Phase 3.
+Last activity: 2026-06-04 -- 02-04 SUMMARY written; checkpoint approved; Phase 2 plans 4/4 complete
 
-Progress: [███████░░░] 75%
+Progress: [██████████] 100% (Phase 2 plans)
 
 ## Performance Metrics
 
@@ -57,6 +57,7 @@ Progress: [███████░░░] 75%
 | Phase 02 P01 | 9min | 2 tasks | 11 files |
 | Phase 02 P02 | ~13min | 3 tasks | 11 files |
 | Phase 02 P03 | ~22min | 3 tasks | 9 files |
+| Phase 02 P04 | ~12min | 3 tasks | 1 file |
 
 ## Accumulated Context
 
@@ -76,6 +77,8 @@ Recent decisions affecting current work:
 - [Phase 02-03]: Renderer reaches the PTY ONLY via window.api; TerminalPane = xterm 5.5 (scrollback 10000, allowProposedApi, unicode11 v11, WebGL+canvas fallback, fit before ptyCreate, 100ms-debounced resize→ptyResize)
 - [Phase 02-03]: Forge+Vite packaging keeps node-pty through the plugin's node_modules pruning, unpacks its .node outside the ASAR, and skips the node-gyp rebuild (ship the N-API prebuild) — required for the packaged app to boot
 - [Phase 02-03]: E2E resize driven via BrowserWindow.setSize (browser.electron.execute); CDP window-rect command is unavailable under @wdio/electron-service
+- [Phase 02-04]: Flow control via the renderer xterm watermark (term.write drain callback + ptyPause/ptyResume, FLOW_HIGH=100000/FLOW_LOW=10000), NOT node-pty XON/XOFF handleFlowControl — keeps a 50MB cat responsive and lossless (SC5)
+- [Phase 02-04]: macOS copy/paste — Cmd+C copies selection, Cmd+V/right-click paste always via term.paste() (bracketed paste, no multi-line auto-execute); Ctrl+C left as SIGINT; no copy-on-select (SC2, D-03)
 
 ### Pending Todos
 
@@ -94,6 +97,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-04T16:25:00.000Z
-Stopped at: Completed 02-03-PLAN.md
+Last session: 2026-06-04T17:05:00.000Z
+Stopped at: Completed 02-04-PLAN.md — all Phase 2 plans done, pending phase verification
 Resume file: None
