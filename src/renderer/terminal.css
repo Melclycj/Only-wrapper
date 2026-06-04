@@ -113,6 +113,42 @@ body {
   background: var(--accent);
 }
 
+/* Per-row quick controls (TERM-07): a Stop control on a running session, a Restart
+ * control once it is no longer running. Revealed on row hover/active to keep the
+ * basic list calm (DESIGN.md §"Session header / quick controls"); always present in
+ * the DOM so the E2E driver can address data-testid="stop-session"/"restart-session". */
+.sidebar-row .row-controls {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 4px;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.sidebar-row:hover .row-controls,
+.sidebar-row.active .row-controls {
+  opacity: 1;
+}
+
+.sidebar-row .row-control {
+  padding: 2px 8px;
+  border-radius: 7px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink-soft);
+  font-family: inherit;
+  font-size: 11px;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.sidebar-row .row-control:hover {
+  background: var(--bg-sunk);
+  color: var(--ink);
+}
+
 .add-session {
   margin-top: 6px;
   padding: 8px 10px;

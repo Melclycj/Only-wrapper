@@ -26,6 +26,12 @@ import { Sidebar } from './Sidebar';
 // so the no-double-spawn invariant is unit-testable in the Node env.
 import { addSession } from './session-add';
 
+// How often the renderer reconciles its rendered session list against main's
+// authoritative listSessions() snapshot. Kept short so a session created OUTSIDE
+// onAdd (the direct-ptyCreate startup-command seam) gets a controlled pane before
+// its startup command injects (main does not replay output to late subscribers).
+const RECONCILE_MS = 100;
+
 export function SessionManager(): React.JSX.Element {
   const [sessions, setSessions] = useState<SessionRecord[]>([]);
   const [activeId, setActiveId] = useState<LogicalId | null>(null);
@@ -33,6 +39,33 @@ export function SessionManager(): React.JSX.Element {
   // Guards the boot effect so a fast double-mount (React StrictMode dev) does not
   // auto-add two default sessions.
   const bootedRef = useRef(false);
+
+  // ── Stop control (TERM-07 / SC3): fire-and-forget. Main runs the platform-aware
+  //    graceful kill and KEEPS the SessionRecord (status → 'stopped'); the row STAYS
+  //    in the sidebar (Pitfall 5 — never auto-removed). The renderer only reflects
+  //    the pushed 'stopped' status via the live onPtyStatus subscription below. ──
+  const handleStop = useCallback((id: LogicalId) => {
+    window.api.ptyStop(id);
+  }, []);
+
+  // ── Restart control (TERM-07 / SC3, IDENT-02): request-response. Main orchestrates
+  //    stop → await-exit → respawn under the SAME logicalId, returning the NEW
+  //    {id, pid} (same logicalId, new ptyPid). The kept SessionView for that id keeps
+  //    its xterm instance (scrollback preserved) and writes the '— restarted HH:MM —'
+  //    separator on the resulting fresh 'running' status (hasRunBefore seam). We thread
+  //    the new ptyPid into the row so the record mirrors main's source of truth. ──
+  const handleRestart = useCallback((id: LogicalId) => {
+    void (async () => {
+      const { pid } = await window.api.ptyRestart(id);
+      setSessions((prev) =>
+        prev.map((row) =>
+          row.logicalId === id
+            ? { ...row, ptyPid: pid, status: 'running' }
+            : row,
+        ),
+      );
+    })();
+  }, []);
 
   // ── Add: the SOLE ptyCreate spawn path (T-03-09). One spawn per add. ──
   const onAdd = useCallback(() => {
@@ -87,6 +120,47 @@ export function SessionManager(): React.JSX.Element {
     };
   }, [sessions]);
 
+  // ── Reconcile with main (source of truth — RESEARCH Open Q2 / Pitfall 5). ──
+  // The renderer's onAdd is the normal spawn path, but a session can also be created
+  // OUTSIDE it — main owns the authoritative record store, and the startup-command
+  // E2E (TERM-05/D-05) calls `window.api.ptyCreate({ startupCommand })` DIRECTLY
+  // (the no-form Phase-3 seam), bypassing onAdd. Such a session lands in main's
+  // listSessions() but has no rendered SessionView. We mirror main here: poll
+  // listSessions() and merge any id we don't yet render, so the directly-created
+  // session gets a controlled pane (and the startup command becomes visible in it).
+  // Existing rows are NOT clobbered — live status comes from the onPtyStatus
+  // subscription; we only ADD ids we're missing (and adopt the first as active if
+  // we have none yet). Phase 5 replaces this poll with the persisted snapshot.
+  //
+  // Interval is tight (RECONCILE_MS) deliberately: main does NOT replay output to a
+  // late subscriber, so a directly-created session's controlled pane must mount —
+  // and bind onPtyData — BEFORE the startup command injects (≥ STARTUP_SETTLE_MS
+  // 300 ms after first output). A 100 ms poll mounts the pane well inside that
+  // window, so the injected command's echo + output (STARTUP_OK, D-05) land in the
+  // pane's buffer rather than being lost pre-subscription.
+  useEffect(() => {
+    let cancelled = false;
+    const reconcile = async (): Promise<void> => {
+      const snapshot = await window.api.listSessions();
+      if (cancelled) return;
+      setSessions((prev) => {
+        const known = new Set(prev.map((s) => s.logicalId));
+        const additions = snapshot.filter((s) => !known.has(s.logicalId));
+        if (additions.length === 0) return prev;
+        const next = [...prev, ...additions];
+        if (activeId === null && next.length > 0) {
+          setActiveId(next[0].logicalId);
+        }
+        return next;
+      });
+    };
+    const timer = setInterval(() => void reconcile(), RECONCILE_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [activeId]);
+
   const onSelect = useCallback((id: LogicalId) => {
     // Switching is renderer-only visibility — the PTY is untouched (TERM-06). The
     // SessionView activate effect hands WebGL + focus to the newly-active view.
@@ -100,6 +174,8 @@ export function SessionManager(): React.JSX.Element {
         activeId={activeId}
         onSelect={onSelect}
         onAdd={onAdd}
+        onStop={handleStop}
+        onRestart={handleRestart}
       />
       <div className="viewport-stack">
         {sessions.map((s) => (
