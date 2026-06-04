@@ -83,6 +83,8 @@ interface PtySession {
 export class PtyManager {
   private readonly sessions = new Map<LogicalId, PtySession>();
   private win: BrowserWindow | null = null;
+  /** True once the process-global IPC handlers are wired (idempotency guard — CR-01). */
+  private ipcRegistered = false;
 
   /**
    * Spawn a login PTY and key it by a fresh LogicalId.
@@ -183,11 +185,23 @@ export class PtyManager {
   }
 
   /**
-   * Wire the validated IPC handlers for a window. `pty:create` is request/response
-   * (invoke→handle); the rest are fire-and-forget (send→on).
+   * Point PTY output (`pty:data`/`pty:exit`) at the current window, then wire the
+   * validated IPC handlers ONCE.
+   *
+   * IPC handlers are **process-global**, not per-window (Electron has no
+   * per-window `ipcMain`). The macOS close-then-reopen flow calls this again via
+   * `app.on('activate') → createWindow()`; re-running `ipcMain.handle` would throw
+   * "Attempted to register a second handler for 'pty:create'" and re-running
+   * `ipcMain.on` would stack duplicate listeners that fire N times (CR-01).
+   *
+   * So: always update `this.win` (the send target — handlers read it lazily, so
+   * `pty:data`/`pty:exit` always reach the *current* window), but register the
+   * handlers only on the first call. Idempotent across N create/destroy cycles.
    */
   registerIpc(win: BrowserWindow): void {
     this.win = win;
+    if (this.ipcRegistered) return; // idempotent — handlers are process-global (CR-01)
+    this.ipcRegistered = true;
 
     ipcMain.handle(PTY_CHANNELS.create, (_event, opts: PtyCreateOptions) =>
       this.create(opts),
@@ -211,5 +225,20 @@ export class PtyManager {
     ipcMain.on(PTY_CHANNELS.resume, (_event: IpcMainEvent, id: LogicalId) =>
       this.resume(id),
     );
+  }
+
+  /**
+   * Tear down the process-global IPC handlers and clear the window target.
+   * Symmetric with `registerIpc`, so a subsequent `registerIpc` re-wires cleanly
+   * (used on teardown; keeps re-activation crash-free — CR-01).
+   */
+  unregisterIpc(): void {
+    ipcMain.removeHandler(PTY_CHANNELS.create);
+    ipcMain.removeAllListeners(PTY_CHANNELS.write);
+    ipcMain.removeAllListeners(PTY_CHANNELS.resize);
+    ipcMain.removeAllListeners(PTY_CHANNELS.pause);
+    ipcMain.removeAllListeners(PTY_CHANNELS.resume);
+    this.ipcRegistered = false;
+    this.win = null;
   }
 }

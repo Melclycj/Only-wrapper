@@ -58,7 +58,9 @@ app.on('activate', () => {
   }
 });
 
-// Final backstop: ensure no PTY child outlives the app (Pitfall 6, T-02-06).
+// Final backstop: ensure no PTY child outlives the app (Pitfall 6, T-02-06), and
+// tear down the process-global PTY IPC handlers symmetrically (CR-01).
 app.on('before-quit', () => {
   ptyManager.disposeAll();
+  ptyManager.unregisterIpc();
 });
