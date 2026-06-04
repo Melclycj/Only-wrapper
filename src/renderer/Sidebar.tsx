@@ -15,16 +15,20 @@ export interface SidebarProps {
   activeId: LogicalId | null;
   onSelect: (id: LogicalId) => void;
   onAdd: () => void;
-  /** Stop a running session (TERM-07) — it stays in the list as 'stopped'. */
-  onStop: (id: LogicalId) => void;
+  /**
+   * Destructively CLOSE a session (D-03a) — opens the confirm modal; on confirm main
+   * kills the PTY and REMOVES the SessionRecord (the row vanishes). Offered on EVERY
+   * row (running or finished/errored) so any session can be removed.
+   */
+  onClose: (id: LogicalId) => void;
   /** Restart a session (TERM-07 / IDENT-02) — same identity, new ptyPid. */
   onRestart: (id: LogicalId) => void;
 }
 
-// A session has a live PTY only while 'running'. STOP is offered then; RESTART is
-// offered once it is no longer running (stopped/exited/error/not_started) — and per
-// D-03 restart may also re-apply to a running session, but the basic-tier control
-// surface shows exactly one primary action per state to keep the row uncluttered.
+// A session has a live PTY only while 'running'. The RESTART affordance is offered
+// once it is no longer running (stopped/exited/error/not_started) so a self-exited
+// session can be relaunched with its identity preserved (D-03a restart-identity half).
+// The destructive Close is offered on every row regardless of status.
 function isRunning(status: SessionRecord['status']): boolean {
   return status === 'running';
 }
@@ -58,7 +62,7 @@ export function Sidebar({
   activeId,
   onSelect,
   onAdd,
-  onStop,
+  onClose,
   onRestart,
 }: SidebarProps): React.JSX.Element {
   return (
@@ -67,11 +71,11 @@ export function Sidebar({
         const style = STATUS_STYLE[s.status];
         const isActive = s.logicalId === activeId;
         const running = isRunning(s.status);
-        // The row is a clickable container (switch on click). The stop/restart
+        // The row is a clickable container (switch on click). The close/restart
         // controls are nested buttons — a row cannot itself be a <button> or the
         // controls would be invalid nested interactives. clickSidebarRow() in the
         // E2E driver calls .click() on `.sidebar-row[data-session-id]`, which still
-        // fires this onClick; the control buttons stopPropagation so a stop/restart
+        // fires this onClick; the control buttons stopPropagation so a close/restart
         // never doubles as a switch.
         return (
           <div
@@ -100,22 +104,9 @@ export function Sidebar({
               {style.label}
             </span>
             <span className="row-controls">
-              {running ? (
-                <button
-                  type="button"
-                  className="row-control"
-                  data-testid="stop-session"
-                  data-action="stop"
-                  title="Stop session"
-                  aria-label={`Stop ${s.name}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onStop(s.logicalId);
-                  }}
-                >
-                  Stop
-                </button>
-              ) : (
+              {/* Non-running rows get a Restart affordance (relaunch a self-exited
+                  session, identity preserved — D-03a). Running rows do not. */}
+              {!running && (
                 <button
                   type="button"
                   className="row-control"
@@ -131,6 +122,22 @@ export function Sidebar({
                   Restart
                 </button>
               )}
+              {/* Destructive Close on EVERY row (D-03a): kill + remove, behind the
+                  confirm modal. Replaces the old keep-as-stopped Stop button. */}
+              <button
+                type="button"
+                className="row-control row-control-close"
+                data-testid="close-session"
+                data-action="close"
+                title="Close session"
+                aria-label={`Close ${s.name}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onClose(s.logicalId);
+                }}
+              >
+                Close
+              </button>
             </span>
           </div>
         );

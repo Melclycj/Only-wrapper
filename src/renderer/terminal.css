@@ -113,10 +113,10 @@ body {
   background: var(--accent);
 }
 
-/* Per-row quick controls (TERM-07): a Stop control on a running session, a Restart
- * control once it is no longer running. Revealed on row hover/active to keep the
- * basic list calm (DESIGN.md §"Session header / quick controls"); always present in
- * the DOM so the E2E driver can address data-testid="stop-session"/"restart-session". */
+/* Per-row quick controls (D-03a): a destructive Close on every row, plus a Restart
+ * control once a session is no longer running. Revealed on row hover/active to keep
+ * the basic list calm (DESIGN.md §"Session header / quick controls"); always present
+ * in the DOM so the E2E driver can address data-testid="close-session"/"restart-session". */
 .sidebar-row .row-controls {
   flex: 0 0 auto;
   display: inline-flex;
@@ -147,6 +147,14 @@ body {
 .sidebar-row .row-control:hover {
   background: var(--bg-sunk);
   color: var(--ink);
+}
+
+/* The destructive Close control reads in the derived error-red on hover so its
+ * intent is unmistakable (consistent with the status-colors error ramp). */
+.sidebar-row .row-control-close:hover {
+  border-color: oklch(0.58 0.16 25);
+  background: oklch(0.58 0.16 25 / 0.08);
+  color: oklch(0.58 0.16 25);
 }
 
 .add-session {
@@ -202,4 +210,89 @@ body {
 .session-view .xterm-screen {
   width: 100%;
   height: 100%;
+}
+
+/* ── Confirm modal (D-03a destructive Close) — DESIGN.md tokens ──────────────── */
+
+/* Scrim: dims the whole app; click = cancel (ConfirmModal wires the handler). */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Warm-dark scrim — not pure black, in keeping with the cozy aesthetic. */
+  background: oklch(0.255 0.018 264 / 0.45);
+}
+
+/* The card: warm --surface, generous --radius (18px), --line border, Nunito. */
+.modal-dialog {
+  width: min(420px, calc(100vw - 48px));
+  box-sizing: border-box;
+  padding: 22px 24px 18px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: 0 18px 48px oklch(0.255 0.018 264 / 0.28);
+  font-family: 'Nunito', system-ui, sans-serif;
+  color: var(--ink);
+}
+
+.modal-title {
+  margin: 0 0 8px;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.modal-body {
+  margin: 0 0 20px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.modal-btn {
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--line);
+}
+
+/* Cancel — neutral. */
+.modal-btn-cancel {
+  background: transparent;
+  color: var(--ink-soft);
+}
+
+.modal-btn-cancel:hover {
+  background: var(--bg-sunk);
+  color: var(--ink);
+}
+
+/* Confirm — the destructive derived red ramp (oklch(0.58 0.16 25), error language). */
+.modal-btn-confirm {
+  background: oklch(0.58 0.16 25);
+  border-color: oklch(0.58 0.16 25);
+  color: #ffffff;
+}
+
+.modal-btn-confirm:hover {
+  background: oklch(0.54 0.16 25);
+  border-color: oklch(0.54 0.16 25);
+}
+
+.modal-btn-confirm:focus-visible {
+  outline: 2px solid oklch(0.58 0.16 25);
+  outline-offset: 2px;
 }
