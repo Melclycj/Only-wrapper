@@ -64,7 +64,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. `echo $TERM` inside the session returns `xterm-256color`; truecolor output renders correctly; CJK characters and emoji occupy the correct cell widths (htop borders intact)
   5. `cat` of a large file (50 MB+) does not freeze the UI or drop output; keyboard input remains responsive during high-throughput output
 
-**Plans:** 1/4 plans executed
+**Plans:** 2/4 plans executed
 **UI hint:** yes
 
 **Wave 1**
@@ -73,7 +73,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 2** *(blocked on Wave 1)*
 
-- [ ] 02-02-PLAN.md — Main-side: resolveShell + flow-control + PtyManager (validated/clamped IPC, lifecycle) + typed bridge contract / EXPECTED_API_KEYS
+- [x] 02-02-PLAN.md — Main-side: resolveShell + flow-control + PtyManager (validated/clamped IPC, lifecycle) + typed bridge contract / EXPECTED_API_KEYS
 
 **Wave 3** *(blocked on Wave 2)*
 
