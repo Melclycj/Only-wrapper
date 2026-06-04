@@ -162,10 +162,20 @@ export function SessionView({ id, active }: SessionViewProps): React.JSX.Element
     };
     container.addEventListener('contextmenu', onContextMenu);
 
-    // Expose the ACTIVE-by-default term for the E2E smoke driver's fallback read
-    // path (window.__term). The driver primarily reads per-session DOM rows via
-    // data-session-id; this is a convenience fallback for the active pane.
-    (window as unknown as { __term?: Terminal }).__term = term;
+    // Expose this session's term for the E2E smoke driver's renderer-agnostic
+    // fallback read path. The WebGL/canvas renderer (active panes) draws to a
+    // canvas and does NOT populate `.xterm-rows`, so the driver's DOM-row read
+    // returns empty for the active session; reading term.buffer is renderer-
+    // agnostic (mirrors the single-pane window.__term fallback). We key it by id
+    // (window.__sessionTerms[id]) so readBufferOf(id) can resolve the right
+    // instance, and also set window.__term to the most-recently-mounted term for
+    // the single-pane helpers' backward-compatible fallback.
+    const w = window as unknown as {
+      __term?: Terminal;
+      __sessionTerms?: Record<string, Terminal>;
+    };
+    w.__term = term;
+    w.__sessionTerms = { ...(w.__sessionTerms ?? {}), [id]: term };
 
     // 4. Keystrokes → main. The PTY already exists (spawned by SessionManager); we
     //    bind directly to the prop `id` (we never spawn here — T-03-09 spawn ownership).
@@ -242,8 +252,13 @@ export function SessionView({ id, active }: SessionViewProps): React.JSX.Element
       container.removeEventListener('contextmenu', onContextMenu);
       detachWebgl(webglRef.current);
       webglRef.current = null;
-      if ((window as unknown as { __term?: Terminal }).__term === term) {
-        delete (window as unknown as { __term?: Terminal }).__term;
+      const wc = window as unknown as {
+        __term?: Terminal;
+        __sessionTerms?: Record<string, Terminal>;
+      };
+      if (wc.__term === term) delete wc.__term;
+      if (wc.__sessionTerms && wc.__sessionTerms[id] === term) {
+        delete wc.__sessionTerms[id];
       }
       term.dispose();
       termRef.current = null;

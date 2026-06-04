@@ -100,21 +100,24 @@ export async function waitForText(substr: string, timeoutMs = 5000): Promise<boo
 //
 // The single-pane helpers above remain the ACTIVE-pane fast path. The helpers
 // below address a SPECIFIC session by its LogicalId, keyed off the DOM that
-// plan 03-02 will produce:
-//   - each per-session container carries `data-session-id="<id>"`
+// plan 03-02 produces:
+//   - each per-session TERMINAL container is `.session-view[data-session-id]`
 //     and wraps that session's own xterm (`.xterm-rows` inside it).
-//   - each sidebar row carries `data-session-id="<id>"`.
+//   - each SIDEBAR row is `.sidebar-row[data-session-id]`.
 //   - the add-session button carries `data-testid="add-session"`.
 //
-// These reference DOM that does NOT exist yet (03-02 scope) — the multi-session
-// E2E scaffolds that consume them are intentionally RED until then.
+// DISAMBIGUATION (03-02): both the terminal pane AND the sidebar row carry the
+// same `data-session-id`, so a bare `[data-session-id="<id>"]` selector is
+// ambiguous — it returns whichever appears first in DOM order (the sidebar row).
+// The pane helpers therefore scope to `.session-view[...]` (the xterm container)
+// and the row helper to `.sidebar-row[...]`, so each resolves the right element.
 
 /** Type `text` into the xterm of the session identified by `id`. */
 export async function sendKeysTo(id: string, text: string): Promise<void> {
-  // Focus the hidden helper-textarea INSIDE this session's container, then type.
+  // Focus the hidden helper-textarea INSIDE this session's TERMINAL pane, then type.
   await browser.execute((sid: string) => {
     const pane = document.querySelector<HTMLElement>(
-      `[data-session-id="${sid}"]`,
+      `.session-view[data-session-id="${sid}"]`,
     );
     const ta = pane?.querySelector<HTMLTextAreaElement>(
       'textarea.xterm-helper-textarea',
@@ -126,18 +129,46 @@ export async function sendKeysTo(id: string, text: string): Promise<void> {
 
 /**
  * Read the rendered buffer text of the session identified by `id`.
- * Joins that session container's `.xterm-rows` row textContent with newlines.
+ *
+ * Prefers that session pane's `.xterm-rows` (DOM renderer). The ACTIVE pane,
+ * however, runs the WebGL/canvas renderer (03-02, WebGL-on-active) which draws to
+ * a canvas and leaves `.xterm-rows` empty — so we fall back to the renderer-
+ * agnostic xterm buffer exposed per id at `window.__sessionTerms[id]` (mirrors the
+ * single-pane `window.__term.buffer` fallback above).
  */
 export async function readBufferOf(id: string): Promise<string> {
   return browser.execute((sid: string) => {
     const pane = document.querySelector<HTMLElement>(
-      `[data-session-id="${sid}"]`,
+      `.session-view[data-session-id="${sid}"]`,
     );
     const rowsEl = pane?.querySelector('.xterm-rows');
-    if (rowsEl) {
-      return Array.from(rowsEl.children)
+    if (rowsEl && rowsEl.children.length > 0) {
+      const text = Array.from(rowsEl.children)
         .map((row) => (row as HTMLElement).textContent ?? '')
         .join('\n');
+      if (text.trim().length > 0) return text;
+    }
+    // Renderer-agnostic fallback: read the xterm buffer for this id directly.
+    const w = window as unknown as {
+      __sessionTerms?: Record<
+        string,
+        {
+          buffer?: {
+            active?: {
+              length: number;
+              getLine: (i: number) => { translateToString: () => string } | undefined;
+            };
+          };
+        }
+      >;
+    };
+    const active = w.__sessionTerms?.[sid]?.buffer?.active;
+    if (active) {
+      const lines: string[] = [];
+      for (let i = 0; i < active.length; i++) {
+        lines.push(active.getLine(i)?.translateToString() ?? '');
+      }
+      return lines.join('\n');
     }
     return '';
   }, id);
@@ -174,7 +205,7 @@ export async function clickAddSession(): Promise<void> {
 export async function clickSidebarRow(id: string): Promise<void> {
   await browser.execute((sid: string) => {
     const row = document.querySelector<HTMLElement>(
-      `[data-session-id="${sid}"]`,
+      `.sidebar-row[data-session-id="${sid}"]`,
     );
     row?.click();
   }, id);
