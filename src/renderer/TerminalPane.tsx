@@ -37,6 +37,15 @@ const TERMINAL_THEME = {
 // Resize debounce budget — well inside the SC3 1-second reflow budget (Pattern 5).
 const RESIZE_DEBOUNCE_MS = 100;
 
+// Flow-control watermark (SC5, RESEARCH Pattern 4 — the canonical xterm.js write
+// callback ↔ node-pty pause/resume backpressure). When xterm's parse queue backs
+// up past HIGH we pause the main-side PTY; as term.write callbacks drain the queue
+// below LOW we resume it. This keeps a 50MB `cat` responsive and lossless. We do
+// NOT use node-pty's built-in XON/XOFF flow control — that is child-driven and
+// the wrong layer (RESEARCH Alternatives); the renderer watermark is UI-driven.
+const FLOW_HIGH = 100000; // pause once buffered bytes exceed this
+const FLOW_LOW = 10000; // resume once drained below this
+
 export function TerminalPane(): React.JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -115,9 +124,20 @@ export function TerminalPane(): React.JSX.Element {
         }
         ptyId = id;
 
-        // 5. Stream PTY output to the terminal (plain write closes the round-trip;
-        //    flow-control pause/resume is layered in 02-04).
-        offData = window.api.onPtyData(id, (data) => term.write(data));
+        // 5. Stream PTY output to the terminal with watermark backpressure (SC5,
+        //    RESEARCH Pattern 4). Count bytes queued into xterm; pause the main
+        //    PTY above FLOW_HIGH and resume it once term.write callbacks have
+        //    drained the queue below FLOW_LOW. No bytes are dropped — pause only
+        //    stops the source; buffered chunks are still parsed and resumed.
+        let watermark = 0;
+        offData = window.api.onPtyData(id, (data) => {
+          watermark += data.length;
+          term.write(data, () => {
+            watermark = Math.max(watermark - data.length, 0);
+            if (watermark < FLOW_LOW) window.api.ptyResume(id);
+          });
+          if (watermark > FLOW_HIGH) window.api.ptyPause(id);
+        });
 
         // 8. Passive exit notice (D-04) — no auto-restart.
         offExit = window.api.onPtyExit(id, () => {
