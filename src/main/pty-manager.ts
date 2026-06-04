@@ -47,11 +47,26 @@ export const PTY_CHANNELS = {
 export const STOP_GRACE_MS = 800;
 
 /**
- * Settle-delay (ms of output quiet after the shell's first chunk) before the
- * startup command is injected as visible keystrokes (Pattern 6, D-05). Tune
- * 250–400 ms; a slower prompt machine may need a larger value.
+ * Settle-delay (ms of output quiet after the shell's MOST RECENT chunk) before the
+ * startup command is injected as visible keystrokes (Pattern 6, D-05). Each new
+ * output chunk re-arms it, so injection lands only after the shell goes quiet.
+ * Tune 300–600 ms; a slower prompt machine may need a larger value.
  */
-export const STARTUP_SETTLE_MS = 300;
+export const STARTUP_SETTLE_MS = 400;
+
+/**
+ * Minimum elapsed time since spawn before the startup command may be injected
+ * (D-05 shell-ready hardening). A COLD login shell sources rc files in BURSTS with
+ * >SETTLE-length gaps mid-init; a bare settle-delay can fire in one of those gaps —
+ * BEFORE the interactive prompt is ready — and the keystrokes are silently eaten
+ * (observed: works on warm restart, not on cold first spawn). This floor pushes the
+ * earliest injection past the cold-init bursts AND guarantees a late-mounting
+ * renderer pane (the no-form console seam mounts via the ~100 ms reconcile poll) is
+ * already subscribed, so the echoed command + its output are never lost. RESEARCH
+ * A1 flagged shell-ready detection as the one MEDIUM-confidence area; OSC-133 shell
+ * integration is the documented future upgrade for a deterministic signal.
+ */
+export const STARTUP_MIN_DELAY_MS = 750;
 
 /** Dimension clamp bounds — resize-bomb DoS guard (Security V5, T-02-03). */
 export const MIN_DIMENSION = 1;
@@ -298,30 +313,39 @@ export class PtyManager {
   }
 
   /**
-   * Settle-delay startup-command injection (Pattern 6, D-05). After the shell's
-   * first output chunk, wait STARTUP_SETTLE_MS of quiet, then write the command +
-   * Enter ONCE as visible keystrokes (it echoes, lands in history, runs natively).
-   * Never logs the command text (may contain a token — Security V7, T-03-04).
+   * Settle-delay startup-command injection (Pattern 6, D-05). Each output chunk
+   * (re-)arms a timer; injection fires once the shell goes quiet for
+   * STARTUP_SETTLE_MS AND at least STARTUP_MIN_DELAY_MS has elapsed since spawn.
+   * The floor skips a cold login shell's mid-init quiet gaps (which otherwise eat
+   * the keystrokes before the prompt is ready — visible only on cold first spawn,
+   * not warm restart) and ensures the renderer pane has subscribed. Writes the
+   * command + Enter ONCE as visible keystrokes (echoes, lands in history, runs
+   * natively). Never logs the command text (may contain a token — Security V7, T-03-04).
    */
   private scheduleStartupCommand(id: LogicalId, cmd?: string): void {
     if (!cmd) return;
     const s = this.sessions.get(id);
     if (!s) return;
+    const spawnedAt = Date.now();
     let settle: NodeJS.Timeout | undefined;
     const armed = { done: false };
+    const inject = (): void => {
+      if (armed.done) return;
+      armed.done = true;
+      // Re-fetch: the session may have exited during the settle window.
+      const live = this.sessions.get(id);
+      if (live?.alive) {
+        live.pty.write(cmd + '\r'); // visible keystrokes + Enter (D-05)
+        console.log(`[pty] startup command injected (session ${id})`); // NOT the text
+      }
+    };
     s.pty.onData(() => {
       if (armed.done) return;
       if (settle) clearTimeout(settle);
-      settle = setTimeout(() => {
-        if (armed.done) return;
-        armed.done = true;
-        // Re-fetch: the session may have exited during the settle window.
-        const live = this.sessions.get(id);
-        if (live?.alive) {
-          live.pty.write(cmd + '\r'); // visible keystrokes + Enter (D-05)
-          console.log(`[pty] startup command injected (session ${id})`); // NOT the text
-        }
-      }, STARTUP_SETTLE_MS);
+      // Earliest fire = max(last-output + SETTLE, spawn + MIN_DELAY floor).
+      const sinceSpawn = Date.now() - spawnedAt;
+      const wait = Math.max(STARTUP_SETTLE_MS, STARTUP_MIN_DELAY_MS - sinceSpawn);
+      settle = setTimeout(inject, wait);
     });
   }
 

@@ -92,7 +92,12 @@ vi.mock('../shell-resolver', () => ({
   resolveShell: () => ({ shell: '/bin/zsh', args: ['-l'] }),
 }));
 
-import { PtyManager, type PtyCreateOptions } from '../pty-manager';
+import {
+  PtyManager,
+  type PtyCreateOptions,
+  STARTUP_SETTLE_MS,
+  STARTUP_MIN_DELAY_MS,
+} from '../pty-manager';
 
 // A real BrowserWindow always exposes isDestroyed() on both the window and its
 // webContents; the PtyManager.send() shutdown guard reads them, so the stub must too.
@@ -223,5 +228,41 @@ describe('PtyManager lifecycle (SC3, TERM-07)', () => {
     const rec = sessions.find((s) => s.logicalId === id);
     expect(rec).toBeDefined();
     expect(rec?.status).toBe('stopped');
+  });
+
+  // Regression: cold first spawn dropped the startup command (D-05). A cold login
+  // shell sources rc files in bursts; a bare settle-delay fired in a mid-init quiet
+  // gap, before the prompt was ready, so the keystrokes were eaten (worked on warm
+  // restart, not cold first spawn). The MIN_DELAY floor skips those early gaps.
+  it('startup command does NOT inject during a cold-init quiet gap before the spawn floor', () => {
+    vi.useFakeTimers();
+    setPlatform('darwin');
+    const mgr = new PtyManager();
+    mgr.registerIpc(fakeWindow());
+    mgr.create({ ...baseOpts, startupCommand: 'echo STARTUP_OK' });
+    const child = spawnedChildren[0];
+
+    // Init burst, then quiet for longer than the settle window — but the spawn
+    // floor has NOT elapsed, so there must be NO early injection.
+    child._fireData('sourcing .zshrc...\r\n');
+    vi.advanceTimersByTime(STARTUP_SETTLE_MS + 50);
+    expect(child.write).not.toHaveBeenCalledWith('echo STARTUP_OK\r');
+
+    // Past the floor with continued quiet → inject EXACTLY once.
+    vi.advanceTimersByTime(STARTUP_MIN_DELAY_MS);
+    expect(child.write).toHaveBeenCalledWith('echo STARTUP_OK\r');
+    expect(child.write).toHaveBeenCalledTimes(1);
+  });
+
+  it('startup command never injects when the shell produces no output at all', () => {
+    vi.useFakeTimers();
+    setPlatform('darwin');
+    const mgr = new PtyManager();
+    mgr.registerIpc(fakeWindow());
+    mgr.create({ ...baseOpts, startupCommand: 'echo X' });
+    const child = spawnedChildren[0];
+
+    vi.advanceTimersByTime(10000); // no _fireData → settle timer never arms
+    expect(child.write).not.toHaveBeenCalled();
   });
 });
