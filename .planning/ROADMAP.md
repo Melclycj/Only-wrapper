@@ -88,21 +88,21 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Goal:** Multiple concurrent terminal sessions can run independently; switching between them never kills a background process; and a user can stop and restart any session while its logical identity remains unchanged.
 **Mode:** mvp
 **Depends on:** Phase 2
-**Requirements:** TERM-05, TERM-06, TERM-07, TERM-08
+**Requirements:** TERM-06, TERM-07, TERM-08
 **Success Criteria** (what must be TRUE):
 
   1. User can have 3+ sessions open simultaneously; switching between them does not terminate any background process (`npm run dev` in session A keeps printing output while session B is active)
   2. Switching back to a previously hidden session replays buffered output so the scrollback is current — no frozen or blank screen
   3. User can stop a running session and restart it; the restart creates a new PTY process but the session's logicalId, name, and icon are unchanged
   4. Each session shows one of five statuses — not started / running / stopped / exited / error — and the badge updates correctly on every state transition
-  5. A session configured with an optional startup command executes that command automatically after the PTY spawns
+  5. ~~A session configured with an optional startup command executes automatically~~ — **DEFERRED** (TERM-05 descoped from Phase 3; the startupCommand field persists for the Phase 4 form, auto-run revisited later).
 
 **Plans:** 2/3 plans executed
 **UI hint:** yes
 
 **Wave 1**
 
-- [x] 03-01-PLAN.md — Producer foundation: PtyManager per-session status machine + platform-aware graceful stop + identity-preserving restart + settle-delay startup injection + pty:status/listSessions; 12-key bridge contract; all Wave 0 RED scaffolds (TERM-05/06/07/08)
+- [x] 03-01-PLAN.md — Producer foundation: PtyManager per-session status machine + platform-aware graceful stop + identity-preserving restart + pty:status/listSessions; 12-key bridge contract; all Wave 0 RED scaffolds (TERM-06/07/08)
 
 **Wave 2** *(blocked on Wave 1)*
 
@@ -110,7 +110,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 3** *(blocked on Wave 2 — has checkpoint)*
 
-- [ ] 03-03-PLAN.md — Lifecycle slice: stop/restart controls + '— restarted HH:MM —' separator + startup-command path (E2E GREEN) + blocking human-verify fidelity checkpoint (TERM-05, TERM-07)
+- [ ] 03-03-PLAN.md — Lifecycle slice: stop/restart controls + '— restarted HH:MM —' separator + blocking human-verify fidelity checkpoint (TERM-07)
 
 ### Phase 4: Session Identity + Sidebar UI
 

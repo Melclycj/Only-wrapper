@@ -8,7 +8,7 @@
 
 Extend the single live terminal (Phase 2) to **multiple concurrent sessions** with a real lifecycle: many PTYs running independently in main, **instant non-destructive switching** with current scrollback, **stop/restart that preserves logical identity**, the **5-state status model**, and the **optional startup command**. Phase 3 also builds the **basic real sidebar** (DESIGN.md) needed to drive all this.
 
-**Requirements covered:** TERM-05 (startup command), TERM-06 (session stays alive on tab switch), TERM-07 (stop/restart preserving logicalId), TERM-08 (5-state status).
+**Requirements covered:** TERM-06 (session stays alive on tab switch), TERM-07 (stop/restart preserving logicalId), TERM-08 (5-state status).
 
 **Explicitly NOT in this phase (→ Phase 4):** the create/edit session FORM, name/icon customization (SESS-01..04), sidebar collapse (NAV-02), keyboard switch shortcuts (NAV-05). **→ Phase 5:** persistence (PERS-01/02). **→ later:** needs-attention heuristic (TERM-09), scrollback search (TERM-10), scrollback-size config (TERM-11), clear-terminal control (TERM-12 — note the *restart* control IS in this phase).
 
@@ -32,7 +32,7 @@ Extend the single live terminal (Phase 2) to **multiple concurrent sessions** wi
 - **D-04: Wire the 5-state `SessionStatus`** (defined in Phase 1, D-02): `not_started` → `running` (on PTY spawn) → `exited` (clean exit, code 0) | `error` (non-zero exit) | `stopped` (user-initiated stop). The badge updates on **every** transition (SC4), using DESIGN.md's status colors — running=blue, exited≈green/"Finished", stopped/not_started≈slate/"Idle"; derive a **red ramp for `error`** (no mockup state exists). Exit code distinguishes `exited` (0) vs `error` (non-zero).
 
 ### Startup Command
-- **D-05: Startup command runs as VISIBLE keystrokes once the shell is ready.** The optional `startupCommand` (TERM-05) executes by being **written into the PTY as if the user typed it + Enter** — transparent, lands in shell history, native feel — after the shell prompt is ready (shell-ready detection is research's job). Re-runs on restart (D-03).
+- **(REMOVED 2026-06-05 — TERM-05 descoped at the verify checkpoint: the settle-delay startup injection was unreliable on cold first spawn and judged low-value; the SessionRecord.startupCommand field persists for the Phase 4 form. Original decision below is historical.)** **D-05: Startup command runs as VISIBLE keystrokes once the shell is ready.** The optional `startupCommand` (TERM-05) executes by being **written into the PTY as if the user typed it + Enter** — transparent, lands in shell history, native feel — after the shell prompt is ready (shell-ready detection is research's job). Re-runs on restart (D-03).
 
 ### Claude's Discretion (guided by SCs + DESIGN.md + research)
 - Extend `PtyManager` from a single PTY to a `Map<LogicalId, PtySession>`; route each PTY's `onData`/`exit` to the correct renderer view; stop disposes the PTY but keeps the `SessionRecord`.
@@ -101,6 +101,7 @@ Routed to owning phases (not lost):
 - Create/edit session FORM, name/icon customization (SESS-01..04), sidebar collapse (NAV-02), keyboard switch shortcuts (NAV-05) → **Phase 4**.
 - Session metadata persistence + restore (PERS-01/02, NAV-04 order persistence) → **Phase 5**.
 - Needs-attention / "waiting for you" heuristic (TERM-09), scrollback search (TERM-10), scrollback-size setting (TERM-11), clear-terminal header control (TERM-12) → **later** (the *restart* control is in this phase via TERM-07).
+- Startup-command auto-run (TERM-05 / D-05) — descoped from Phase 3 at verify; revisit with the Phase 4 create/edit form.
 
 </deferred>
 
