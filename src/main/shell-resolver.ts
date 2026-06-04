@@ -3,8 +3,7 @@
 // it directly — the shell-resolver unit test runs standalone with no Electron
 // process (mirrors the window-config.ts convention; RESEARCH Pitfall 4 / D-07).
 //
-// SIGNATURE STUB ONLY — the real implementation lands in Plan 02-02.
-// resolveShell() currently throws so its Wave 0 unit test fails RED.
+// Real implementation (Plan 02-02): resolves the login shell for a PTY spawn.
 
 /** The resolved shell invocation: the shell binary and its launch arguments. */
 export interface ResolvedShell {
@@ -17,12 +16,22 @@ export interface ResolvedShell {
 /**
  * Resolve the shell to spawn for a PTY session.
  *
- * Contract (implemented in 02-02, see 02-RESEARCH Pattern 3 / D-01):
- *   - shell = process.env.SHELL when set, else /bin/zsh fallback
- *   - args  = ['-l'] (login flag; interactive comes free from the PTY TTY)
+ * Contract (02-RESEARCH Pattern 3 / D-01):
+ *   - shell = process.env.SHELL when set (non-empty), else /bin/zsh fallback
+ *   - args  = ['-l'] (login flag → sources .zprofile/.zlogin/.zshrc, so
+ *     Homebrew/nvm/asdf-installed `claude`/`codex` resolve on PATH — TERM-03).
+ *     Interactive comes free from the PTY's real TTY, so we do NOT add '-i'
+ *     (RESEARCH anti-pattern: '-i' can cause double-sourcing/job-control noise).
  *
- * @throws Always, until 02-02 provides the implementation.
+ * OS-agnostic: the Windows shell mapping (powershell.exe / wsl.exe and its
+ * non-POSIX login-flag semantics) is deferred to Phase 8. We intentionally do
+ * NOT hard-code a non-macOS path here so the macOS-first case stays correct;
+ * the $SHELL/zsh fallback is already platform-neutral for the current targets.
  */
 export function resolveShell(): ResolvedShell {
-  throw new Error('not implemented — 02-02');
+  // Fallback to /bin/zsh when SHELL is unset OR empty (D-01).
+  const shell = process.env.SHELL || '/bin/zsh';
+  // Login flag only — interactive is implied by the PTY TTY.
+  const args = ['-l'];
+  return { shell, args };
 }

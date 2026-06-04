@@ -1,13 +1,10 @@
-// Wave 0 failing stub — covers TERM-03 and TERM-04 (D-01).
-// This test INTENTIONALLY FAILS RED until Plan 02-02 implements resolveShell()
-// in src/main/shell-resolver.ts (currently a signature stub that throws).
+// Covers TERM-03 and TERM-04 (D-01). GREEN as of Plan 02-02
+// (src/main/shell-resolver.ts implements resolveShell).
 //
 // Contract under test (02-RESEARCH Pattern 3 / D-01):
 //   - args === ['-l']                       (login flag → Terminal.app-parity PATH)
 //   - shell === process.env.SHELL when set  (honor the user's shell)
 //   - shell === '/bin/zsh' when SHELL unset (macOS fallback)
-//
-// When Plan 02-02 turns these GREEN, delete this banner.
 
 import { describe, it, expect, afterEach } from 'vitest';
 import { resolveShell } from '../shell-resolver';

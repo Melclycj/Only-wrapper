@@ -1,7 +1,5 @@
-// Wave 0 failing stub — covers SC5 flow-control accounting (watermark).
-// This test INTENTIONALLY FAILS RED until Plan 02-02 creates
-// src/main/flow-control.ts (the module does not exist yet, so the import below
-// throws at load time and the whole suite is RED).
+// Covers SC5 flow-control accounting (watermark). GREEN as of Plan 02-02
+// (src/main/flow-control.ts implements createWatermark).
 //
 // Contract under test (02-RESEARCH Pattern 4 — canonical xterm.js watermark,
 // https://xtermjs.org/docs/guides/flowcontrol/):
@@ -13,8 +11,6 @@
 //     - total:       the current readable running byte total
 //
 // The "watermark" keyword in this comment also satisfies the must-have grep.
-//
-// When Plan 02-02 turns these GREEN, delete this banner.
 
 import { describe, it, expect } from 'vitest';
 import { createWatermark } from '../flow-control';
@@ -42,9 +38,12 @@ describe('watermark flow-control accounting (SC5, 02-RESEARCH Pattern 4)', () =>
     const wm = createWatermark(HIGH, LOW);
     wm.add(HIGH + 1);
     expect(wm.shouldPause()).toBe(true);
-    wm.drain(HIGH); // total now LOW+1 ... still not below LOW
+    // Drain back to LOW + 1 (still at/above LOW → not yet resumable).
+    // (HIGH + 1) - (HIGH - LOW) = LOW + 1
+    wm.drain(HIGH - LOW);
+    expect(wm.total).toBe(LOW + 1);
     expect(wm.shouldResume()).toBe(false);
-    wm.drain(2); // cross below LOW
+    wm.drain(2); // cross strictly below LOW
     expect(wm.total).toBeLessThan(LOW);
     expect(wm.shouldResume()).toBe(true);
   });
