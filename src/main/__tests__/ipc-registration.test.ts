@@ -48,8 +48,12 @@ vi.mock('node-pty', () => ({ spawn: vi.fn() }));
 import { PtyManager, PTY_CHANNELS } from '../pty-manager';
 
 // A minimal BrowserWindow stand-in — registerIpc only stores it as the send target.
+// isDestroyed() on window + webContents mirror a real BrowserWindow (PtyManager.send guard).
 function fakeWindow(): never {
-  return { webContents: { send: vi.fn() } } as never;
+  return {
+    isDestroyed: () => false,
+    webContents: { send: vi.fn(), isDestroyed: () => false },
+  } as never;
 }
 
 describe('PtyManager.registerIpc — idempotency (CR-01)', () => {

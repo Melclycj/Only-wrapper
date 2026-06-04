@@ -215,7 +215,7 @@ export class PtyManager {
     // Forward the UTF-8 string straight through — no binary re-encoding
     // (would risk splitting a multibyte char and corrupting CJK/emoji — SC4).
     child.onData((data) => {
-      this.win?.webContents.send(PTY_CHANNELS.data, { id, data });
+      this.send(PTY_CHANNELS.data, { id, data });
     });
 
     child.onExit(({ exitCode }) => {
@@ -241,7 +241,7 @@ export class PtyManager {
         s.record.ptyPid = undefined; // the OS process is gone
       }
       this.setStatus(id, status, { exitCode });
-      this.win?.webContents.send(PTY_CHANNELS.exit, { id, exitCode });
+      this.send(PTY_CHANNELS.exit, { id, exitCode });
     });
 
     // Inject the startup command once the shell settles (visible keystrokes — D-05).
@@ -265,7 +265,34 @@ export class PtyManager {
       s.status = status;
       s.record.status = status;
     }
-    this.win?.webContents.send(PTY_CHANNELS.status, { id, status, ...extra });
+    this.send(PTY_CHANNELS.status, { id, status, ...extra });
+  }
+
+  /**
+   * Safe send to the renderer — the ONLY path PTY events take to the window.
+   *
+   * On shutdown, `win.on('closed')` destroys the BrowserWindow, but node-pty may
+   * still flush a final buffered onData/onExit chunk synchronously as its child is
+   * killed (disposeAll). A bare `this.win?.webContents.send(...)` only guards null;
+   * a DESTROYED-but-non-null window throws `TypeError: Object has been destroyed`,
+   * repeating per buffered chunk (TERM-06/08 shutdown crash). Guard on BOTH the
+   * window and its webContents being destroyed before sending.
+   */
+  private send(channel: string, payload: unknown): void {
+    const w = this.win;
+    if (w && !w.isDestroyed() && !w.webContents.isDestroyed()) {
+      w.webContents.send(channel, payload);
+    }
+  }
+
+  /**
+   * Detach the renderer window target (set it to null) so any in-flight PTY flush
+   * during shutdown becomes a no-op. Called from `win.on('closed')` BEFORE
+   * disposeAll() so synchronous onData/onExit flushes from the kill never reach a
+   * destroyed window (belt-and-braces with the isDestroyed() guard in send()).
+   */
+  detachWindow(): void {
+    this.win = null;
   }
 
   /**

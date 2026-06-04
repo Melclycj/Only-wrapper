@@ -27,7 +27,10 @@ function createWindow(): void {
   ptyManager.registerIpc(win);
 
   // Orphan-safe cleanup: kill every PTY when this window closes (Pitfall 6, T-02-06).
+  // detachWindow() FIRST so node-pty's synchronous final onData/onExit flushes during
+  // disposeAll() never hit a destroyed BrowserWindow (TERM-06/08 shutdown crash guard).
   win.on('closed', () => {
+    ptyManager.detachWindow();
     ptyManager.disposeAll();
   });
 

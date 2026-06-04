@@ -94,8 +94,13 @@ vi.mock('../shell-resolver', () => ({
 
 import { PtyManager, type PtyCreateOptions } from '../pty-manager';
 
+// A real BrowserWindow always exposes isDestroyed() on both the window and its
+// webContents; the PtyManager.send() shutdown guard reads them, so the stub must too.
 function fakeWindow(): never {
-  return { webContents: { send: vi.fn() } } as never;
+  return {
+    isDestroyed: () => false,
+    webContents: { send: vi.fn(), isDestroyed: () => false },
+  } as never;
 }
 
 const ORIGINAL_PLATFORM = process.platform;
