@@ -95,3 +95,87 @@ export async function waitForText(substr: string, timeoutMs = 5000): Promise<boo
   );
   return true;
 }
+
+// ─── N-pane addressing (Phase 3 multi-session) ───────────────────────────────
+//
+// The single-pane helpers above remain the ACTIVE-pane fast path. The helpers
+// below address a SPECIFIC session by its LogicalId, keyed off the DOM that
+// plan 03-02 will produce:
+//   - each per-session container carries `data-session-id="<id>"`
+//     and wraps that session's own xterm (`.xterm-rows` inside it).
+//   - each sidebar row carries `data-session-id="<id>"`.
+//   - the add-session button carries `data-testid="add-session"`.
+//
+// These reference DOM that does NOT exist yet (03-02 scope) — the multi-session
+// E2E scaffolds that consume them are intentionally RED until then.
+
+/** Type `text` into the xterm of the session identified by `id`. */
+export async function sendKeysTo(id: string, text: string): Promise<void> {
+  // Focus the hidden helper-textarea INSIDE this session's container, then type.
+  await browser.execute((sid: string) => {
+    const pane = document.querySelector<HTMLElement>(
+      `[data-session-id="${sid}"]`,
+    );
+    const ta = pane?.querySelector<HTMLTextAreaElement>(
+      'textarea.xterm-helper-textarea',
+    );
+    ta?.focus();
+  }, id);
+  await browser.keys(text.split(''));
+}
+
+/**
+ * Read the rendered buffer text of the session identified by `id`.
+ * Joins that session container's `.xterm-rows` row textContent with newlines.
+ */
+export async function readBufferOf(id: string): Promise<string> {
+  return browser.execute((sid: string) => {
+    const pane = document.querySelector<HTMLElement>(
+      `[data-session-id="${sid}"]`,
+    );
+    const rowsEl = pane?.querySelector('.xterm-rows');
+    if (rowsEl) {
+      return Array.from(rowsEl.children)
+        .map((row) => (row as HTMLElement).textContent ?? '')
+        .join('\n');
+    }
+    return '';
+  }, id);
+}
+
+/** Poll readBufferOf(id) until `substr` appears or `timeoutMs` elapses. */
+export async function waitForTextIn(
+  id: string,
+  substr: string,
+  timeoutMs = 5000,
+): Promise<boolean> {
+  await browser.waitUntil(
+    async () => (await readBufferOf(id)).includes(substr),
+    {
+      timeout: timeoutMs,
+      interval: 100,
+      timeoutMsg: `Expected session ${id} buffer to contain "${substr}" within ${timeoutMs}ms`,
+    },
+  );
+  return true;
+}
+
+/** Click the "add session" button (creates a new session via the sidebar). */
+export async function clickAddSession(): Promise<void> {
+  await browser.execute(() => {
+    const btn = document.querySelector<HTMLElement>(
+      '[data-testid="add-session"]',
+    );
+    btn?.click();
+  });
+}
+
+/** Click the sidebar row for the session identified by `id` (switches active). */
+export async function clickSidebarRow(id: string): Promise<void> {
+  await browser.execute((sid: string) => {
+    const row = document.querySelector<HTMLElement>(
+      `[data-session-id="${sid}"]`,
+    );
+    row?.click();
+  }, id);
+}
