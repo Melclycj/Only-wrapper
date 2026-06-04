@@ -20,7 +20,6 @@ import type { IPty } from 'node-pty';
 import type { LogicalId } from '../shared/types';
 import { newLogicalId } from '../shared/id-factory';
 import { resolveShell } from './shell-resolver';
-import { createWatermark, type Watermark } from './flow-control';
 
 /** IPC channel names (payloads carry `id` so the design scales to N sessions). */
 export const PTY_CHANNELS = {
@@ -72,8 +71,6 @@ export interface PtyCreateResult {
 
 interface PtySession {
   pty: IPty;
-  /** Per-session backpressure accountant (SC5). */
-  watermark: Watermark;
 }
 
 /**
@@ -114,8 +111,11 @@ export class PtyManager {
     // separately for the SessionRecord.
     const ptyPid = child.pid;
 
-    const watermark = createWatermark(100000, 10000);
-    this.sessions.set(id, { pty: child, watermark });
+    // Flow control (SC5) is renderer-driven: the renderer counts bytes via the
+    // term.write() callback and calls ptyPause()/ptyResume() (02-RESEARCH §Flow
+    // Control, recommendation (a)). Main just spawns + pause()/resume()s the PTY;
+    // it keeps no watermark of its own (avoids the dead-accountant of WR-01).
+    this.sessions.set(id, { pty: child });
 
     // Lifecycle logging ONLY — never log raw PTY data (Security V7, T-02-05).
     console.log(`[pty] spawned ${shell} pid=${ptyPid} (session ${id})`);
