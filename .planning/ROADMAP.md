@@ -201,7 +201,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 |-------|----------------|--------|-----------|
 | 1. Project Scaffold + Dev Infrastructure | 3/3 | Complete    | 2026-06-03 |
 | 2. PTY Core + Terminal Fidelity | 4/4 | Complete    | 2026-06-04 |
-| 3. Multi-Session + Session Lifecycle | 3/3 | Complete   | 2026-06-04 |
+| 3. Multi-Session + Session Lifecycle | 3/3 | Complete    | 2026-06-04 |
 | 4. Session Identity + Sidebar UI | 0/TBD | Not started | - |
 | 5. Persistence + Shell Discovery | 0/TBD | Not started | - |
 | 6. Robustness + Flow-Control Polish | 0/TBD | Not started | - |

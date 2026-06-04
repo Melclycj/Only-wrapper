@@ -1,5 +1,5 @@
 ---
-status: partial
+status: complete
 phase: 03-multi-session-session-lifecycle
 source: [03-VERIFICATION.md]
 started: 2026-06-05
@@ -22,7 +22,7 @@ result: passed — confirmed by user at 03-03 checkpoint
 
 ### 3. Restart identity UX (SC3 / TERM-07 / IDENT-02)
 expected: Restart a non-running (exited/error) session → same name + icon, a visible `— restarted HH:MM —` separator above the kept scrollback, new ptyPid, same logical row
-result: pending
+result: passed — confirmed by user 2026-06-05
 
 ### 4. Destructive Close flow (D-03a)
 expected: Close opens the DESIGN.md confirm modal; Cancel/Esc/overlay preserves; Close kills the PTY + removes the row + reselects another session
@@ -43,9 +43,9 @@ result: passed — confirmed by user at 03-03 checkpoint (item A)
 ## Summary
 
 total: 7
-passed: 6
+passed: 7
 issues: 0
-pending: 1
+pending: 0
 skipped: 0
 blocked: 0
 

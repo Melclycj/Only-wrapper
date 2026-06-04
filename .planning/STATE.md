@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Completed 03-02-PLAN.md
-last_updated: "2026-06-04T11:59:15Z"
-last_activity: 2026-06-04 -- Completed 03-02 (multi-session renderer slice)
+status: paused
+stopped_at: 03-03 gap-closure complete (crash fix + D-03a Close redesign, 3 atomic commits); the 03-03 human-verify checkpoint is STILL OPEN — orchestrator re-runs it. No SUMMARY; plan not marked complete.
+last_updated: "2026-06-04T17:51:36.985Z"
+last_activity: 2026-06-04
 progress:
   total_phases: 8
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 10
-  completed_plans: 9
-  percent: 28
+  completed_plans: 10
+  percent: 38
 ---
 
 # Project State
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-06-03)
 
 ## Current Position
 
-Phase: 03 (multi-session-session-lifecycle) — EXECUTING
-Plan: 3 of 3
+Phase: 4
+Plan: Not started
 Status: 03-03 Task 1 + gap-closure complete — STILL AWAITING the 03-03 human-verify checkpoint (orchestrator re-runs it). Gap-closure (3 atomic commits) surfaced at the verify checkpoint: (1) shutdown-crash fix — guard PTY webContents.send against a destroyed window; (2) D-03a — new ptyClose bridge (13-key surface); (3) D-03a — stop→destructive Close behind a DESIGN.md confirm modal, keep-as-stopped Stop button removed (ptyStop API retained, not surfaced). No SUMMARY written; plan NOT marked complete.
-Last activity: 2026-06-04 -- 03-03 gap-closure committed (91c2ca7 shutdown fix, e27b947 ptyClose bridge, f6ccb77 Close+modal); full unit suite GREEN (54) incl. security.guard at 13 keys; package + smoke GREEN (keepalive + startup-command); checkpoint re-opened for human re-verify
+Last activity: 2026-06-04
 
 Progress: [██████░░░░] 67% (Phase 3 plans: 2/3)
 
@@ -36,7 +36,7 @@ Progress: [██████░░░░] 67% (Phase 3 plans: 2/3)
 
 **Velocity:**
 
-- Total plans completed: 7
+- Total plans completed: 10
 - Average duration: — min
 - Total execution time: 0 hours
 
@@ -46,6 +46,7 @@ Progress: [██████░░░░] 67% (Phase 3 plans: 2/3)
 |-------|-------|-------|----------|
 | 01 | 3 | - | - |
 | 02 | 4 | - | - |
+| 03 | 3 | - | - |
 
 **Recent Trend:**
 
