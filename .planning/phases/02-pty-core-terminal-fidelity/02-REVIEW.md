@@ -24,7 +24,14 @@ findings:
   warning: 6
   info: 4
   total: 12
-status: issues_found
+status: partially_remediated
+remediation:
+  fixed: [CR-01, CR-02, WR-01]
+  deferred: [WR-02, WR-03, WR-04, WR-05, WR-06, IN-01, IN-02, IN-03, IN-04]
+  commits:
+    CR-01: 75fdf85
+    CR-02: cf10dba
+    WR-01: 4f00a0b
 ---
 
 # Phase 2: Code Review Report
@@ -43,6 +50,8 @@ However, the review surfaces two BLOCKERs: (1) IPC handlers are registered per-w
 ## Critical Issues
 
 ### CR-01: IPC handlers registered per-window are never removed — macOS re-activate throws and stacks ghost listeners
+
+> **RESOLVED (commit `75fdf85`).** `registerIpc` now guards handler registration behind an `ipcRegistered` flag — handlers are wired once, `this.win` (the send target, read lazily so `pty:data`/`pty:exit` always reach the current window) is updated on every call. Added a symmetric `unregisterIpc()` called on `before-quit`. `src/main/__tests__/ipc-registration.test.ts` proves idempotency (create handler registered exactly once, no stacked `on` listeners, N create/destroy cycles never throw, clean re-register after teardown).
 
 **File:** `src/main/pty-manager.ts:189-214`, `src/main/index.ts:30-32,55-59`
 
@@ -75,6 +84,8 @@ unregisterIpc(): void {
 Alternatively call `ipcMain.removeHandler(PTY_CHANNELS.create)` + `removeAllListeners` for the four send channels at the top of `registerIpc`, and update `this.win` on every activate.
 
 ### CR-02: Flow-control resume is keyed off a post-mutation race — lost-resume / stuck-paused deadlock
+
+> **RESOLVED (commit `cf10dba`).** Replaced the ad-hoc counter with explicit edge-tracking: a `paused` boolean toggled ONLY on the transition — `ptyPause(id)` once when crossing above HIGH (and not already paused), `ptyResume(id)` once when draining below LOW (and currently paused). No resume spam, no lost resume, no stuck-paused deadlock. The accounting uses the shared `createWatermark` accountant (`src/shared/flow-control.ts`, electron/node-pty-free) — the same layer the unit tests now exercise (see WR-01). Edge behaviour is asserted by the new hysteresis case in `src/shared/__tests__/flow-control.test.ts`.
 
 **File:** `src/renderer/TerminalPane.tsx:159-167`
 
@@ -122,6 +133,8 @@ This guarantees resume is only sent when actually paused and the queue has drain
 ## Warnings
 
 ### WR-01: Main-side watermark accountant is dead code — false backpressure coverage
+
+> **RESOLVED (commit `4f00a0b`).** Reconciled to the renderer-driven model (02-RESEARCH §Flow Control recommendation (a)). The accountant moved to `src/shared/flow-control.ts` (electron/node-pty-free, ESLint-enforced) where `TerminalPane` actually imports and exercises every method (CR-02). Dropped the unused `PtySession.watermark` field and the per-session `createWatermark` instantiation from `pty-manager.ts`; deleted the old `src/main/flow-control.ts` + its test and relocated the unit test to `src/shared/__tests__/flow-control.test.ts` so it tests the layer that runs — now including the CR-02 pause-once/resume-once edge case. No test asserts dead code.
 
 **File:** `src/main/pty-manager.ts:115-116`, `src/main/flow-control.ts` (whole module)
 
@@ -209,6 +222,22 @@ Also guard `opts` being null before destructuring.
 **Issue:** `new WebglAddon()` and `term.loadAddon(webgl)` are guarded by try/catch for synchronous failure, and `onContextLoss` swaps to canvas later. That is reasonable, but `webgl.onContextLoss` is registered *before* `term.loadAddon(webgl)`; if `loadAddon` throws, `webgl` was already created and not disposed (minor leak of an unattached addon). Also if canvas `loadAddon` inside the catch throws, the comment claims DOM fallback but no explicit fallback call confirms xterm reverts. Mostly cosmetic.
 
 **Fix:** Move `onContextLoss` registration after a successful `loadAddon`, and `webgl.dispose()` in the catch before trying canvas.
+
+---
+
+## Remediation (2026-06-04)
+
+Both BLOCKERs and the coupled warning are fixed; the remaining warnings and all Info items are deferred.
+
+| Finding | Status | Commit |
+|---------|--------|--------|
+| CR-01 (IPC re-activate crash) | RESOLVED | `75fdf85` |
+| CR-02 (lost-resume deadlock) | RESOLVED | `cf10dba` |
+| WR-01 (dead main watermark) | RESOLVED | `4f00a0b` |
+| WR-02..WR-06 | DEFERRED (open) | — |
+| IN-01..IN-04 | DEFERRED (open) | — |
+
+**Verification:** `npx tsc --noEmit` → 0, `npm run lint` → 0, `npx vitest run` → 29/29 GREEN (flow-control unit test now exercises the real renderer-driven accountant, with an added pause-once/resume-once edge case + a new CR-01 IPC-idempotency suite). E2E smoke (`npm run test:smoke`) could not be executed in the CI/sandbox environment — chromedriver/Electron WebDriver session creation times out (`DevToolsActivePort file doesn't exist`, no display, no `--no-sandbox`); this is environmental and fails identically at session bootstrap for every spec before any test body runs. The packaged binary itself boots cleanly, and the CR-02 deadlock fix is covered at the unit level by the edge-tracking test.
 
 ---
 
