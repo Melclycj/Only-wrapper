@@ -46,28 +46,6 @@ export const PTY_CHANNELS = {
  */
 export const STOP_GRACE_MS = 800;
 
-/**
- * Settle-delay (ms of output quiet after the shell's MOST RECENT chunk) before the
- * startup command is injected as visible keystrokes (Pattern 6, D-05). Each new
- * output chunk re-arms it, so injection lands only after the shell goes quiet.
- * Tune 300–600 ms; a slower prompt machine may need a larger value.
- */
-export const STARTUP_SETTLE_MS = 400;
-
-/**
- * Minimum elapsed time since spawn before the startup command may be injected
- * (D-05 shell-ready hardening). A COLD login shell sources rc files in BURSTS with
- * >SETTLE-length gaps mid-init; a bare settle-delay can fire in one of those gaps —
- * BEFORE the interactive prompt is ready — and the keystrokes are silently eaten
- * (observed: works on warm restart, not on cold first spawn). This floor pushes the
- * earliest injection past the cold-init bursts AND guarantees a late-mounting
- * renderer pane (the no-form console seam mounts via the ~100 ms reconcile poll) is
- * already subscribed, so the echoed command + its output are never lost. RESEARCH
- * A1 flagged shell-ready detection as the one MEDIUM-confidence area; OSC-133 shell
- * integration is the documented future upgrade for a deterministic signal.
- */
-export const STARTUP_MIN_DELAY_MS = 750;
-
 /** Dimension clamp bounds — resize-bomb DoS guard (Security V5, T-02-03). */
 export const MIN_DIMENSION = 1;
 export const MAX_DIMENSION = 1000;
@@ -102,8 +80,6 @@ export interface PtyCreateOptions {
    * or undefined for a brand-new session — it never invents ids.
    */
   id?: LogicalId;
-  /** Visible startup command, injected as keystrokes once the shell settles (D-05). */
-  startupCommand?: string;
   /** Display name carried on the kept SessionRecord (defaults applied on first spawn). */
   name?: string;
   /** Display order carried on the kept SessionRecord. */
@@ -145,7 +121,6 @@ interface PtySession {
   pty: IPty;
   alive: boolean;
   status: SessionStatus;
-  startupCommand?: string;
   killTimer?: NodeJS.Timeout;
   userStopped: boolean;
   record: SessionRecord;
@@ -204,7 +179,6 @@ export class PtyManager {
       icon: prior?.icon ?? { type: 'emoji', value: '🖥️' },
       cwd, // the resolved cwd (so a restart respects the original directory)
       shell,
-      startupCommand: opts.startupCommand ?? prior?.startupCommand,
       status: 'running',
       order: opts.order ?? prior?.order ?? this.sessions.size,
       lastActive: Date.now(),
@@ -218,7 +192,6 @@ export class PtyManager {
       pty: child,
       alive: true,
       status: 'running',
-      startupCommand: record.startupCommand,
       userStopped: false,
       record,
     });
@@ -260,9 +233,6 @@ export class PtyManager {
       this.setStatus(id, status, { exitCode });
       this.send(PTY_CHANNELS.exit, { id, exitCode });
     });
-
-    // Inject the startup command once the shell settles (visible keystrokes — D-05).
-    this.scheduleStartupCommand(id, record.startupCommand);
 
     return { id, pid: ptyPid };
   }
@@ -313,43 +283,6 @@ export class PtyManager {
   }
 
   /**
-   * Settle-delay startup-command injection (Pattern 6, D-05). Each output chunk
-   * (re-)arms a timer; injection fires once the shell goes quiet for
-   * STARTUP_SETTLE_MS AND at least STARTUP_MIN_DELAY_MS has elapsed since spawn.
-   * The floor skips a cold login shell's mid-init quiet gaps (which otherwise eat
-   * the keystrokes before the prompt is ready — visible only on cold first spawn,
-   * not warm restart) and ensures the renderer pane has subscribed. Writes the
-   * command + Enter ONCE as visible keystrokes (echoes, lands in history, runs
-   * natively). Never logs the command text (may contain a token — Security V7, T-03-04).
-   */
-  private scheduleStartupCommand(id: LogicalId, cmd?: string): void {
-    if (!cmd) return;
-    const s = this.sessions.get(id);
-    if (!s) return;
-    const spawnedAt = Date.now();
-    let settle: NodeJS.Timeout | undefined;
-    const armed = { done: false };
-    const inject = (): void => {
-      if (armed.done) return;
-      armed.done = true;
-      // Re-fetch: the session may have exited during the settle window.
-      const live = this.sessions.get(id);
-      if (live?.alive) {
-        live.pty.write(cmd + '\r'); // visible keystrokes + Enter (D-05)
-        console.log(`[pty] startup command injected (session ${id})`); // NOT the text
-      }
-    };
-    s.pty.onData(() => {
-      if (armed.done) return;
-      if (settle) clearTimeout(settle);
-      // Earliest fire = max(last-output + SETTLE, spawn + MIN_DELAY floor).
-      const sinceSpawn = Date.now() - spawnedAt;
-      const wait = Math.max(STARTUP_SETTLE_MS, STARTUP_MIN_DELAY_MS - sinceSpawn);
-      settle = setTimeout(inject, wait);
-    });
-  }
-
-  /**
    * Stop a session gracefully. POSIX: SIGTERM → SIGKILL after STOP_GRACE_MS;
    * win32: a single bare kill() (ConPTY has NO signal model — kill('SIGTERM')
    * THROWS there, Pattern 4). The SessionRecord is KEPT (status → 'stopped' via
@@ -376,9 +309,9 @@ export class PtyManager {
 
   /**
    * Restart a session: stop the old PTY, await its exit, then create a NEW PTY
-   * under the SAME logicalId (IDENT-02 — same id, new ptyPid). Re-runs the kept
-   * record's startupCommand. Orchestrated in main so the Map invariant (one live
-   * pty per id) is enforced in one place (RESEARCH Open Q1). Unknown id → no-op.
+   * under the SAME logicalId (IDENT-02 — same id, new ptyPid). Orchestrated in main
+   * so the Map invariant (one live pty per id) is enforced in one place (RESEARCH
+   * Open Q1). Unknown id → no-op.
    */
   restart(id: LogicalId): Promise<PtyCreateResult> {
     const s = this.sessions.get(id);
@@ -395,7 +328,6 @@ export class PtyManager {
           rows: 24,
           cwd: record.cwd,
           id, // reuse the SAME logicalId (IDENT-02)
-          startupCommand: record.startupCommand,
           name: record.name,
           order: record.order,
         });

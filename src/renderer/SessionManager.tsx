@@ -31,9 +31,9 @@ import { addSession } from './session-add';
 import { closeSession } from './session-close';
 
 // How often the renderer reconciles its rendered session list against main's
-// authoritative listSessions() snapshot. Kept short so a session created OUTSIDE
-// onAdd (the direct-ptyCreate startup-command seam) gets a controlled pane before
-// its startup command injects (main does not replay output to late subscribers).
+// authoritative listSessions() snapshot. Main is the source of truth, so a session
+// created OUTSIDE onAdd (e.g. a future Phase-5 persisted-snapshot restore) gets a
+// controlled pane shortly after it appears in main's record store.
 const RECONCILE_MS = 100;
 
 export function SessionManager(): React.JSX.Element {
@@ -154,22 +154,14 @@ export function SessionManager(): React.JSX.Element {
 
   // ── Reconcile with main (source of truth — RESEARCH Open Q2 / Pitfall 5). ──
   // The renderer's onAdd is the normal spawn path, but a session can also be created
-  // OUTSIDE it — main owns the authoritative record store, and the startup-command
-  // E2E (TERM-05/D-05) calls `window.api.ptyCreate({ startupCommand })` DIRECTLY
-  // (the no-form Phase-3 seam), bypassing onAdd. Such a session lands in main's
-  // listSessions() but has no rendered SessionView. We mirror main here: poll
-  // listSessions() and merge any id we don't yet render, so the directly-created
-  // session gets a controlled pane (and the startup command becomes visible in it).
-  // Existing rows are NOT clobbered — live status comes from the onPtyStatus
-  // subscription; we only ADD ids we're missing (and adopt the first as active if
-  // we have none yet). Phase 5 replaces this poll with the persisted snapshot.
-  //
-  // Interval is tight (RECONCILE_MS) deliberately: main does NOT replay output to a
-  // late subscriber, so a directly-created session's controlled pane must mount —
-  // and bind onPtyData — BEFORE the startup command injects (≥ STARTUP_SETTLE_MS
-  // 300 ms after first output). A 100 ms poll mounts the pane well inside that
-  // window, so the injected command's echo + output (STARTUP_OK, D-05) land in the
-  // pane's buffer rather than being lost pre-subscription.
+  // OUTSIDE it — main owns the authoritative record store (e.g. a future Phase-5
+  // persisted-snapshot restore populates listSessions() without going through onAdd).
+  // Such a session lands in main's listSessions() but has no rendered SessionView. We
+  // mirror main here: poll listSessions() and merge any id we don't yet render, so the
+  // session gets a controlled pane. Existing rows are NOT clobbered — live status comes
+  // from the onPtyStatus subscription; we only ADD ids we're missing (and adopt the
+  // first as active if we have none yet). Phase 5 replaces this poll with the persisted
+  // snapshot.
   useEffect(() => {
     let cancelled = false;
     const reconcile = async (): Promise<void> => {

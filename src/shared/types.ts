@@ -81,7 +81,7 @@ export interface SessionRecord {
   /** Shell executable path (e.g. /bin/zsh, C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe) */
   shell: string;
 
-  /** Optional startup command run on session creation (e.g. "claude --rc") */
+  /** Stored startup command on the session profile (set by the Phase 4 create/edit form, persisted in Phase 5). NOT auto-run in v1 — TERM-05 auto-injection deferred. */
   startupCommand?: string;
 
   /** Current session lifecycle state (D-02) */

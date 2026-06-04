@@ -17,16 +17,14 @@ import type { LogicalId, SessionStatus, SessionRecord } from './types';
  *   - `id?` — when present, RESTART reuses this LogicalId (IDENT-02). When absent,
  *     main mints a fresh LogicalId. The renderer never invents an id; it passes the
  *     id of the session being restarted, or undefined for a brand-new session.
- *   - `startupCommand?` — written into the PTY as visible keystrokes once the shell
- *     settles (D-05, TERM-05). The renderer passes `cwd: undefined` for the default —
- *     MAIN resolves `os.homedir()`; the renderer never computes home.
+ *     The renderer passes `cwd: undefined` for the default — MAIN resolves
+ *     `os.homedir()`; the renderer never computes home.
  */
 export type PtyCreateOptions = {
   cols: number;
   rows: number;
   cwd?: string;
   id?: LogicalId;
-  startupCommand?: string;
 };
 
 /** Result of a successful spawn — stable logical id + the live OS PID (IDENT-02). */
@@ -95,7 +93,7 @@ export type ElectronAPI = {
    * row does NOT survive — it vanishes from listSessions() so reconcile won't re-add.
    */
   ptyClose: (id: LogicalId) => void;
-  /** Restart a session: SAME logicalId, NEW ptyPid; re-runs startupCommand. */
+  /** Restart a session: SAME logicalId, NEW ptyPid. */
   ptyRestart: (id: LogicalId) => Promise<PtyCreateResult>;
   /** Subscribe to status transitions for `id` (id-filtered); returns unsubscribe. */
   onPtyStatus: (id: LogicalId, cb: (p: PtyStatusPayload) => void) => () => void;
