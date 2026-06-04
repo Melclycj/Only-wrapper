@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 02-02-PLAN.md
-last_updated: "2026-06-04T16:10:00.000Z"
-last_activity: 2026-06-04 -- Completed Phase 02 Plan 02 (PtyManager + bridge)
+stopped_at: Completed 02-03-PLAN.md
+last_updated: "2026-06-04T16:25:00.000Z"
+last_activity: 2026-06-04 -- Completed Phase 02 Plan 03 (live PTY round-trip TerminalPane)
 progress:
   total_phases: 8
   completed_phases: 1
   total_plans: 7
-  completed_plans: 5
-  percent: 16
+  completed_plans: 6
+  percent: 19
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-06-03)
 ## Current Position
 
 Phase: 02 (pty-core-terminal-fidelity) — EXECUTING
-Plan: 3 of 4
-Status: 02-02 complete — main-process PTY producer ready; 02-03 (renderer) next
-Last activity: 2026-06-04 -- Completed Phase 02 Plan 02 (PtyManager + bridge)
+Plan: 4 of 4
+Status: 02-03 complete — live PTY round-trip works (round-trip + resize E2E smoke GREEN); 02-04 (flow control / throughput) next
+Last activity: 2026-06-04 -- Completed Phase 02 Plan 03 (live PTY round-trip TerminalPane)
 
-Progress: [█████░░░░░] 50%
+Progress: [███████░░░] 75%
 
 ## Performance Metrics
 
@@ -56,6 +56,7 @@ Progress: [█████░░░░░] 50%
 | Phase 01 P03 | ~25min | 3 tasks | 9 files |
 | Phase 02 P01 | 9min | 2 tasks | 11 files |
 | Phase 02 P02 | ~13min | 3 tasks | 11 files |
+| Phase 02 P03 | ~22min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -72,6 +73,9 @@ Recent decisions affecting current work:
 - [Phase 02-02]: Spawn $SHELL with login flag -l only (no -i) — PTY TTY makes the shell interactive automatically; avoids double-sourcing
 - [Phase 02-02]: All renderer-supplied IPC args validated in main before reaching node-pty (clampDimension 1-1000, unknown-id ignore, string type-guard)
 - [Phase 02-02]: Reviewed EXPECTED_API_KEYS expansion to 8 keys (getVersion + 7 PTY methods); security guard still asserts the exact surface
+- [Phase 02-03]: Renderer reaches the PTY ONLY via window.api; TerminalPane = xterm 5.5 (scrollback 10000, allowProposedApi, unicode11 v11, WebGL+canvas fallback, fit before ptyCreate, 100ms-debounced resize→ptyResize)
+- [Phase 02-03]: Forge+Vite packaging keeps node-pty through the plugin's node_modules pruning, unpacks its .node outside the ASAR, and skips the node-gyp rebuild (ship the N-API prebuild) — required for the packaged app to boot
+- [Phase 02-03]: E2E resize driven via BrowserWindow.setSize (browser.electron.execute); CDP window-rect command is unavailable under @wdio/electron-service
 
 ### Pending Todos
 
@@ -90,6 +94,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-04T16:10:00.000Z
-Stopped at: Completed 02-02-PLAN.md
+Last session: 2026-06-04T16:25:00.000Z
+Stopped at: Completed 02-03-PLAN.md
 Resume file: None
