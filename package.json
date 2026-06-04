@@ -14,7 +14,7 @@
     "test:unit": "vitest run",
     "test:smoke": "wdio run wdio.conf.ts",
     "test": "npm run test:unit && npm run test:smoke",
-    "postinstall": "electron-rebuild -f"
+    "postinstall": "node scripts/fix-node-pty.cjs"
   },
   "keywords": [],
   "author": "",
@@ -48,7 +48,14 @@
     "webdriverio": "^9.27.2"
   },
   "dependencies": {
+    "@xterm/addon-canvas": "0.7.0",
+    "@xterm/addon-fit": "0.10.0",
+    "@xterm/addon-unicode11": "0.8.0",
+    "@xterm/addon-web-links": "0.11.0",
+    "@xterm/addon-webgl": "0.18.0",
+    "@xterm/xterm": "5.5.0",
     "electron-squirrel-startup": "1.0.1",
+    "node-pty": "1.1.0",
     "react": "19.2.7",
     "react-dom": "19.2.7",
     "uuid": "14.0.0"

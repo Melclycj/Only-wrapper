@@ -67,6 +67,16 @@ export default tseslint.config(
     },
   },
 
-  // 4. Prettier last — must be trailing entry to override formatting rules
+  // 4. Node CJS build scripts (postinstall helpers) — must use require() and
+  // run under plain Node with no TS/ESM tooling. Exempt them from the
+  // ESM-only require ban; they are not application source.
+  {
+    files: ['scripts/**/*.cjs'],
+    rules: {
+      '@typescript-eslint/no-require-imports': 'off',
+    },
+  },
+
+  // 5. Prettier last — must be trailing entry to override formatting rules
   eslintConfigPrettier,
 );
