@@ -1,0 +1,32 @@
+/* Full-window terminal layout (02-03). The xterm pane fills the entire window;
+ * v1 has no sidebar/tabs chrome (Phase 4). Background uses DESIGN.md --term-bg
+ * (oklch(0.255 0.018 264) → #1e232c) so the gutter around the terminal matches
+ * the xterm theme before the first frame paints. */
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: #1e232c; /* --term-bg */
+  overflow: hidden;
+}
+
+/* The TerminalPane container — fills the window; xterm sizes itself to fit. */
+.terminal-pane {
+  width: 100%;
+  height: 100%;
+  background: #1e232c; /* --term-bg */
+}
+
+/* xterm fills its container; the fit addon computes cols/rows from this box. */
+.terminal-pane .xterm,
+.terminal-pane .xterm-viewport,
+.terminal-pane .xterm-screen {
+  width: 100%;
+  height: 100%;
+}

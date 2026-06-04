@@ -1,20 +1,10 @@
-import React, { useEffect, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import '../shared/api-types'; // Window.api augmentation
+import { TerminalPane } from './TerminalPane';
+import './terminal.css';
 
-function App() {
-  const [version, setVersion] = useState<string>('...');
-
-  useEffect(() => {
-    window.api.getVersion().then(setVersion);
-  }, []);
-
-  return (
-    <div style={{ fontFamily: 'monospace', padding: '2rem' }}>
-      <p>Just-Wrapper v{version}</p>
-    </div>
-  );
-}
-
+// v1 = a single full-window xterm terminal that auto-starts a live session on
+// mount (D-02). No sidebar/tabs chrome yet (Phase 4). TerminalPane owns the
+// whole PTY round-trip; this entry just mounts it into #root.
 const root = document.getElementById('root')!;
-ReactDOM.createRoot(root).render(<App />);
+ReactDOM.createRoot(root).render(<TerminalPane />);
