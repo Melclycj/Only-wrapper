@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-06-03)
 
 Phase: 03 (multi-session-session-lifecycle) — EXECUTING
 Plan: 3 of 3
-Status: 03-03 Task 1 complete (stop/restart controls + startup-command path wired, startup-command E2E GREEN) — AWAITING human-verify checkpoint (Task 2) before SUMMARY
-Last activity: 2026-06-04 -- 03-03 Task 1 committed (f3cd989); paused at the blocking human-verify checkpoint
+Status: 03-03 Task 1 + gap-closure complete — STILL AWAITING the 03-03 human-verify checkpoint (orchestrator re-runs it). Gap-closure (3 atomic commits) surfaced at the verify checkpoint: (1) shutdown-crash fix — guard PTY webContents.send against a destroyed window; (2) D-03a — new ptyClose bridge (13-key surface); (3) D-03a — stop→destructive Close behind a DESIGN.md confirm modal, keep-as-stopped Stop button removed (ptyStop API retained, not surfaced). No SUMMARY written; plan NOT marked complete.
+Last activity: 2026-06-04 -- 03-03 gap-closure committed (91c2ca7 shutdown fix, e27b947 ptyClose bridge, f6ccb77 Close+modal); full unit suite GREEN (54) incl. security.guard at 13 keys; package + smoke GREEN (keepalive + startup-command); checkpoint re-opened for human re-verify
 
 Progress: [██████░░░░] 67% (Phase 3 plans: 2/3)
 
@@ -90,6 +90,9 @@ Recent decisions affecting current work:
 - [Phase 03-02]: Hide panes via visibility:hidden / off-screen (NOT display:none — fit()/proposeDimensions() no-op on display:none); re-fit + ptyResize on activate
 - [Phase 03-02]: addSession spawn path lives in a pure React/xterm-free module (session-add.ts) so the no-double-spawn invariant unit-tests in the Node env without jsdom
 - [Phase 03-02]: E2E reads the active pane via window.__sessionTerms[id].buffer (WebGL/canvas active pane has no .xterm-rows); driver scopes pane reads to .session-view[...] / row clicks to .sidebar-row[...]
+- [Phase 03-03 D-03a]: stop → DESTRUCTIVE Close (kill PTY + remove SessionRecord) behind a DESIGN.md confirm modal; the keep-as-stopped Stop BUTTON is removed but PtyManager.stop + window.api.ptyStop are RETAINED ("keep the function, disable the button") and stay unit-tested
+- [Phase 03-03 D-03a]: ptyClose is the 13th bridge key (pty:close channel, mirrors ptyStop fire-and-forget); EXPECTED_API_KEYS + security.guard updated in lockstep to 13. Close removes the row so the reconcile poll (which only ADDS missing ids) never re-adds it
+- [Phase 03-03 gap-closure]: PtyManager.send() guards webContents.send with w.isDestroyed()/webContents.isDestroyed(); win.on('closed') calls detachWindow() before disposeAll() so node-pty's final shutdown flush never crashes a destroyed window (TERM-06/08)
 
 ### Pending Todos
 
@@ -108,6 +111,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-04T12:10Z
-Stopped at: 03-03 Task 1 complete; paused at the blocking human-verify checkpoint (Task 2) — awaiting "approved"
-Resume file: .planning/phases/03-multi-session-session-lifecycle/03-03-PLAN.md (resume at Task 2)
+Last session: 2026-06-04T15:20Z
+Stopped at: 03-03 gap-closure complete (crash fix + D-03a Close redesign, 3 atomic commits); the 03-03 human-verify checkpoint is STILL OPEN — orchestrator re-runs it. No SUMMARY; plan not marked complete.
+Resume file: .planning/phases/03-multi-session-session-lifecycle/03-03-PLAN.md (resume at the human-verify checkpoint)
