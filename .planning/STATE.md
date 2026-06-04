@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 02-03-PLAN.md
-last_updated: "2026-06-04T16:25:00.000Z"
-last_activity: 2026-06-04 -- Completed Phase 02 Plan 03 (live PTY round-trip TerminalPane)
+stopped_at: 02-04 code complete — PAUSED at checkpoint:human-verify (Task 3, blocking)
+last_updated: "2026-06-04T16:40:00.000Z"
+last_activity: 2026-06-04 -- 02-04 flow-control watermark + copy/paste committed; awaiting human fidelity verification
 progress:
   total_phases: 8
   completed_phases: 1
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-06-03)
 ## Current Position
 
 Phase: 02 (pty-core-terminal-fidelity) — EXECUTING
-Plan: 4 of 4
-Status: 02-03 complete — live PTY round-trip works (round-trip + resize E2E smoke GREEN); 02-04 (flow control / throughput) next
-Last activity: 2026-06-04 -- Completed Phase 02 Plan 03 (live PTY round-trip TerminalPane)
+Plan: 4 of 4 — code tasks complete, PAUSED at checkpoint:human-verify (blocking)
+Status: 02-04 Tasks 1-2 committed (047e0e9 flow-control watermark SC5, e7efe77 copy/paste + bracketed paste SC2/D-03). Automated pre-checks GREEN: tsc 0, lint 0, 24/24 unit, 4/4 E2E smoke (boot, roundtrip SC1/SC4, resize SC3, throughput SC5). Task 3 is a blocking human-verify gate — awaiting human approval of native fidelity (vim/python/ssh/htop/truecolor/CJK/paste). SUMMARY deferred until post-approval.
+Last activity: 2026-06-04 -- 02-04 flow-control + copy/paste committed; awaiting human fidelity verification
 
 Progress: [███████░░░] 75%
 
