@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: 02-04 complete — all Phase 2 plans done; pending phase-level verification
-last_updated: "2026-06-04T17:05:00.000Z"
-last_activity: 2026-06-04 -- 02-04 SUMMARY written; human-verify checkpoint approved; Phase 2 plans 4/4 complete
+status: verifying
+stopped_at: Completed 02-04-PLAN.md — all Phase 2 plans done, pending phase verification
+last_updated: "2026-06-04T07:55:34.958Z"
+last_activity: 2026-06-04
 progress:
   total_phases: 8
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 7
   completed_plans: 7
-  percent: 22
+  percent: 25
 ---
 
 # Project State
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-06-03)
 
 ## Current Position
 
-Phase: 02 (pty-core-terminal-fidelity) — plans complete, pending phase verification
-Plan: 4 of 4 — COMPLETE (all tasks done; human-verify checkpoint approved)
+Phase: 3
+Plan: Not started
 Status: 02-04 complete. Tasks 1-2 committed (047e0e9 flow-control watermark SC5, e7efe77 copy/paste + bracketed paste SC2/D-03); Task 3 human-verify checkpoint approved on automated evidence. SUMMARY written (f967e8c). Phase-2 SC1-SC5 all satisfied; TERM-01/02/03/04 complete across plans 02-01..02-04. Automated suite GREEN against the real packaged app (tsc 0, lint 0, 24/24 unit, 4/4 E2E). Next: phase-level verification, then Phase 3.
-Last activity: 2026-06-04 -- 02-04 SUMMARY written; checkpoint approved; Phase 2 plans 4/4 complete
+Last activity: 2026-06-04
 
 Progress: [██████████] 100% (Phase 2 plans)
 
@@ -36,7 +36,7 @@ Progress: [██████████] 100% (Phase 2 plans)
 
 **Velocity:**
 
-- Total plans completed: 3
+- Total plans completed: 7
 - Average duration: — min
 - Total execution time: 0 hours
 
@@ -45,6 +45,7 @@ Progress: [██████████] 100% (Phase 2 plans)
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01 | 3 | - | - |
+| 02 | 4 | - | - |
 
 **Recent Trend:**
 
