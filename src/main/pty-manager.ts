@@ -17,7 +17,7 @@ import os from 'node:os';
 import * as pty from 'node-pty';
 import { ipcMain, type BrowserWindow, type IpcMainEvent } from 'electron';
 import type { IPty } from 'node-pty';
-import type { LogicalId } from '../shared/types';
+import type { LogicalId, SessionStatus, SessionRecord } from '../shared/types';
 import { newLogicalId } from '../shared/id-factory';
 import { resolveShell } from './shell-resolver';
 
@@ -30,7 +30,26 @@ export const PTY_CHANNELS = {
   resume: 'pty:resume',
   data: 'pty:data',
   exit: 'pty:exit',
+  // 03-01 lifecycle channels (per-session status machine + stop/restart/list).
+  status: 'pty:status',
+  stop: 'pty:stop',
+  restart: 'pty:restart',
+  list: 'pty:list',
 } as const;
+
+/**
+ * Grace window between SIGTERM (ask politely) and SIGKILL (force) on POSIX stop.
+ * Short by design (tune 500–1500 ms). Windows ConPTY has no signal model, so the
+ * grace timer is POSIX-only — win32 uses a single unconditional kill() (Pattern 4).
+ */
+export const STOP_GRACE_MS = 800;
+
+/**
+ * Settle-delay (ms of output quiet after the shell's first chunk) before the
+ * startup command is injected as visible keystrokes (Pattern 6, D-05). Tune
+ * 250–400 ms; a slower prompt machine may need a larger value.
+ */
+export const STARTUP_SETTLE_MS = 300;
 
 /** Dimension clamp bounds — resize-bomb DoS guard (Security V5, T-02-03). */
 export const MIN_DIMENSION = 1;
@@ -60,6 +79,18 @@ export interface PtyCreateOptions {
   cols: number;
   rows: number;
   cwd?: string;
+  /**
+   * When present, RESTART reuses this LogicalId (IDENT-02). When absent, a fresh
+   * LogicalId is minted. The renderer passes the id of the session being restarted,
+   * or undefined for a brand-new session — it never invents ids.
+   */
+  id?: LogicalId;
+  /** Visible startup command, injected as keystrokes once the shell settles (D-05). */
+  startupCommand?: string;
+  /** Display name carried on the kept SessionRecord (defaults applied on first spawn). */
+  name?: string;
+  /** Display order carried on the kept SessionRecord. */
+  order?: number;
 }
 
 /** The result of a successful spawn: stable logical id + the live OS PID. */
@@ -69,8 +100,38 @@ export interface PtyCreateResult {
   pid: number;
 }
 
+/**
+ * Pure status-derivation helper (SC4, TERM-08, RESEARCH Pattern 3).
+ *
+ *   - `userStopped` → 'stopped'  (a user-initiated stop, regardless of exitCode —
+ *     a SIGKILL'd process reports a non-zero exitCode but the flag wins).
+ *   - `exitCode === 0` → 'exited'  (clean exit).
+ *   - otherwise → 'error'  (non-zero exit, not user-initiated).
+ *
+ * NEVER branches on `signal`: it is `undefined` on Windows and on clean exits, so
+ * routing status through it would mis-classify (Pattern 3, Anti-Patterns).
+ */
+export function deriveStatus(input: {
+  exitCode: number;
+  userStopped: boolean;
+}): SessionStatus {
+  if (input.userStopped) return 'stopped';
+  return input.exitCode === 0 ? 'exited' : 'error';
+}
+
+/**
+ * Per-session state. The full `SessionRecord` is retained so stop/exit keep the
+ * row restartable and `listSessions()` can return it. `pty` is the live handle;
+ * `alive` flips false on exit (the record stays, the handle is logically dropped).
+ */
 interface PtySession {
   pty: IPty;
+  alive: boolean;
+  status: SessionStatus;
+  startupCommand?: string;
+  killTimer?: NodeJS.Timeout;
+  userStopped: boolean;
+  record: SessionRecord;
 }
 
 /**
@@ -91,14 +152,19 @@ export class PtyManager {
    * cwd defaulting to the user's home (D-02). cols/rows are clamped (T-02-03).
    */
   create(opts: PtyCreateOptions): PtyCreateResult {
-    const id = newLogicalId();
+    // IDENT-02: restart passes the existing id (reuse); add passes none (mint).
+    const id = opts.id ?? newLogicalId();
     const { shell, args } = resolveShell();
+
+    // cwd default is resolved HERE, in main. The renderer never computes home —
+    // it passes `cwd: undefined` and main owns the os.homedir() fallback (D-02).
+    const cwd = opts.cwd && opts.cwd.length ? opts.cwd : os.homedir();
 
     const child = pty.spawn(shell, args, {
       name: 'xterm-256color', // sets $TERM inside the child (SC4)
       cols: clampDimension(opts.cols),
       rows: clampDimension(opts.rows),
-      cwd: opts.cwd ?? os.homedir(), // D-02 / TERM-04
+      cwd, // resolved in main — D-02 / TERM-04
       env: {
         ...process.env,
         TERM: 'xterm-256color',
@@ -111,14 +177,40 @@ export class PtyManager {
     // separately for the SessionRecord.
     const ptyPid = child.pid;
 
+    // On restart, reuse the kept record's display fields (name/icon/order/cwd/shell);
+    // on first spawn, build a fresh record with sensible defaults (refined in Phase 4).
+    const prior = this.sessions.get(id)?.record;
+    const record: SessionRecord = {
+      logicalId: id,
+      ptyPid,
+      name: opts.name ?? prior?.name ?? 'Session',
+      icon: prior?.icon ?? { type: 'emoji', value: '🖥️' },
+      cwd, // the resolved cwd (so a restart respects the original directory)
+      shell,
+      startupCommand: opts.startupCommand ?? prior?.startupCommand,
+      status: 'running',
+      order: opts.order ?? prior?.order ?? this.sessions.size,
+      lastActive: Date.now(),
+    };
+
     // Flow control (SC5) is renderer-driven: the renderer counts bytes via the
     // term.write() callback and calls ptyPause()/ptyResume() (02-RESEARCH §Flow
     // Control, recommendation (a)). Main just spawns + pause()/resume()s the PTY;
     // it keeps no watermark of its own (avoids the dead-accountant of WR-01).
-    this.sessions.set(id, { pty: child });
+    this.sessions.set(id, {
+      pty: child,
+      alive: true,
+      status: 'running',
+      startupCommand: record.startupCommand,
+      userStopped: false,
+      record,
+    });
 
     // Lifecycle logging ONLY — never log raw PTY data (Security V7, T-02-05).
     console.log(`[pty] spawned ${shell} pid=${ptyPid} (session ${id})`);
+
+    // Broadcast the spawn → 'running' transition for live status badges (SC4).
+    this.setStatus(id, 'running', { ptyPid });
 
     // Forward the UTF-8 string straight through — no binary re-encoding
     // (would risk splitting a multibyte char and corrupting CJK/emoji — SC4).
@@ -128,55 +220,201 @@ export class PtyManager {
 
     child.onExit(({ exitCode }) => {
       console.log(`[pty] exit code=${exitCode} (session ${id})`);
-      this.sessions.delete(id);
+      const s = this.sessions.get(id);
+      // Clear any in-flight SIGKILL grace timer — the child exited first, so the
+      // force-kill must never run (Pattern 3/4 grace-period race).
+      if (s?.killTimer) {
+        clearTimeout(s.killTimer);
+        s.killTimer = undefined;
+      }
+      // Derive status from exitCode + the userStopped flag — NEVER from signal.
+      const status = deriveStatus({
+        exitCode,
+        userStopped: s?.userStopped ?? false,
+      });
+      // KEEP the SessionRecord (status updated) so the row stays restartable and
+      // listSessions() still returns it; drop ONLY the live pty handle (Pitfall 5).
+      if (s) {
+        s.alive = false;
+        s.status = status;
+        s.record.status = status;
+        s.record.ptyPid = undefined; // the OS process is gone
+      }
+      this.setStatus(id, status, { exitCode });
       this.win?.webContents.send(PTY_CHANNELS.exit, { id, exitCode });
     });
+
+    // Inject the startup command once the shell settles (visible keystrokes — D-05).
+    this.scheduleStartupCommand(id, record.startupCommand);
 
     return { id, pid: ptyPid };
   }
 
-  /** Write keystroke bytes to a PTY. Unknown id OR non-string data → ignored. */
+  /**
+   * Update a session's status (in-memory + on its kept record) and broadcast a
+   * `pty:status` event to the current window for live badge updates (SC4, Pattern 5).
+   * Mirrors the onData send-target pattern (handlers read `this.win` lazily).
+   */
+  private setStatus(
+    id: LogicalId,
+    status: SessionStatus,
+    extra?: { ptyPid?: number; exitCode?: number },
+  ): void {
+    const s = this.sessions.get(id);
+    if (s) {
+      s.status = status;
+      s.record.status = status;
+    }
+    this.win?.webContents.send(PTY_CHANNELS.status, { id, status, ...extra });
+  }
+
+  /**
+   * Settle-delay startup-command injection (Pattern 6, D-05). After the shell's
+   * first output chunk, wait STARTUP_SETTLE_MS of quiet, then write the command +
+   * Enter ONCE as visible keystrokes (it echoes, lands in history, runs natively).
+   * Never logs the command text (may contain a token — Security V7, T-03-04).
+   */
+  private scheduleStartupCommand(id: LogicalId, cmd?: string): void {
+    if (!cmd) return;
+    const s = this.sessions.get(id);
+    if (!s) return;
+    let settle: NodeJS.Timeout | undefined;
+    const armed = { done: false };
+    s.pty.onData(() => {
+      if (armed.done) return;
+      if (settle) clearTimeout(settle);
+      settle = setTimeout(() => {
+        if (armed.done) return;
+        armed.done = true;
+        // Re-fetch: the session may have exited during the settle window.
+        const live = this.sessions.get(id);
+        if (live?.alive) {
+          live.pty.write(cmd + '\r'); // visible keystrokes + Enter (D-05)
+          console.log(`[pty] startup command injected (session ${id})`); // NOT the text
+        }
+      }, STARTUP_SETTLE_MS);
+    });
+  }
+
+  /**
+   * Stop a session gracefully. POSIX: SIGTERM → SIGKILL after STOP_GRACE_MS;
+   * win32: a single bare kill() (ConPTY has NO signal model — kill('SIGTERM')
+   * THROWS there, Pattern 4). The SessionRecord is KEPT (status → 'stopped' via
+   * the userStopped flag when onExit fires). Unknown/forged id → ignored (T-03-01).
+   */
+  stop(id: LogicalId): void {
+    const s = this.sessions.get(id);
+    if (!s || !s.alive) return; // unknown/forged id or already dead (T-03-01)
+    s.userStopped = true; // → exit maps to 'stopped' (deriveStatus)
+    if (process.platform === 'win32') {
+      s.pty.kill(); // ConPTY: unconditional terminate, NO signal arg
+      return;
+    }
+    s.pty.kill('SIGTERM'); // POSIX: ask politely
+    s.killTimer = setTimeout(() => {
+      try {
+        s.pty.kill('SIGKILL'); // force if it ignored SIGTERM
+      } catch {
+        // The handle may be dead between SIGTERM and the timer fire — node-pty
+        // throws on kill of a dead child; cleanup must not crash.
+      }
+    }, STOP_GRACE_MS);
+  }
+
+  /**
+   * Restart a session: stop the old PTY, await its exit, then create a NEW PTY
+   * under the SAME logicalId (IDENT-02 — same id, new ptyPid). Re-runs the kept
+   * record's startupCommand. Orchestrated in main so the Map invariant (one live
+   * pty per id) is enforced in one place (RESEARCH Open Q1). Unknown id → no-op.
+   */
+  restart(id: LogicalId): Promise<PtyCreateResult> {
+    const s = this.sessions.get(id);
+    if (!s) {
+      return Promise.reject(new Error(`restart: unknown session ${id}`)); // T-03-01
+    }
+    const record = s.record;
+    return new Promise<PtyCreateResult>((resolve) => {
+      const respawn = (): void => {
+        // SessionRecord carries no cols/rows — the renderer re-fits + ptyResize()s
+        // on attach (Pattern 8), so a sane default here is corrected immediately.
+        const result = this.create({
+          cols: 80,
+          rows: 24,
+          cwd: record.cwd,
+          id, // reuse the SAME logicalId (IDENT-02)
+          startupCommand: record.startupCommand,
+          name: record.name,
+          order: record.order,
+        });
+        resolve(result);
+      };
+      if (s.alive) {
+        // Wait for the old PTY to exit before re-spawning (no two live ptys/id).
+        s.pty.onExit(() => respawn());
+        this.stop(id);
+      } else {
+        // Already exited/stopped — re-spawn immediately under the same id.
+        respawn();
+      }
+    });
+  }
+
+  /**
+   * Snapshot of all current SessionRecords (incl. stopped/exited ones kept for
+   * restart). Main is the source of truth (RESEARCH Open Q2) — Phase 5 persists this.
+   */
+  listSessions(): SessionRecord[] {
+    return Array.from(this.sessions.values()).map((s) => s.record);
+  }
+
+  /** Write keystroke bytes to a PTY. Unknown/dead id OR non-string data → ignored. */
   write(id: LogicalId, data: unknown): void {
     if (!isStringData(data)) return; // type guard (T-02-02)
     const session = this.sessions.get(id);
-    if (!session) return; // unknown/forged id (T-02-04)
+    if (!session || !session.alive) return; // unknown/forged/dead id (T-02-04)
     session.pty.write(data);
   }
 
-  /** Resize a PTY. Unknown id → ignored; cols/rows clamped 1..1000 (T-02-03). */
+  /** Resize a PTY. Unknown/dead id → ignored; cols/rows clamped 1..1000 (T-02-03). */
   resize(id: LogicalId, cols: number, rows: number): void {
     const session = this.sessions.get(id);
-    if (!session) return; // unknown id (T-02-04)
+    if (!session || !session.alive) return; // unknown/dead id (T-02-04)
     session.pty.resize(clampDimension(cols), clampDimension(rows));
   }
 
-  /** Pause a PTY (backpressure). Unknown id → ignored. */
+  /** Pause a PTY (backpressure). Unknown/dead id → ignored. */
   pause(id: LogicalId): void {
     const session = this.sessions.get(id);
-    if (!session) return;
+    if (!session || !session.alive) return;
     session.pty.pause();
   }
 
-  /** Resume a paused PTY. Unknown id → ignored. */
+  /** Resume a paused PTY. Unknown/dead id → ignored. */
   resume(id: LogicalId): void {
     const session = this.sessions.get(id);
-    if (!session) return;
+    if (!session || !session.alive) return;
     session.pty.resume();
   }
 
-  /** Kill a single PTY and drop it from the live map. */
+  /** Kill a single PTY and drop it from the live map (hard removal). */
   kill(id: LogicalId): void {
     const session = this.sessions.get(id);
     if (!session) return;
-    session.pty.kill();
+    if (session.killTimer) clearTimeout(session.killTimer);
+    try {
+      session.pty.kill();
+    } catch {
+      // Already-dead children throw on kill; ignore.
+    }
     this.sessions.delete(id);
   }
 
-  /** Kill every live PTY — orphan-safe cleanup (Pitfall 6, T-02-06). */
+  /** Kill every live PTY + clear any grace timer — orphan-safe cleanup (Pitfall 6, T-02-06/T-03-05). */
   disposeAll(): void {
-    for (const { pty: child } of this.sessions.values()) {
+    for (const session of this.sessions.values()) {
+      if (session.killTimer) clearTimeout(session.killTimer); // T-03-05: no leaked grace timer
       try {
-        child.kill();
+        session.pty.kill();
       } catch {
         // Already-dead children throw on kill; cleanup must not crash quit.
       }
@@ -225,6 +463,19 @@ export class PtyManager {
     ipcMain.on(PTY_CHANNELS.resume, (_event: IpcMainEvent, id: LogicalId) =>
       this.resume(id),
     );
+
+    // 03-01 lifecycle channels — registered inside the idempotency guard (T-03-02).
+    // stop is fire-and-forget (.on); restart/list are request-response (.handle).
+    // Each id-taking handler validates via the sessions/record store (T-03-01).
+    ipcMain.on(PTY_CHANNELS.stop, (_event: IpcMainEvent, id: LogicalId) =>
+      this.stop(id),
+    );
+
+    ipcMain.handle(PTY_CHANNELS.restart, (_event, id: LogicalId) =>
+      this.restart(id),
+    );
+
+    ipcMain.handle(PTY_CHANNELS.list, () => this.listSessions());
   }
 
   /**
@@ -238,6 +489,10 @@ export class PtyManager {
     ipcMain.removeAllListeners(PTY_CHANNELS.resize);
     ipcMain.removeAllListeners(PTY_CHANNELS.pause);
     ipcMain.removeAllListeners(PTY_CHANNELS.resume);
+    // 03-01 lifecycle channels — symmetric teardown (T-03-02; keeps re-register clean).
+    ipcMain.removeAllListeners(PTY_CHANNELS.stop);
+    ipcMain.removeHandler(PTY_CHANNELS.restart);
+    ipcMain.removeHandler(PTY_CHANNELS.list);
     this.ipcRegistered = false;
     this.win = null;
   }
