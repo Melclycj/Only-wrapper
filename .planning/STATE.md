@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
+status: executing
 stopped_at: Phase 2 context gathered
-last_updated: "2026-06-04T04:28:44.920Z"
-last_activity: 2026-06-04 -- Phase 2 planning complete
+last_updated: "2026-06-04T06:00:24.551Z"
+last_activity: 2026-06-04 -- Phase 02 execution started
 progress:
   total_phases: 8
   completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
+  total_plans: 7
+  completed_plans: 4
   percent: 13
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-03)
 
 **Core value:** Real terminal fidelity — `claude --rc`, `codex`, `vim`, `ssh`, REPLs all behave exactly like a native terminal inside the wrapper.
-**Current focus:** Phase 01 — project-scaffold-dev-infrastructure
+**Current focus:** Phase 02 — pty-core-terminal-fidelity
 
 ## Current Position
 
-Phase: 2
-Plan: Not started
-Status: All Phase 1 plans executed (01-01, 01-02, 01-03); SC1/SC2/SC3/SC4 satisfied; awaiting phase-level verification
-Last activity: 2026-06-04 -- Phase 2 planning complete
+Phase: 02 (pty-core-terminal-fidelity) — EXECUTING
+Plan: 2 of 4
+Status: Ready to execute
+Last activity: 2026-06-04 -- Phase 02 execution started
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -54,6 +54,7 @@ Progress: [░░░░░░░░░░] 0%
 *Updated after each plan completion*
 | Phase 01 P02 | 175 | 2 tasks | 4 files |
 | Phase 01 P03 | ~25min | 3 tasks | 9 files |
+| Phase 02 P01 | 9min | 2 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -65,6 +66,8 @@ Recent decisions affecting current work:
 - Stack confirmed (roadmap): Electron + @xterm/xterm + node-pty + lowdb + Electron Forge
 - Packaging smoke-test embedded in Phase 2 success criteria (not a separate phase); full packaging is Phase 8
 - TERM-09 (waiting-for-input) assigned to Phase 6 as best-effort heuristic per research
+- [Phase ?]: node-pty 1.1.0 is N-API; ABI-stable prebuild loads under Electron 36.9.5 without from-source recompile
+- [Phase ?]: Pinned the 7 terminal-stack packages at exact versions (no caret) to prevent drift onto xterm-6 addons that removed addon-canvas
 
 ### Pending Todos
 
@@ -83,6 +86,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-03T15:29:18.649Z
+Last session: 2026-06-04T06:00:10.486Z
 Stopped at: Phase 2 context gathered
 Resume file: .planning/phases/02-pty-core-terminal-fidelity/02-CONTEXT.md

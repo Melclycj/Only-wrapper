@@ -64,12 +64,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. `echo $TERM` inside the session returns `xterm-256color`; truecolor output renders correctly; CJK characters and emoji occupy the correct cell widths (htop borders intact)
   5. `cat` of a large file (50 MB+) does not freeze the UI or drop output; keyboard input remains responsive during high-throughput output
 
-**Plans:** 4 plans
+**Plans:** 1/4 plans executed
 **UI hint:** yes
 
 **Wave 1**
 
-- [ ] 02-01-PLAN.md — Install/pin node-pty + @xterm 5.x stack; create all Wave 0 RED test stubs + WDIO xterm driver
+- [x] 02-01-PLAN.md — Install/pin node-pty + @xterm 5.x stack; create all Wave 0 RED test stubs + WDIO xterm driver
 
 **Wave 2** *(blocked on Wave 1)*
 
@@ -188,7 +188,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Project Scaffold + Dev Infrastructure | 3/3 | Complete    | 2026-06-03 |
-| 2. PTY Core + Terminal Fidelity | 0/4 | Not started | - |
+| 2. PTY Core + Terminal Fidelity | 1/4 | In Progress|  |
 | 3. Multi-Session + Session Lifecycle | 0/TBD | Not started | - |
 | 4. Session Identity + Sidebar UI | 0/TBD | Not started | - |
 | 5. Persistence + Shell Discovery | 0/TBD | Not started | - |

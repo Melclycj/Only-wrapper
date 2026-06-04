@@ -30,10 +30,10 @@ Requirements for the initial release. Derived from the user's FR-01–FR-21 spec
 
 ### Terminal Session
 
-- [ ] **TERM-01**: Session provides a real interactive terminal surface supporting keyboard input, stdout/stderr rendering, Ctrl+C, Ctrl+D, arrow keys, copy/paste, terminal resize, ANSI colors/control sequences, long-running processes, and interactive programs (FR-12)
-- [ ] **TERM-02**: Sessions run through a real PTY/pseudo-terminal layer (input → PTY → output → render), not one-shot run→capture→return command execution (FR-13)
-- [ ] **TERM-03**: User can open a normal shell session with no automatic startup command, then manually `cd` into any accessible folder and launch tools (e.g. `codex`, `claude --rc`) from the current working directory (FR-14)
-- [ ] **TERM-04**: Each session starts in its configured initial working directory (FR-15)
+- [x] **TERM-01**: Session provides a real interactive terminal surface supporting keyboard input, stdout/stderr rendering, Ctrl+C, Ctrl+D, arrow keys, copy/paste, terminal resize, ANSI colors/control sequences, long-running processes, and interactive programs (FR-12)
+- [x] **TERM-02**: Sessions run through a real PTY/pseudo-terminal layer (input → PTY → output → render), not one-shot run→capture→return command execution (FR-13)
+- [x] **TERM-03**: User can open a normal shell session with no automatic startup command, then manually `cd` into any accessible folder and launch tools (e.g. `codex`, `claude --rc`) from the current working directory (FR-14)
+- [x] **TERM-04**: Each session starts in its configured initial working directory (FR-15)
 - [ ] **TERM-05**: A session can optionally run a configured startup command after opening, separate from normal shell mode (FR-16)
 - [ ] **TERM-06**: A running session remains alive when the user switches to another tab; switching only changes the visible view (FR-17)
 - [ ] **TERM-07**: User can stop and restart a session; restart may create a new process ID but keeps the same logical session ID (FR-18)
@@ -113,10 +113,10 @@ Populated during roadmap creation. Each v1 requirement maps to exactly one phase
 | NAV-03 | Phase 4: Session Identity + Sidebar UI | Pending |
 | NAV-04 | Phase 5: Persistence + Shell Discovery | Pending |
 | NAV-05 | Phase 4: Session Identity + Sidebar UI | Pending |
-| TERM-01 | Phase 2: PTY Core + Terminal Fidelity | Pending |
-| TERM-02 | Phase 2: PTY Core + Terminal Fidelity | Pending |
-| TERM-03 | Phase 2: PTY Core + Terminal Fidelity | Pending |
-| TERM-04 | Phase 2: PTY Core + Terminal Fidelity | Pending |
+| TERM-01 | Phase 2: PTY Core + Terminal Fidelity | Complete |
+| TERM-02 | Phase 2: PTY Core + Terminal Fidelity | Complete |
+| TERM-03 | Phase 2: PTY Core + Terminal Fidelity | Complete |
+| TERM-04 | Phase 2: PTY Core + Terminal Fidelity | Complete |
 | TERM-05 | Phase 3: Multi-Session + Session Lifecycle | Pending |
 | TERM-06 | Phase 3: Multi-Session + Session Lifecycle | Pending |
 | TERM-07 | Phase 3: Multi-Session + Session Lifecycle | Pending |
