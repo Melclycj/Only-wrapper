@@ -98,6 +98,33 @@ export function TerminalPane(): React.JSX.Element {
     term.open(container);
     fit.fit();
 
+    // 3b. macOS copy/paste + bracketed paste (D-03, SC2, RESEARCH Pattern 6).
+    //   - Cmd+C copies the current selection (only when there is one).
+    //   - Cmd+V and right-click paste via term.paste(), which honors bracketed-
+    //     paste mode (DECSET 2004) so a multi-line paste does NOT auto-execute
+    //     until the user presses Enter (SC2). Raw text is never fed to onData.
+    //   - Returning true for everything else means Ctrl+C is NOT intercepted —
+    //     xterm forwards \x03 to the PTY as SIGINT (D-03: Cmd+C ≠ Ctrl+C).
+    //   - No copy-on-select handler (D-03).
+    term.attachCustomKeyEventHandler((e) => {
+      if (e.type !== 'keydown') return true;
+      if (e.metaKey && e.code === 'KeyC' && term.hasSelection()) {
+        void navigator.clipboard.writeText(term.getSelection());
+        return false;
+      }
+      if (e.metaKey && e.code === 'KeyV') {
+        void navigator.clipboard.readText().then((t) => term.paste(t));
+        return false;
+      }
+      return true;
+    });
+
+    const onContextMenu = (e: MouseEvent): void => {
+      e.preventDefault();
+      void navigator.clipboard.readText().then((t) => term.paste(t));
+    };
+    container.addEventListener('contextmenu', onContextMenu);
+
     // Expose the terminal for the E2E smoke driver's fallback read path
     // (xterm-driver.readBuffer window.__term). DOM rows are the primary path.
     (window as unknown as { __term?: Terminal }).__term = term;
@@ -169,6 +196,7 @@ export function TerminalPane(): React.JSX.Element {
       onDataDisp.dispose();
       resizeObserver.disconnect();
       window.removeEventListener('resize', onResize);
+      container.removeEventListener('contextmenu', onContextMenu);
       delete (window as unknown as { __term?: Terminal }).__term;
       term.dispose();
     };
