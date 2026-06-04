@@ -6,7 +6,10 @@ export default tseslint.config(
   // node_modules/.git by default, but NOT these generated dirs). Without this,
   // `npm run lint` fails on the minified .vite/out bundles after any build.
   {
-    ignores: ['.vite/**', 'out/**', 'dist/**', 'coverage/**'],
+    // `main.js`: a stray Vite lib-build artifact emitted at repo root when the
+    // main bundle is built outside Forge's configured outDir (minified — never
+    // hand-authored). Ignore it alongside the generated build dirs.
+    ignores: ['.vite/**', 'out/**', 'dist/**', 'coverage/**', 'main.js'],
   },
 
   // 1. Base TypeScript rules for ALL source (.ts and .tsx files)

@@ -17,13 +17,36 @@
 /** Type `text` into the focused xterm terminal (keystroke-by-keystroke). */
 export async function sendKeys(text: string): Promise<void> {
   // Focus xterm's hidden textarea so keystrokes route into the terminal, then
-  // type. browser.keys() dispatches real key events through the same path a
-  // user would, which is what the PTY round-trip must exercise.
-  const textarea = await browser.$('textarea.xterm-helper-textarea');
-  if (await textarea.isExisting()) {
-    await textarea.click();
-  }
+  // type. The textarea is intentionally rendered tiny + z-index:-5 (xterm hides
+  // it under the canvas), so WDIO's .click() interactability check rejects it.
+  // Focus it directly in-page instead (same effect, no interactability gate),
+  // then dispatch real key events via browser.keys() — the same path a user's
+  // keystrokes take through the PTY round-trip.
+  await browser.execute(() => {
+    const ta = document.querySelector<HTMLTextAreaElement>(
+      'textarea.xterm-helper-textarea',
+    );
+    ta?.focus();
+  });
   await browser.keys(text.split(''));
+}
+
+/**
+ * Resize the app's BrowserWindow to `width`×`height` via the Electron main
+ * process. The CDP `Browser.getWindowForTarget`/`setWindowBounds` path that
+ * backs browser.getWindowSize()/setWindowSize() is unavailable under the
+ * Electron service, so we drive the real BrowserWindow.setSize() instead — this
+ * still fires the OS resize → fit addon → pty.resize → SIGWINCH chain (SC3).
+ */
+export async function resizeWindow(width: number, height: number): Promise<void> {
+  await browser.electron.execute(
+    (electron, w, h) => {
+      const win = electron.BrowserWindow.getAllWindows()[0];
+      win?.setSize(w, h);
+    },
+    width,
+    height,
+  );
 }
 
 /**
