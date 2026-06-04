@@ -85,8 +85,16 @@ export type ElectronAPI = {
   /**
    * Stop a session (fire-and-forget). POSIX: SIGTERM→SIGKILL grace; win32: ConPTY
    * unconditional kill. KEEPS the SessionRecord (status → 'stopped') for restart.
+   * Retained per D-03a ("keep the function, disable the button") but no longer
+   * surfaced as a UI control — the destructive Close (ptyClose) replaced it.
    */
   ptyStop: (id: LogicalId) => void;
+  /**
+   * Destructively CLOSE a session (fire-and-forget, D-03a, the 13th key): main
+   * kills the PTY AND removes the SessionRecord (close+remove). Unlike ptyStop, the
+   * row does NOT survive — it vanishes from listSessions() so reconcile won't re-add.
+   */
+  ptyClose: (id: LogicalId) => void;
   /** Restart a session: SAME logicalId, NEW ptyPid; re-runs startupCommand. */
   ptyRestart: (id: LogicalId) => Promise<PtyCreateResult>;
   /** Subscribe to status transitions for `id` (id-filtered); returns unsubscribe. */

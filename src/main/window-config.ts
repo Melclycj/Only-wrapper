@@ -41,6 +41,12 @@ export function buildWebPreferences(preloadPath: string): WebPreferencesConfig {
  * NOTE: this plan (03-01) updates the EXPECTED contract + the type surface only; the
  * actual preload wiring lands in 03-02, at which point security.guard.test.ts goes
  * GREEN again (it asserts preload-keys === EXPECTED_API_KEYS exactly).
+ *
+ * Phase 3 (03-03 gap-closure) REVIEWED EXPANSION (D-03a): the destructive `ptyClose`
+ * method (kill PTY + remove the SessionRecord) joins the surface — a 13-key set. It
+ * mirrors ptyStop's fire-and-forget shape; the guard test enforces the EXACT 13-key
+ * set so no unreviewed key leaks. ptyStop is RETAINED ("keep the function, disable
+ * the button") so both remain in the contract.
  */
 export const EXPECTED_API_KEYS = [
   'getVersion',
@@ -52,6 +58,7 @@ export const EXPECTED_API_KEYS = [
   'onPtyData',
   'onPtyExit',
   'ptyStop',
+  'ptyClose',
   'ptyRestart',
   'onPtyStatus',
   'listSessions',

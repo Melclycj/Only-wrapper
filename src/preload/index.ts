@@ -83,6 +83,12 @@ const api: ElectronAPI = {
     ipcRenderer.send('pty:stop', id);
   },
 
+  // ptyClose mirrors ptyStop: fire-and-forget send (D-03a, 13th key). Main kills
+  // the PTY AND removes the SessionRecord (close+remove) — the row does not survive.
+  ptyClose: (id: LogicalId): void => {
+    ipcRenderer.send('pty:close', id);
+  },
+
   // ptyRestart mirrors ptyCreate: request-response invoke. Main orchestrates
   // stop→await-exit→create-with-same-id, returning the new {id, ptyPid} (same
   // logicalId, new ptyPid — IDENT-02).

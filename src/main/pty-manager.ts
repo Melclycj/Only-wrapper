@@ -35,6 +35,8 @@ export const PTY_CHANNELS = {
   stop: 'pty:stop',
   restart: 'pty:restart',
   list: 'pty:list',
+  // D-03a destructive close: kill the PTY AND remove the SessionRecord (close+remove).
+  close: 'pty:close',
 } as const;
 
 /**
@@ -423,10 +425,16 @@ export class PtyManager {
     session.pty.resume();
   }
 
-  /** Kill a single PTY and drop it from the live map (hard removal). */
-  kill(id: LogicalId): void {
+  /**
+   * Destructive CLOSE (D-03a): kill a single PTY AND drop its SessionRecord from
+   * the live map (close+remove primitive). Unlike stop() — which KEEPS the record
+   * as 'stopped' for restart — close() permanently removes the session so it
+   * vanishes from listSessions() and the renderer's reconcile poll never re-adds it.
+   * Unknown/forged id → no-op (T-03-01: validated against the sessions store).
+   */
+  close(id: LogicalId): void {
     const session = this.sessions.get(id);
-    if (!session) return;
+    if (!session) return; // unknown/forged id (T-03-01)
     if (session.killTimer) clearTimeout(session.killTimer);
     try {
       session.pty.kill();
@@ -503,6 +511,12 @@ export class PtyManager {
     );
 
     ipcMain.handle(PTY_CHANNELS.list, () => this.listSessions());
+
+    // D-03a destructive close — fire-and-forget (.on), inside the idempotency guard
+    // (T-03-02). close() validates id against the sessions store (unknown → no-op).
+    ipcMain.on(PTY_CHANNELS.close, (_event: IpcMainEvent, id: LogicalId) =>
+      this.close(id),
+    );
   }
 
   /**
@@ -520,6 +534,7 @@ export class PtyManager {
     ipcMain.removeAllListeners(PTY_CHANNELS.stop);
     ipcMain.removeHandler(PTY_CHANNELS.restart);
     ipcMain.removeHandler(PTY_CHANNELS.list);
+    ipcMain.removeAllListeners(PTY_CHANNELS.close); // D-03a destructive close (T-03-02)
     this.ipcRegistered = false;
     this.win = null;
   }
