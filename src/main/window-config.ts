@@ -33,6 +33,14 @@ export function buildWebPreferences(preloadPath: string): WebPreferencesConfig {
  * Phase-1 invariant, but the security guard test still enforces the EXACT new set —
  * so no UNREVIEWED key (e.g. raw ipcRenderer) can leak through. The locked
  * webPreferences (contextIsolation/sandbox/nodeIntegration) are NOT touched.
+ *
+ * Phase 3 (03-01) REVIEWED EXPANSION (threat_model T-03-06): the 4 lifecycle methods
+ * (ptyStop, ptyRestart, onPtyStatus, listSessions) join the surface — a 12-key set.
+ * The contextBridge is the dominant new threat surface this phase; the guard is the
+ * reviewed tripwire that fails if any unreviewed key (e.g. raw ipcRenderer) leaks.
+ * NOTE: this plan (03-01) updates the EXPECTED contract + the type surface only; the
+ * actual preload wiring lands in 03-02, at which point security.guard.test.ts goes
+ * GREEN again (it asserts preload-keys === EXPECTED_API_KEYS exactly).
  */
 export const EXPECTED_API_KEYS = [
   'getVersion',
@@ -43,4 +51,8 @@ export const EXPECTED_API_KEYS = [
   'ptyResume',
   'onPtyData',
   'onPtyExit',
+  'ptyStop',
+  'ptyRestart',
+  'onPtyStatus',
+  'listSessions',
 ] as const;

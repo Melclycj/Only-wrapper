@@ -12,7 +12,19 @@ import type { LogicalId } from '../shared/types';
 // 02-02 expansion: the 7 PTY methods join getVersion. The surface is mirrored in
 // EXPECTED_API_KEYS (window-config.ts) and asserted by security.guard.test.ts —
 // raw ipcRenderer is never exposed (only these narrow typed methods cross).
-const api: ElectronAPI = {
+//
+// 03-01 NOTE: the ElectronAPI contract gained 4 lifecycle methods (ptyStop,
+// ptyRestart, onPtyStatus, listSessions) this plan, but their PRELOAD WIRING is
+// 03-02 scope (03-02 Task 1). Until then this object exposes the Phase-2 subset,
+// so it is annotated `Omit<ElectronAPI, …the 4 new keys>` to stay tsc-clean
+// WITHOUT prematurely wiring (or fake-stubbing) the new methods. 03-02 restores
+// the full `ElectronAPI` annotation when it adds the real implementations — at
+// which point security.guard.test.ts (which asserts the exposed surface equals
+// the 12-key EXPECTED_API_KEYS) goes GREEN. It is intentionally RED in 03-01.
+const api: Omit<
+  ElectronAPI,
+  'ptyStop' | 'ptyRestart' | 'onPtyStatus' | 'listSessions'
+> = {
   getVersion: (): Promise<string> => ipcRenderer.invoke('api:get-version'),
 
   // ─── PTY surface (02-02) ────────────────────────────────────────────────────
