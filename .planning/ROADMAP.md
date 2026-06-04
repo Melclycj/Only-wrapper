@@ -97,12 +97,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. Each session shows one of five statuses — not started / running / stopped / exited / error — and the badge updates correctly on every state transition
   5. A session configured with an optional startup command executes that command automatically after the PTY spawns
 
-**Plans:** 3 plans
+**Plans:** 1/3 plans executed
 **UI hint:** yes
 
 **Wave 1**
 
-- [ ] 03-01-PLAN.md — Producer foundation: PtyManager per-session status machine + platform-aware graceful stop + identity-preserving restart + settle-delay startup injection + pty:status/listSessions; 12-key bridge contract; all Wave 0 RED scaffolds (TERM-05/06/07/08)
+- [x] 03-01-PLAN.md — Producer foundation: PtyManager per-session status machine + platform-aware graceful stop + identity-preserving restart + settle-delay startup injection + pty:status/listSessions; 12-key bridge contract; all Wave 0 RED scaffolds (TERM-05/06/07/08)
 
 **Wave 2** *(blocked on Wave 1)*
 
@@ -201,7 +201,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 |-------|----------------|--------|-----------|
 | 1. Project Scaffold + Dev Infrastructure | 3/3 | Complete    | 2026-06-03 |
 | 2. PTY Core + Terminal Fidelity | 4/4 | Complete    | 2026-06-04 |
-| 3. Multi-Session + Session Lifecycle | 0/3 | Planned     | - |
+| 3. Multi-Session + Session Lifecycle | 1/3 | In Progress|  |
 | 4. Session Identity + Sidebar UI | 0/TBD | Not started | - |
 | 5. Persistence + Shell Discovery | 0/TBD | Not started | - |
 | 6. Robustness + Flow-Control Polish | 0/TBD | Not started | - |

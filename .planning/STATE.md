@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
+status: executing
 stopped_at: Phase 3 context gathered
-last_updated: "2026-06-04T10:30:00.081Z"
-last_activity: 2026-06-04 -- Phase 03 planning complete
+last_updated: "2026-06-04T11:42:39.552Z"
+last_activity: 2026-06-04 -- Phase 03 execution started
 progress:
   total_phases: 8
   completed_phases: 2
-  total_plans: 7
-  completed_plans: 7
+  total_plans: 10
+  completed_plans: 8
   percent: 25
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-03)
 
 **Core value:** Real terminal fidelity — `claude --rc`, `codex`, `vim`, `ssh`, REPLs all behave exactly like a native terminal inside the wrapper.
-**Current focus:** Phase 02 — pty-core-terminal-fidelity
+**Current focus:** Phase 03 — multi-session-session-lifecycle
 
 ## Current Position
 
-Phase: 3
-Plan: Not started
-Status: 02-04 complete. Tasks 1-2 committed (047e0e9 flow-control watermark SC5, e7efe77 copy/paste + bracketed paste SC2/D-03); Task 3 human-verify checkpoint approved on automated evidence. SUMMARY written (f967e8c). Phase-2 SC1-SC5 all satisfied; TERM-01/02/03/04 complete across plans 02-01..02-04. Automated suite GREEN against the real packaged app (tsc 0, lint 0, 24/24 unit, 4/4 E2E). Next: phase-level verification, then Phase 3.
-Last activity: 2026-06-04 -- Phase 03 planning complete
+Phase: 03 (multi-session-session-lifecycle) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
+Last activity: 2026-06-04 -- Phase 03 execution started
 
 Progress: [██████████] 100% (Phase 2 plans)
 
@@ -59,6 +59,7 @@ Progress: [██████████] 100% (Phase 2 plans)
 | Phase 02 P02 | ~13min | 3 tasks | 11 files |
 | Phase 02 P03 | ~22min | 3 tasks | 9 files |
 | Phase 02 P04 | ~12min | 3 tasks | 1 file |
+| Phase 03 P01 | 56min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -80,6 +81,9 @@ Recent decisions affecting current work:
 - [Phase 02-03]: E2E resize driven via BrowserWindow.setSize (browser.electron.execute); CDP window-rect command is unavailable under @wdio/electron-service
 - [Phase 02-04]: Flow control via the renderer xterm watermark (term.write drain callback + ptyPause/ptyResume, FLOW_HIGH=100000/FLOW_LOW=10000), NOT node-pty XON/XOFF handleFlowControl — keeps a 50MB cat responsive and lossless (SC5)
 - [Phase 02-04]: macOS copy/paste — Cmd+C copies selection, Cmd+V/right-click paste always via term.paste() (bracketed paste, no multi-line auto-execute); Ctrl+C left as SIGINT; no copy-on-select (SC2, D-03)
+- [Phase ?]: 03-01: listSessions source of truth lives in MAIN (Phase 5 lowdb is a drop-in)
+- [Phase ?]: 03-01: restart orchestrated in main (stop then await exit then create-with-id); same logicalId, new ptyPid
+- [Phase ?]: 03-01: dead sessions kept in the Map with alive:false (record retained, pty handle dropped)
 
 ### Pending Todos
 
@@ -98,6 +102,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-04T09:10:17.431Z
+Last session: 2026-06-04T11:42:20.727Z
 Stopped at: Phase 3 context gathered
 Resume file: .planning/phases/03-multi-session-session-lifecycle/03-CONTEXT.md
