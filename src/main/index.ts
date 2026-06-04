@@ -2,17 +2,33 @@ import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
 import { buildWebPreferences } from './window-config';
+import { PtyManager } from './pty-manager';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
   app.quit();
 }
 
+// Single PtyManager owns all live PTY children (one this phase; N in Phase 3).
+// Instantiated at module scope so the before-quit hook can dispose it even if
+// the window is already gone.
+const ptyManager = new PtyManager();
+
 function createWindow(): void {
   const win = new BrowserWindow({
     width: 1200,
     height: 800,
     webPreferences: buildWebPreferences(path.join(__dirname, '../preload/index.js')),
+  });
+
+  // Wire the validated PTY IPC handlers to this window. The renderer (02-03)
+  // originates the actual ptyCreate() call when its TerminalPane mounts and
+  // auto-starts the single session (D-02) — here we just make the surface live.
+  ptyManager.registerIpc(win);
+
+  // Orphan-safe cleanup: kill every PTY when this window closes (Pitfall 6, T-02-06).
+  win.on('closed', () => {
+    ptyManager.disposeAll();
   });
 
   // Load renderer
@@ -40,4 +56,9 @@ app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) {
     createWindow();
   }
+});
+
+// Final backstop: ensure no PTY child outlives the app (Pitfall 6, T-02-06).
+app.on('before-quit', () => {
+  ptyManager.disposeAll();
 });
