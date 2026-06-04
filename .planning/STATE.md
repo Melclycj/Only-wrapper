@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-06-03)
 
 Phase: 03 (multi-session-session-lifecycle) — EXECUTING
 Plan: 3 of 3
-Status: 03-02 complete — multi-session renderer slice landed; ready for 03-03 (lifecycle controls)
-Last activity: 2026-06-04 -- Completed 03-02 (multi-session renderer slice)
+Status: 03-03 Task 1 complete (stop/restart controls + startup-command path wired, startup-command E2E GREEN) — AWAITING human-verify checkpoint (Task 2) before SUMMARY
+Last activity: 2026-06-04 -- 03-03 Task 1 committed (f3cd989); paused at the blocking human-verify checkpoint
 
 Progress: [██████░░░░] 67% (Phase 3 plans: 2/3)
 
@@ -108,6 +108,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-04T11:59:15Z
-Stopped at: Completed 03-02-PLAN.md (multi-session renderer slice)
-Resume file: None
+Last session: 2026-06-04T12:10Z
+Stopped at: 03-03 Task 1 complete; paused at the blocking human-verify checkpoint (Task 2) — awaiting "approved"
+Resume file: .planning/phases/03-multi-session-session-lifecycle/03-03-PLAN.md (resume at Task 2)
