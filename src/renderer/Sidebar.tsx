@@ -187,9 +187,27 @@ export function Sidebar({
                     onRestart(s.logicalId);
                   }}
                 >
-                  Restart
+                  <span aria-hidden="true">↻</span>
                 </button>
               )}
+              {/* Inline Edit pencil (D-04): the expanded-mode affordance for the edit
+                  form, calling the SAME existing onEdit prop the context menu and
+                  double-click use. Always rendered (like Close); hidden in the
+                  collapsed rail along with the rest of .row-controls. */}
+              <button
+                type="button"
+                className="row-control"
+                data-testid="edit-session"
+                data-action="edit"
+                title="Edit session"
+                aria-label={`Edit ${s.name}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(s.logicalId);
+                }}
+              >
+                <span aria-hidden="true">✎</span>
+              </button>
               {/* Destructive Close on EVERY row (D-03a): kill + remove, behind the
                   confirm modal. Replaces the old keep-as-stopped Stop button. */}
               <button
@@ -204,7 +222,7 @@ export function Sidebar({
                   onClose(s.logicalId);
                 }}
               >
-                Close
+                <span aria-hidden="true">✕</span>
               </button>
             </span>
             {/* Custom rail tooltip (D-11 / RESEARCH Pattern 6): shown on row
@@ -221,9 +239,10 @@ export function Sidebar({
         type="button"
         className="add-session"
         data-testid="add-session"
+        aria-label="Add session"
         onClick={onAdd}
       >
-        + Add session
+        <span>{collapsed ? '+' : '+ Add session'}</span>
       </button>
     </nav>
   );

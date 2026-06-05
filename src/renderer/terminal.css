@@ -132,15 +132,23 @@ body {
   opacity: 1;
 }
 
+/* Compact square monochrome icon buttons (Restart ↻ · Edit ✎ · Delete ✕): the glyph
+ * reads as an icon (transparent border, no chip), inheriting currentColor from the
+ * muted --ink-soft so the cluster stays calm until hovered. */
 .sidebar-row .row-control {
-  padding: 2px 8px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 7px;
-  border: 1px solid var(--line);
+  border: 1px solid transparent;
   background: transparent;
   color: var(--ink-soft);
   font-family: inherit;
-  font-size: 11px;
-  line-height: 1.4;
+  font-size: 14px;
+  line-height: 1;
   cursor: pointer;
 }
 
