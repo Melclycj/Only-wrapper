@@ -4,8 +4,8 @@ milestone: v1.0
 milestone_name: milestone
 status: paused
 stopped_at: Phase 4 context gathered
-last_updated: "2026-06-04T18:21:52.170Z"
-last_activity: 2026-06-04
+last_updated: "2026-06-05T02:01:35.975Z"
+last_activity: 2026-06-05 -- Phase 4 planning complete
 progress:
   total_phases: 8
   completed_phases: 3
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-06-03)
 Phase: 4
 Plan: Not started
 Status: 03-03 Task 1 + gap-closure complete — STILL AWAITING the 03-03 human-verify checkpoint (orchestrator re-runs it). Gap-closure (3 atomic commits) surfaced at the verify checkpoint: (1) shutdown-crash fix — guard PTY webContents.send against a destroyed window; (2) D-03a — new ptyClose bridge (13-key surface); (3) D-03a — stop→destructive Close behind a DESIGN.md confirm modal, keep-as-stopped Stop button removed (ptyStop API retained, not surfaced). No SUMMARY written; plan NOT marked complete.
-Last activity: 2026-06-04
+Last activity: 2026-06-05 -- Phase 4 planning complete
 
 Progress: [██████░░░░] 67% (Phase 3 plans: 2/3)
 
