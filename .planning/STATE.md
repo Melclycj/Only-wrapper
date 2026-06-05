@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04-03-PLAN.md
-last_updated: "2026-06-05T14:10:00Z"
-last_activity: 2026-06-05 -- Phase 04 Plan 03 (keyboard session-switch slice) complete
+stopped_at: Completed 04-04-PLAN.md
+last_updated: "2026-06-05T14:18:00Z"
+last_activity: 2026-06-05 -- Phase 04 Plan 04 (collapsible-sidebar slice) complete — Phase 4 Nyquist signed off
 progress:
   total_phases: 8
   completed_phases: 3
   total_plans: 14
-  completed_plans: 13
-  percent: 93
+  completed_plans: 14
+  percent: 100
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-06-03)
 
 ## Current Position
 
-Phase: 04 (Session Identity + Sidebar UI) — EXECUTING
+Phase: 04 (Session Identity + Sidebar UI) — ALL PLANS COMPLETE (awaiting phase verification)
 Plan: 4 of 4
-Status: Executing Phase 04
-Last activity: 2026-06-05 -- Phase 04 Plan 03 (keyboard session-switch slice) complete
+Status: Phase 04 plans complete — Nyquist signed off
+Last activity: 2026-06-05 -- Phase 04 Plan 04 (collapsible-sidebar slice) complete
 
-Progress: [███████████████░░░░░] 75% (Phase 4 plans: 3/4)
+Progress: [████████████████████] 100% (Phase 4 plans: 4/4)
 
 ## Performance Metrics
 
@@ -65,6 +65,7 @@ Progress: [███████████████░░░░░] 75% (Ph
 | Phase 04 P01 | ~7min | 3 tasks | 19 files |
 | Phase 04 P02 | ~10min | 3 tasks | 5 files |
 | Phase 04 P03 | ~6min | 2 tasks | 3 files |
+| Phase 04 P04 | ~5min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -104,6 +105,7 @@ Recent decisions affecting current work:
 - [Phase 04-02]: renderIcon is now a single exported source in Sidebar.tsx (IconPicker + IdentityHeader import it); the color branch renders a badge with COLOR_INITIAL (D-09). The edit modal is a controlled EDIT form (D-04, D-01 quick-add unchanged); name/icon apply live via setSessions (NO new logicalId — SESS-04) AND mirror to main via ptyUpdateProfile so a restart/reconcile rebuild does not revert (Pitfall 4); cwd/shell/startup persist under an "Applies on restart" hint
 - [Phase 04-03]: Keyboard switch chords are intercepted MAIN-side in createWindow via win.webContents.on('before-input-event') → matchSwitchKey → preventDefault() + send('session:switch') so the chord NEVER reaches xterm/PTY (D-13 app-wins, works in vim/tmux); NOT a Menu accelerator (Electron #19279) and NOT globalShortcut. SessionManager subscribes ONCE to onSwitchSession and applies resolveSwitch→setActiveId reading the live list via a sessionsRef (no per-render re-bind; mirrors onPtyStatus cleanup); switch reuses the click/TERM-06 non-destructive path
 - [Phase 04-03 A1 RESOLVED]: matchSwitchKey needed NO change. Empirical Electron Input strings confirmed via the live interceptor: Cmd/Ctrl+2 → key '2'/code 'Digit2'; Cmd/Ctrl+Shift+] → key '}'/code 'BracketRight' (Shift mutates the LOGICAL key ] → }, so the code-fallback is what matches — vindicating the Plan-01 key-OR-code defensive matcher). E2E finding: WDIO CDP browser.keys does NOT reach before-input-event (zero events captured); pressSwitchChord now drives the native path via webContents.sendInputEvent — keyboard-switch.smoke.test.ts GREEN
+- [Phase 04-04]: Sidebar collapse is a pinned chevron (data-testid=sidebar-collapse, aria-pressed) folding .sidebar to a ~52px icon-only rail via a .collapsed class; collapsed mode hides .row-name/.status-badge/.row-controls and reveals a per-row .collapsed-status-dot (shares the status-dot class so STATUS_STYLE.accent stays legible — NAV-01) + a custom .rail-tooltip (name + status, preferred over native title= per D-11). onContextMenu stays at the .sidebar-row level so the right-click menu is the collapsed control surface (Pitfall 5); .session-view/.viewport-stack visibility is untouched (keep-alive intact). collapsed state is component-local in SessionManager (persistence is Phase 5 — D-11). All three Phase-4 E2E smoke tests GREEN → 04-VALIDATION.md nyquist_compliant: true; NAV-01/NAV-02/SESS-03 satisfied
 - [Phase 04-02]: Rule-1 fix — SessionEditModal reads its text fields from refs at save time; React 19's controlled-input value-tracker suppresses onChange when a fill sets `input.value` directly then dispatches 'input' (the E2E contract), so reading the live DOM at save makes the form robust to both real typing and automated fills. session-edit.smoke.test.ts is GREEN (live rename, same logicalId); keyboard-switch/sidebar-collapse stubs stay RED for Plans 03/04
 
 ### Pending Todos
@@ -123,6 +125,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-05T14:10:00Z
-Stopped at: Completed 04-03-PLAN.md
+Last session: 2026-06-05T14:18:00Z
+Stopped at: Completed 04-04-PLAN.md
 Resume file: None

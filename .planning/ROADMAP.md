@@ -143,7 +143,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 4** *(blocked on Wave 3)*
 
-- [ ] 04-04-PLAN.md — Collapsible-sidebar slice: chevron toggle + icon-only rail + status dot + tooltip + Nyquist sign-off (NAV-01/02, SESS-03)
+- [x] 04-04-PLAN.md — Collapsible-sidebar slice: chevron toggle + icon-only rail + status dot + tooltip + Nyquist sign-off (NAV-01/02, SESS-03)
 
 ### Phase 5: Persistence + Shell Discovery
 
