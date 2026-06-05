@@ -47,6 +47,17 @@ export function buildWebPreferences(preloadPath: string): WebPreferencesConfig {
  * mirrors ptyStop's fire-and-forget shape; the guard test enforces the EXACT 13-key
  * set so no unreviewed key leaks. ptyStop is RETAINED ("keep the function, disable
  * the button") so both remain in the contract.
+ *
+ * Phase 4 (04-01) REVIEWED EXPANSION (threat_model T-04-03): two identity methods
+ * join the surface — a 15-key set:
+ *   - `ptyUpdateProfile` (fire-and-forget, mirrors ptyClose): persists edited
+ *     name/icon/cwd/shell/startupCommand into main's record (id-validated +
+ *     type-guarded main-side, T-04-01/02; startupCommand stored-only, T-04-04).
+ *   - `onSwitchSession` (subscribe, mirrors onPtyStatus): a read-only inbound
+ *     main→renderer switch-intent event from before-input-event (NAV-05, D-13).
+ * The lockstep (api-types + this array + preload + pty-manager channel triple) is
+ * done in ONE atomic task; the guard asserts the EXACT 15-key set so no unreviewed
+ * key (e.g. raw ipcRenderer) can leak (T-04-03).
  */
 export const EXPECTED_API_KEYS = [
   'getVersion',
@@ -62,4 +73,6 @@ export const EXPECTED_API_KEYS = [
   'ptyRestart',
   'onPtyStatus',
   'listSessions',
+  'ptyUpdateProfile',
+  'onSwitchSession',
 ] as const;

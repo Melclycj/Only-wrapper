@@ -6,7 +6,15 @@
 // footprint, so importing it here keeps api-types renderer-safe (ESLint enforces
 // no electron/node import in shared/).
 
-import type { LogicalId, SessionStatus, SessionRecord } from './types';
+import type {
+  LogicalId,
+  SessionStatus,
+  SessionRecord,
+  SessionIconSpec,
+} from './types';
+// type-only: SwitchIntent is a plain discriminated union (no runtime electron) so
+// importing it from the main-side pure matcher keeps api-types renderer-safe (04-01).
+import type { SwitchIntent } from '../main/switch-keys';
 
 // ─── PTY payload types (02-02) ───────────────────────────────────────────────
 
@@ -99,6 +107,32 @@ export type ElectronAPI = {
   onPtyStatus: (id: LogicalId, cb: (p: PtyStatusPayload) => void) => () => void;
   /** Snapshot of current sessions (initial render / after add) — main is source of truth. */
   listSessions: () => Promise<SessionRecord[]>;
+
+  // ─── Identity surface (04-01) — 2 new keys mirrored in EXPECTED_API_KEYS ─────
+
+  /**
+   * Persist edited profile fields into main's record (fire-and-forget, mirrors
+   * ptyClose, the 14th key). name/icon are mirrored so a restart (which rebuilds
+   * the record from main's fields) does not revert a live edit; cwd/shell/
+   * startupCommand take effect on the NEXT restart. startupCommand is STORED ONLY
+   * — main never writes it to a PTY (TERM-05 auto-run deferred).
+   */
+  ptyUpdateProfile: (
+    id: LogicalId,
+    fields: {
+      name?: string;
+      icon?: SessionIconSpec;
+      cwd?: string;
+      shell?: string;
+      startupCommand?: string;
+    },
+  ) => void;
+  /**
+   * Subscribe to app-level switch intents pushed from main's before-input-event
+   * (the 15th key, mirrors onPtyStatus's subscribe-returns-unsubscribe shape).
+   * Returns an unsubscribe fn. main → renderer, read-only inbound event.
+   */
+  onSwitchSession: (cb: (intent: SwitchIntent) => void) => () => void;
 };
 
 // Window augmentation — import this in renderer entry point

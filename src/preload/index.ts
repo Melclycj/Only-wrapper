@@ -5,7 +5,12 @@ import type {
   PtyCreateResult,
   PtyStatusPayload,
 } from '../shared/api-types';
-import type { LogicalId, SessionRecord } from '../shared/types';
+import type {
+  LogicalId,
+  SessionRecord,
+  SessionIconSpec,
+} from '../shared/types';
+import type { SwitchIntent } from '../main/switch-keys';
 
 // The ONLY renderer↔main bridge (SC3, D-06, T-1-04)
 // Renderer accesses main process ONLY via window.api — never raw ipcRenderer
@@ -113,6 +118,35 @@ const api: ElectronAPI = {
     };
     ipcRenderer.on('pty:status', listener);
     return () => ipcRenderer.removeListener('pty:status', listener);
+  },
+
+  // ─── Identity surface (04-01) ────────────────────────────────────────────────
+
+  // ptyUpdateProfile mirrors ptyClose: fire-and-forget send (the 14th key). Main
+  // id-validates + type-guards each field before writing to the record; the
+  // renderer never reaches the record store except through this narrow method.
+  ptyUpdateProfile: (
+    id: LogicalId,
+    fields: {
+      name?: string;
+      icon?: SessionIconSpec;
+      cwd?: string;
+      shell?: string;
+      startupCommand?: string;
+    },
+  ): void => {
+    ipcRenderer.send('pty:update-profile', id, fields);
+  },
+
+  // onSwitchSession is a VERBATIM structural copy of onPtyStatus (the 15th key):
+  // subscribe to the main→renderer 'session:switch' event, returning an unsubscribe
+  // fn. No id filter — switch intents are app-level (the active session changes).
+  onSwitchSession: (cb: (intent: SwitchIntent) => void): (() => void) => {
+    const listener = (_event: IpcRendererEvent, intent: SwitchIntent): void => {
+      cb(intent);
+    };
+    ipcRenderer.on('session:switch', listener);
+    return () => ipcRenderer.removeListener('session:switch', listener);
   },
 };
 

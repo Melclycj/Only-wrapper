@@ -17,7 +17,12 @@ import os from 'node:os';
 import * as pty from 'node-pty';
 import { ipcMain, type BrowserWindow, type IpcMainEvent } from 'electron';
 import type { IPty } from 'node-pty';
-import type { LogicalId, SessionStatus, SessionRecord } from '../shared/types';
+import type {
+  LogicalId,
+  SessionStatus,
+  SessionRecord,
+  SessionIconSpec,
+} from '../shared/types';
 import { newLogicalId } from '../shared/id-factory';
 import { resolveShell } from './shell-resolver';
 
@@ -37,6 +42,9 @@ export const PTY_CHANNELS = {
   list: 'pty:list',
   // D-03a destructive close: kill the PTY AND remove the SessionRecord (close+remove).
   close: 'pty:close',
+  // 04-01 identity: persist edited profile fields onto the kept record (no-op on
+  // unknown id; type-guarded; startupCommand stored-only — TERM-05 deferred).
+  updateProfile: 'pty:update-profile',
 } as const;
 
 /**
@@ -146,7 +154,16 @@ export class PtyManager {
   create(opts: PtyCreateOptions): PtyCreateResult {
     // IDENT-02: restart passes the existing id (reuse); add passes none (mint).
     const id = opts.id ?? newLogicalId();
-    const { shell, args } = resolveShell();
+
+    // A2 (04-01, Pitfall 3): prefer an EDITED shell stored on the kept record when
+    // non-empty, else fall back to resolveShell()'s platform default. The edited
+    // shell launches with no extra args (the user supplied a full invocation path);
+    // resolveShell() supplies its own login args ('-l') in the fallback path.
+    const prior = this.sessions.get(id)?.record;
+    const { shell, args } =
+      prior?.shell && prior.shell.length
+        ? { shell: prior.shell, args: [] as string[] }
+        : resolveShell();
 
     // cwd default is resolved HERE, in main. The renderer never computes home —
     // it passes `cwd: undefined` and main owns the os.homedir() fallback (D-02).
@@ -169,16 +186,18 @@ export class PtyManager {
     // separately for the SessionRecord.
     const ptyPid = child.pid;
 
-    // On restart, reuse the kept record's display fields (name/icon/order/cwd/shell);
-    // on first spawn, build a fresh record with sensible defaults (refined in Phase 4).
-    const prior = this.sessions.get(id)?.record;
+    // On restart, reuse the kept record's display fields (name/icon/order/cwd/shell/
+    // startupCommand); on first spawn, build a fresh record with sensible defaults.
+    // `prior` was read above (A2 shell-honor). startupCommand is carried through but
+    // NEVER written to the PTY — TERM-05 auto-run stays deferred.
     const record: SessionRecord = {
       logicalId: id,
       ptyPid,
       name: opts.name ?? prior?.name ?? 'Session',
       icon: prior?.icon ?? { type: 'emoji', value: '🖥️' },
       cwd, // the resolved cwd (so a restart respects the original directory)
-      shell,
+      shell, // the edited shell (A2) or the resolveShell() default
+      startupCommand: prior?.startupCommand, // stored-only carry-through (TERM-05 deferred)
       status: 'running',
       order: opts.order ?? prior?.order ?? this.sessions.size,
       lastActive: Date.now(),
@@ -400,6 +419,44 @@ export class PtyManager {
     this.sessions.delete(id);
   }
 
+  /**
+   * Persist edited profile fields onto a session's kept record (04-01, D-02, SESS-01).
+   *
+   * id-validated + type-guarded mutation (mirrors close()'s unknown-id no-op and
+   * isStringData's type guard):
+   *   - unknown/forged id → no-op (T-04-01).
+   *   - each of name/cwd/shell/startupCommand is written ONLY when `typeof === 'string'`
+   *     (T-04-02 — a forged renderer payload with non-string fields is ignored).
+   *   - icon is assigned when present (the renderer always sends a well-formed
+   *     SessionIconSpec from the pure icon-spec builders).
+   *
+   * cwd/shell/startupCommand take effect on the NEXT restart (create() reads the
+   * stored shell via the A2 guard, and respawns from record.cwd). name/icon are
+   * mirrored here so a restart — which rebuilds the record from these fields — does
+   * not revert a live edit (Pitfall 4). startupCommand is STORED ONLY: no code path
+   * writes it to a PTY this phase (TERM-05 auto-run deferred, T-04-04).
+   */
+  updateProfile(
+    id: LogicalId,
+    fields: {
+      name?: string;
+      icon?: SessionIconSpec;
+      cwd?: string;
+      shell?: string;
+      startupCommand?: string;
+    },
+  ): void {
+    const s = this.sessions.get(id);
+    if (!s) return; // unknown/forged id → no-op (T-04-01)
+    if (typeof fields.name === 'string') s.record.name = fields.name;
+    if (typeof fields.cwd === 'string') s.record.cwd = fields.cwd;
+    if (typeof fields.shell === 'string') s.record.shell = fields.shell;
+    if (typeof fields.startupCommand === 'string') {
+      s.record.startupCommand = fields.startupCommand; // stored-only (T-04-04)
+    }
+    if (fields.icon) s.record.icon = fields.icon;
+  }
+
   /** Kill every live PTY + clear any grace timer — orphan-safe cleanup (Pitfall 6, T-02-06/T-03-05). */
   disposeAll(): void {
     for (const session of this.sessions.values()) {
@@ -473,6 +530,23 @@ export class PtyManager {
     ipcMain.on(PTY_CHANNELS.close, (_event: IpcMainEvent, id: LogicalId) =>
       this.close(id),
     );
+
+    // 04-01 identity — fire-and-forget (.on), inside the idempotency guard
+    // (T-03-02). updateProfile() id-validates + type-guards (unknown id → no-op).
+    ipcMain.on(
+      PTY_CHANNELS.updateProfile,
+      (
+        _event: IpcMainEvent,
+        id: LogicalId,
+        fields: {
+          name?: string;
+          icon?: SessionIconSpec;
+          cwd?: string;
+          shell?: string;
+          startupCommand?: string;
+        },
+      ) => this.updateProfile(id, fields),
+    );
   }
 
   /**
@@ -491,6 +565,7 @@ export class PtyManager {
     ipcMain.removeHandler(PTY_CHANNELS.restart);
     ipcMain.removeHandler(PTY_CHANNELS.list);
     ipcMain.removeAllListeners(PTY_CHANNELS.close); // D-03a destructive close (T-03-02)
+    ipcMain.removeAllListeners(PTY_CHANNELS.updateProfile); // 04-01 identity (T-03-02)
     this.ipcRegistered = false;
     this.win = null;
   }
