@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Project Scaffold + Dev Infrastructure** - Electron+Vite+TypeScript skeleton with security config, contextBridge, shared types, and logicalId/ptyPid data model established (completed 2026-06-03)
 - [x] **Phase 2: PTY Core + Terminal Fidelity** - Single real PTY session with full keyboard, ANSI, resize, flow control, Unicode, and fidelity validated via `claude --rc` / `vim` / Python REPL (completed 2026-06-04)
 - [x] **Phase 3: Multi-Session + Session Lifecycle** - N concurrent PTY sessions with ring-buffer replay, CSS show/hide tab panels, stop/restart, and the session status state machine (completed 2026-06-04)
-- [ ] **Phase 4: Session Identity + Sidebar UI** - Full sidebar (icon + name + status badge, expanded/collapsed), session creation form, rename/re-icon, and keyboard session-switching shortcuts
+- [x] **Phase 4: Session Identity + Sidebar UI** - Full sidebar (icon + name + status badge, expanded/collapsed), session creation form, rename/re-icon, and keyboard session-switching shortcuts (completed 2026-06-05)
 - [ ] **Phase 5: Persistence + Shell Discovery** - Session profiles saved to disk and restored on reopen (always not_started), platform-aware shell resolver, and sidebar order persistence
 - [ ] **Phase 6: Robustness + Flow-Control Polish** - HIGH/LOW watermark backpressure, spawn/cwd error handling, waiting-for-input heuristic, alt-screen reset, and session header quick controls
 - [ ] **Phase 7: Terminal Search + Scrollback Config** - Ctrl+F in-session search and configurable scrollback buffer size (global setting with sensible default)
@@ -126,7 +126,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. User can switch to any session using keyboard shortcuts (Ctrl/Cmd+1–9 for positions, and next/previous shortcuts) without touching the mouse
   5. Switching to a session updates the main terminal panel immediately; the previously active session remains running and visible again on re-activation
 
-**Plans:** 4 plans
+**Plans:** 4/4 plans complete
 **UI hint:** yes
 
 **Wave 1**
@@ -218,7 +218,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 1. Project Scaffold + Dev Infrastructure | 3/3 | Complete    | 2026-06-03 |
 | 2. PTY Core + Terminal Fidelity | 4/4 | Complete    | 2026-06-04 |
 | 3. Multi-Session + Session Lifecycle | 3/3 | Complete    | 2026-06-04 |
-| 4. Session Identity + Sidebar UI | 3/4 | In progress | - |
+| 4. Session Identity + Sidebar UI | 4/4 | Complete    | 2026-06-05 |
 | 5. Persistence + Shell Discovery | 0/TBD | Not started | - |
 | 6. Robustness + Flow-Control Polish | 0/TBD | Not started | - |
 | 7. Terminal Search + Scrollback Config | 0/TBD | Not started | - |
