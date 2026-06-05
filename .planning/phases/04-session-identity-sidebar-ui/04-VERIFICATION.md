@@ -1,9 +1,11 @@
 ---
 phase: 04-session-identity-sidebar-ui
 verified: 2026-06-05T14:25:00Z
-status: human_needed
+status: passed
 score: 5/5 must-haves verified
 overrides_applied: 0
+human_verified: 2026-06-05
+human_verification_note: "User approved all 3 human-UAT items (edit flow, keyboard app-wins, collapsed rail) after the 260605-ki7 sidebar-controls polish."
 human_verification:
   - test: "Canonical Parlour Claude RC flow — edit a session's name/icon live"
     expected: "Right-click a row -> Edit; change name to 'Parlour Claude RC', pick 🛋️ icon; row name + identity header update immediately; logicalId unchanged (same data-session-id on the row); set cwd + shell under 'Applies on restart'; Save; clicking another row switches non-destructively"
