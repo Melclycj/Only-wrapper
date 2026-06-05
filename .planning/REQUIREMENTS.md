@@ -26,7 +26,7 @@ Requirements for the initial release. Derived from the user's FR-01–FR-21 spec
 - [ ] **NAV-02**: Sidebar supports expanded and collapsed modes; in collapsed mode the icon still identifies the session (FR-09)
 - [x] **NAV-03**: Clicking a session tab switches the main view to that session without stopping or restarting its terminal process (FR-10)
 - [ ] **NAV-04**: App remembers and persists the user's session order in the sidebar (FR-11)
-- [ ] **NAV-05**: User can switch sessions via keyboard shortcuts (e.g. Ctrl/Cmd+1–9 and next/previous) without using the mouse (research addition)
+- [x] **NAV-05**: User can switch sessions via keyboard shortcuts (e.g. Ctrl/Cmd+1–9 and next/previous) without using the mouse (research addition)
 
 ### Terminal Session
 
@@ -112,7 +112,7 @@ Populated during roadmap creation. Each v1 requirement maps to exactly one phase
 | NAV-02 | Phase 4: Session Identity + Sidebar UI | Pending |
 | NAV-03 | Phase 4: Session Identity + Sidebar UI | Complete |
 | NAV-04 | Phase 5: Persistence + Shell Discovery | Pending |
-| NAV-05 | Phase 4: Session Identity + Sidebar UI | Pending |
+| NAV-05 | Phase 4: Session Identity + Sidebar UI | Complete |
 | TERM-01 | Phase 2: PTY Core + Terminal Fidelity | Complete |
 | TERM-02 | Phase 2: PTY Core + Terminal Fidelity | Complete |
 | TERM-03 | Phase 2: PTY Core + Terminal Fidelity | Complete |

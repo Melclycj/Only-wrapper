@@ -139,7 +139,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 3** *(blocked on Wave 2)*
 
-- [ ] 04-03-PLAN.md — Keyboard-switch slice: main before-input-event + onSwitchSession sub + NAV-05 E2E (NAV-05, app-wins D-13)
+- [x] 04-03-PLAN.md — Keyboard-switch slice: main before-input-event + onSwitchSession sub + NAV-05 E2E (NAV-05, app-wins D-13)
 
 **Wave 4** *(blocked on Wave 3)*
 
@@ -218,7 +218,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 1. Project Scaffold + Dev Infrastructure | 3/3 | Complete    | 2026-06-03 |
 | 2. PTY Core + Terminal Fidelity | 4/4 | Complete    | 2026-06-04 |
 | 3. Multi-Session + Session Lifecycle | 3/3 | Complete    | 2026-06-04 |
-| 4. Session Identity + Sidebar UI | 1/4 | In progress | - |
+| 4. Session Identity + Sidebar UI | 3/4 | In progress | - |
 | 5. Persistence + Shell Discovery | 0/TBD | Not started | - |
 | 6. Robustness + Flow-Control Polish | 0/TBD | Not started | - |
 | 7. Terminal Search + Scrollback Config | 0/TBD | Not started | - |
