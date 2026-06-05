@@ -429,3 +429,85 @@ body {
 .color-swatch.selected {
   border-color: var(--ink);
 }
+
+/* ── Identity header (D-05 / IDENT-03) — slim active-session bar, identity only ── */
+
+/* Sits above the .viewport-stack inside the flex-column .terminal-area. Reuses the
+ * .row-icon / .row-name / .status-badge markup so identity reads consistently. */
+.identity-header {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  box-sizing: border-box;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  font-family: 'Nunito', system-ui, sans-serif;
+  color: var(--ink);
+}
+
+.identity-header .row-name {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+/* ── Session edit form (D-04) — fields + the "Applies on restart" group ───────── */
+
+.modal-dialog-edit {
+  width: min(460px, calc(100vw - 48px));
+  max-height: calc(100vh - 64px);
+  overflow-y: auto;
+}
+
+.edit-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.edit-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.edit-input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.edit-input:focus-visible {
+  outline: 2px solid oklch(0.62 0.14 248);
+  outline-offset: 1px;
+}
+
+/* The restart-applied fields are visually grouped under their hint so the user knows
+ * cwd/shell/startup take effect on the next restart (D-02). */
+.edit-restart-group {
+  margin-top: 4px;
+  padding: 12px 12px 2px;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  background: var(--bg-sunk);
+}
+
+.applies-on-restart-hint {
+  margin: 0 0 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
