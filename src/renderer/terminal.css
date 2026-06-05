@@ -296,3 +296,136 @@ body {
   outline: 2px solid oklch(0.58 0.16 25);
   outline-offset: 2px;
 }
+
+/* ── Color-badge icon (D-09) — a filled tile with the session-name initial ────── */
+
+/* The color kind renders the colored box WITH a centered uppercased initial so it
+ * identifies the session in the collapsed rail (not a blank swatch). Keep the 20x20
+ * row-icon footprint + line-height:1 + centering to avoid emoji jitter (Pitfall 6). */
+.row-icon-color {
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  text-shadow: 0 1px 1px oklch(0.255 0.018 264 / 0.35);
+}
+
+/* ── Right-click context menu (D-03) — DESIGN.md tokens ───────────────────────── */
+
+/* Positioned absolutely at the cursor (left/top set inline from clientX/clientY).
+ * Warm --surface card, --line border, soft shadow, Nunito — matches the modal card. */
+.context-menu {
+  position: fixed;
+  z-index: 200;
+  min-width: 140px;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px oklch(0.255 0.018 264 / 0.22);
+  font-family: 'Nunito', system-ui, sans-serif;
+}
+
+.context-menu-item {
+  display: block;
+  width: 100%;
+  padding: 7px 12px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.context-menu-item:hover,
+.context-menu-item:focus-visible {
+  background: var(--bg-sunk);
+  outline: none;
+}
+
+/* ── Icon picker (D-07/D-08/D-09) — curated grid + free-text + color swatches ──── */
+
+.icon-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.icon-picker-preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.icon-picker-preview .row-icon {
+  width: 28px;
+  height: 28px;
+  font-size: 18px;
+}
+
+.emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 4px;
+}
+
+.emoji-cell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.emoji-cell:hover {
+  background: var(--bg-sunk);
+}
+
+.emoji-cell.selected {
+  border-color: var(--line);
+  background: var(--bg-sunk);
+}
+
+.emoji-input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.color-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.color-swatch {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.color-swatch.selected {
+  border-color: var(--ink);
+}

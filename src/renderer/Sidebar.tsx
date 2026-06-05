@@ -9,6 +9,39 @@
 
 import type { LogicalId, SessionIconSpec, SessionRecord } from '../shared/types';
 import { STATUS_STYLE } from './status-colors';
+import { COLOR_INITIAL } from './icon-spec';
+
+/**
+ * Render a SessionIconSpec across all three kinds — the SINGLE source of truth
+ * (exported so IconPicker + IdentityHeader render icons identically, D-09). emoji/
+ * preset render their glyph/token verbatim (Pitfall 6 — never split a grapheme); the
+ * `color` branch renders a filled badge with the uppercased session-name initial
+ * (COLOR_INITIAL) so a color icon stays identifiable in the collapsed rail.
+ */
+export function renderIcon(
+  icon: SessionIconSpec,
+  name: string,
+): React.JSX.Element {
+  switch (icon.type) {
+    case 'emoji':
+      return <span className="row-icon">{icon.value}</span>;
+    case 'preset':
+      return (
+        <span className="row-icon" data-preset={icon.value}>
+          {icon.value}
+        </span>
+      );
+    case 'color':
+      return (
+        <span
+          className="row-icon row-icon-color"
+          style={{ background: icon.value }}
+        >
+          {COLOR_INITIAL(icon, name)}
+        </span>
+      );
+  }
+}
 
 export interface SidebarProps {
   sessions: SessionRecord[];
@@ -23,6 +56,14 @@ export interface SidebarProps {
   onClose: (id: LogicalId) => void;
   /** Restart a session (TERM-07 / IDENT-02) — same identity, new ptyPid. */
   onRestart: (id: LogicalId) => void;
+  /**
+   * Right-click a row (D-03): open the context menu at (x, y) for `id`. Wired at the
+   * `.sidebar-row` level so it works in BOTH expanded and collapsed modes — the menu
+   * is the only control surface when collapsed (Pitfall 5 / D-11).
+   */
+  onContextMenu: (id: LogicalId, x: number, y: number) => void;
+  /** Open the edit form modal for `id` (D-04) — used by the context menu's Edit item. */
+  onEdit: (id: LogicalId) => void;
 }
 
 // A session has a live PTY only while 'running'. The RESTART affordance is offered
@@ -33,30 +74,6 @@ function isRunning(status: SessionRecord['status']): boolean {
   return status === 'running';
 }
 
-// Render a SessionIconSpec across ALL three kinds (DESIGN.md §"Reconciliation":
-// the row must render emoji | preset | color, not just emoji). emoji/preset render
-// their glyph/token; color renders a filled swatch.
-function renderIcon(icon: SessionIconSpec): React.JSX.Element {
-  switch (icon.type) {
-    case 'emoji':
-      return <span className="row-icon">{icon.value}</span>;
-    case 'preset':
-      return (
-        <span className="row-icon" data-preset={icon.value}>
-          {icon.value}
-        </span>
-      );
-    case 'color':
-      return (
-        <span
-          className="row-icon"
-          style={{ background: icon.value }}
-          aria-hidden="true"
-        />
-      );
-  }
-}
-
 export function Sidebar({
   sessions,
   activeId,
@@ -64,6 +81,8 @@ export function Sidebar({
   onAdd,
   onClose,
   onRestart,
+  onContextMenu,
+  onEdit,
 }: SidebarProps): React.JSX.Element {
   return (
     <nav className="sidebar" aria-label="Sessions">
@@ -86,6 +105,15 @@ export function Sidebar({
             data-session-id={s.logicalId}
             aria-current={isActive ? 'true' : undefined}
             onClick={() => onSelect(s.logicalId)}
+            // Double-click is a convenience shortcut to the edit form (D-04); the
+            // primary affordance is the right-click context menu's "Edit" item.
+            onDoubleClick={() => onEdit(s.logicalId)}
+            // Right-click opens the context menu at the cursor (D-03). Attached at the
+            // .sidebar-row level so it also fires in collapsed mode (Pitfall 5 / D-11).
+            onContextMenu={(e) => {
+              e.preventDefault();
+              onContextMenu(s.logicalId, e.clientX, e.clientY);
+            }}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
@@ -93,7 +121,7 @@ export function Sidebar({
               }
             }}
           >
-            {renderIcon(s.icon)}
+            {renderIcon(s.icon, s.name)}
             <span className="row-name">{s.name}</span>
             <span
               className="status-badge"

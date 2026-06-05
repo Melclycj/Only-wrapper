@@ -207,6 +207,8 @@ export function SessionManager(): React.JSX.Element {
         onAdd={onAdd}
         onClose={handleCloseRequest}
         onRestart={handleRestart}
+        onContextMenu={() => undefined}
+        onEdit={() => undefined}
       />
       <div className="viewport-stack">
         {sessions.map((s) => (
