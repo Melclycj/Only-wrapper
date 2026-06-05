@@ -1,9 +1,9 @@
 ---
 phase: 4
 slug: session-identity-sidebar-ui
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: complete
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-06-05
 ---
 
@@ -42,9 +42,9 @@ created: 2026-06-05
 | 01-T1 | 04-01 | 0 | NAV-05, SESS-01..04 | — | RED stubs assert the not-yet-built contracts (fail-fast Nyquist) | Unit + E2E stub | `npm run test:unit` (5 new files RED) | ✅ stubs exist | ✅ green (RED-by-design) |
 | 01-T2 | 04-01 | 1 | NAV-05, SESS-03 | — | Pure matcher/reducer/icon/split modules, React/xterm/electron-free | Unit | `npm run test:unit` (switch-keys, session-switch, icon-spec, session-edit GREEN) | ✅ | ✅ green |
 | 01-T3 | 04-01 | 1 | SESS-01, SESS-04 | T-04-01/02/03/04 | id-validated + type-guarded `updateProfile`; 15-key guard; startupCommand stored-only | Unit | `npm run test:unit` (security.guard + pty-update-profile GREEN) | ✅ | ✅ green |
-| 02-T* | 04-02 | 2 | SESS-01, SESS-02, SESS-03, SESS-04, IDENT-03 | T-04-01/02 | Create/Edit modal + IconPicker + IdentityHeader wired through `ptyUpdateProfile` | Unit + E2E | `npm run test:smoke -- session-edit.smoke` | ✅ stub | ⬜ pending |
-| 03-T* | 04-03 | 3 | NAV-05 | T-04-03 | `before-input-event` → `session:switch` → `resolveSwitch` (A1 proof) | E2E | `npm run test:smoke -- keyboard-switch.smoke` | ✅ stub | ⬜ pending |
-| 04-T* | 04-04 | 4 | NAV-01, NAV-02 | — | Collapsible sidebar keeps icon + status dot identifiable; closes Nyquist | E2E | `npm run test:smoke -- sidebar-collapse.smoke` | ✅ stub | ⬜ pending |
+| 02-T* | 04-02 | 2 | SESS-01, SESS-02, SESS-03, SESS-04, IDENT-03 | T-04-01/02 | Create/Edit modal + IconPicker + IdentityHeader wired through `ptyUpdateProfile` | Unit + E2E | `npm run test:smoke -- session-edit.smoke` | ✅ | ✅ green |
+| 03-T* | 04-03 | 3 | NAV-05 | T-04-03 | `before-input-event` → `session:switch` → `resolveSwitch` (A1 proof) | E2E | `npm run test:smoke -- keyboard-switch.smoke` | ✅ | ✅ green |
+| 04-T* | 04-04 | 4 | NAV-01, NAV-02 | — | Collapsible sidebar keeps icon + status dot identifiable; closes Nyquist | E2E | `npm run test:smoke -- sidebar-collapse.smoke` | ✅ | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 *Plans 02–04 task rows are placeholders (`*`) the later planners refine per-task; the requirement/test-type/command columns are the binding Wave map.*
@@ -81,11 +81,14 @@ go GREEN as plans 04-02 (edit), 04-03 (keyboard-switch), 04-04 (collapse) land.
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency low
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency low
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** signed off 2026-06-05 — all six Wave-0 stubs GREEN (82 unit tests + the
+three Phase-4 E2E smoke tests: `session-edit`, `keyboard-switch`, `sidebar-collapse`).
+The collapse vertical slice (04-04) closed the last E2E gap; NAV-01/NAV-02/SESS-03
+satisfied. Nyquist contract met.
