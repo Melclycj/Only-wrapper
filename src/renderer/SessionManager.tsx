@@ -32,6 +32,10 @@ import { addSession } from './session-add';
 // closeSession is the PURE close reducer (D-03a) — kept React/xterm-free so the
 // "remove that row + reselect active" invariant is unit-testable in the Node env.
 import { closeSession } from './session-close';
+// resolveSwitch is the PURE switch reducer (04-01, NAV-05) — (sessions, activeId,
+// intent) → next activeId. The keyboard chords are intercepted MAIN-side
+// (before-input-event, 04-03 Task 1) and pushed over window.api.onSwitchSession.
+import { resolveSwitch } from './session-switch';
 
 // How often the renderer reconciles its rendered session list against main's
 // authoritative listSessions() snapshot. Main is the source of truth, so a session
@@ -59,6 +63,13 @@ export function SessionManager(): React.JSX.Element {
   // Guards the boot effect so a fast double-mount (React StrictMode dev) does not
   // auto-add two default sessions.
   const bootedRef = useRef(false);
+
+  // Live mirror of the current sessions list for the keyboard-switch subscription.
+  // The onSwitchSession effect subscribes ONCE (it must not re-bind on every sessions
+  // change, or a chord could race a listener teardown), so it reads the up-to-date
+  // list through this ref instead of closing over the render-time `sessions` value.
+  const sessionsRef = useRef<SessionRecord[]>(sessions);
+  sessionsRef.current = sessions;
 
   // ── Close control (D-03a, supersedes the old keep-as-stopped Stop): a destructive
   //    close behind a confirm modal. NOTE: window.api.ptyStop + PtyManager.stop are
@@ -208,6 +219,23 @@ export function SessionManager(): React.JSX.Element {
       for (const off of offs) off();
     };
   }, [sessions]);
+
+  // ── Keyboard session switching (NAV-05, D-12/D-13): main intercepts the chords
+  //    (before-input-event, 04-03 Task 1) and pushes a SwitchIntent over
+  //    window.api.onSwitchSession. We subscribe ONCE (empty deps — no re-bind per
+  //    sessions change, mirroring the onPtyStatus sub's cleanup discipline) and read
+  //    the current list via sessionsRef inside the functional setActiveId update so the
+  //    callback is stable yet never stale. Applying resolveSwitch → setActiveId drives
+  //    the SAME non-destructive switch path as a click (TERM-06 / NAV-03): the
+  //    SessionView activate effect hands WebGL+focus to the new pane, the previously
+  //    active session keeps running, and the identity header (which reads the active
+  //    record by activeId) updates immediately. D-14: SWITCH intents only — no new/close. ──
+  useEffect(() => {
+    const off = window.api.onSwitchSession((intent) => {
+      setActiveId((cur) => resolveSwitch(sessionsRef.current, cur, intent));
+    });
+    return off;
+  }, []);
 
   // ── Reconcile with main (source of truth — RESEARCH Open Q2 / Pitfall 5). ──
   // The renderer's onAdd is the normal spawn path, but a session can also be created

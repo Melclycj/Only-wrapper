@@ -258,20 +258,51 @@ export async function toggleCollapse(): Promise<void> {
 }
 
 /**
- * Drive the global switch chord for `intent` via `browser.keys`. Position intents
- * use Cmd/Ctrl+<n> (1-based); next/prev use Cmd/Ctrl+Shift+]/[. The platform's
- * primary modifier is chosen by `process.platform` (Meta on macOS, Control else).
+ * Drive the global switch chord for `intent` so it reaches the MAIN-process
+ * `before-input-event` interceptor (04-03, NAV-05/D-13).
+ *
+ * A1 EMPIRICAL FINDING (this is the proof the plan's A1 assumption asked for):
+ * WDIO's CDP-backed `browser.keys` injects synthetic key events at the page/DOM
+ * level — they do NOT traverse Electron's native `before-input-event` pipeline, so
+ * a `browser.keys([Meta, '2'])` chord NEVER fires the main-side interceptor (verified:
+ * the hook recorded zero events). The reliable native path is
+ * `webContents.sendInputEvent({ type: 'keyDown', keyCode, modifiers })`, which DOES
+ * reach `before-input-event`. We therefore drive the chord through the main process.
+ *
+ * Confirmed real Electron `Input` strings via the interceptor (A1 resolved):
+ *   - Cmd/Ctrl+2 → { key: '2', code: 'Digit2', meta/control: true }            (digit path)
+ *   - Cmd/Ctrl+Shift+] → { key: '}', code: 'BracketRight', meta: true, shift: true }
+ *   - Cmd/Ctrl+Shift+[ → { key: '{', code: 'BracketLeft',  meta: true, shift: true }
+ * Note: holding Shift mutates the LOGICAL `key` (] → }, [ → {), so matchSwitchKey's
+ * `code`-fallback (BracketRight/BracketLeft) is what actually matches — confirming the
+ * Plan-01 `key`-OR-`code` defensive matcher was necessary. No matcher change was needed.
+ *
+ * Position intents send Cmd/Ctrl+<n> (1-based); next/prev send Cmd/Ctrl+Shift+]/[.
+ * The primary modifier is chosen by `process.platform` (meta on macOS, control else).
  */
 export async function pressSwitchChord(
   intent: { kind: 'position'; index: number } | { kind: 'next' } | { kind: 'prev' },
 ): Promise<void> {
-  const primary = process.platform === 'darwin' ? 'Meta' : 'Control';
-  if (intent.kind === 'position') {
-    await browser.keys([primary, String(intent.index + 1)]);
-    return;
-  }
-  const bracket = intent.kind === 'next' ? ']' : '[';
-  await browser.keys([primary, 'Shift', bracket]);
+  const primary = process.platform === 'darwin' ? 'meta' : 'control';
+  const keyCode =
+    intent.kind === 'position'
+      ? String(intent.index + 1)
+      : intent.kind === 'next'
+        ? ']'
+        : '[';
+  const modifiers = intent.kind === 'position' ? [primary] : [primary, 'shift'];
+  await browser.electron.execute(
+    (electron, kc: string, mods: string[]) => {
+      const win = electron.BrowserWindow.getAllWindows()[0];
+      win?.webContents.sendInputEvent({
+        type: 'keyDown',
+        keyCode: kc,
+        modifiers: mods as Electron.InputEvent['modifiers'],
+      } as Electron.InputEvent);
+    },
+    keyCode,
+    modifiers,
+  );
 }
 
 /** Read the visible text of the active session's identity header (`.identity-header`). */
