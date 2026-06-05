@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-06-03)
 Phase: 04 (Session Identity + Sidebar UI) — ALL PLANS COMPLETE (awaiting phase verification)
 Plan: 4 of 4
 Status: Phase 04 plans complete — Nyquist signed off
-Last activity: 2026-06-05 -- Phase 04 Plan 04 (collapsible-sidebar slice) complete
+Last activity: 2026-06-05 -- Quick task 260605-ki7 (Phase-4 sidebar UI polish) complete
 
 Progress: [████████████████████] 100% (Phase 4 plans: 4/4)
 
@@ -116,6 +116,12 @@ None yet.
 
 - node-pty version for Electron 42.x needs verification before Phase 2 starts (see research/SUMMARY.md); consider starting on Electron 36.x if compatibility is unclear
 - macOS notarization (Phase 8) requires Apple Developer Program membership (~$99/year); plan ahead
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260605-ki7 | Phase-4 sidebar UI polish: collapsed add-button shows only "+"; row controls become edit/delete (+conditional restart) icon buttons | 2026-06-05 | 0ea3d68 | [260605-ki7-phase-4-sidebar-ui-polish-collapsed-add-](./quick/260605-ki7-phase-4-sidebar-ui-polish-collapsed-add-/) |
 
 ## Deferred Items
 
