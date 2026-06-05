@@ -39,17 +39,33 @@ created: 2026-06-05
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| _(populated by planner from 04-RESEARCH.md Validation Architecture)_ | | | | | | | | | ⬜ pending |
+| 01-T1 | 04-01 | 0 | NAV-05, SESS-01..04 | — | RED stubs assert the not-yet-built contracts (fail-fast Nyquist) | Unit + E2E stub | `npm run test:unit` (5 new files RED) | ✅ stubs exist | ✅ green (RED-by-design) |
+| 01-T2 | 04-01 | 1 | NAV-05, SESS-03 | — | Pure matcher/reducer/icon/split modules, React/xterm/electron-free | Unit | `npm run test:unit` (switch-keys, session-switch, icon-spec, session-edit GREEN) | ✅ | ✅ green |
+| 01-T3 | 04-01 | 1 | SESS-01, SESS-04 | T-04-01/02/03/04 | id-validated + type-guarded `updateProfile`; 15-key guard; startupCommand stored-only | Unit | `npm run test:unit` (security.guard + pty-update-profile GREEN) | ✅ | ✅ green |
+| 02-T* | 04-02 | 2 | SESS-01, SESS-02, SESS-03, SESS-04, IDENT-03 | T-04-01/02 | Create/Edit modal + IconPicker + IdentityHeader wired through `ptyUpdateProfile` | Unit + E2E | `npm run test:smoke -- session-edit.smoke` | ✅ stub | ⬜ pending |
+| 03-T* | 04-03 | 3 | NAV-05 | T-04-03 | `before-input-event` → `session:switch` → `resolveSwitch` (A1 proof) | E2E | `npm run test:smoke -- keyboard-switch.smoke` | ✅ stub | ⬜ pending |
+| 04-T* | 04-04 | 4 | NAV-01, NAV-02 | — | Collapsible sidebar keeps icon + status dot identifiable; closes Nyquist | E2E | `npm run test:smoke -- sidebar-collapse.smoke` | ✅ stub | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
+*Plans 02–04 task rows are placeholders (`*`) the later planners refine per-task; the requirement/test-type/command columns are the binding Wave map.*
 
 ---
 
 ## Wave 0 Requirements
 
-- [ ] _(populated by planner — RED test stubs for IDENT-03, SESS-01..04, NAV-01/02/03/05)_
+RED stubs landed in 04-01 Task 1 (fail-fast Nyquist — each imports a not-yet-built
+module/method or drives a not-yet-wired DOM surface):
 
-*If none: "Existing infrastructure covers all phase requirements."*
+- [x] **NAV-05** — `src/main/__tests__/switch-keys.test.ts` (matchSwitchKey) + `src/renderer/__tests__/session-switch.test.ts` (resolveSwitch) + `tests/smoke/keyboard-switch.smoke.test.ts` (A1 E2E proof)
+- [x] **SESS-03** — `src/renderer/__tests__/icon-spec.test.ts` (emojiSpec/colorSpec/COLOR_INITIAL)
+- [x] **SESS-01 / SESS-04** — `src/main/__tests__/pty-update-profile.test.ts` (id-validated, type-guarded record write; stored shell drives respawn; startupCommand stored-only)
+- [x] **SESS-01 / SESS-02 / SESS-04** — `src/renderer/__tests__/session-edit.test.ts` (splitEdit) + `tests/smoke/session-edit.smoke.test.ts` (live rename, stable id E2E)
+- [x] **NAV-01 / NAV-02** — `tests/smoke/sidebar-collapse.smoke.test.ts` (collapse keeps icon + status dot)
+- [x] **5 driver helpers** — `tests/smoke/helpers/xterm-driver.ts` exports `openContextMenu`, `clickMenuItem`, `toggleCollapse`, `pressSwitchChord`, `readIdentityHeader`
+
+The five Wave-0 UNIT stubs close in 04-01 Tasks 2–3 (this plan); the three E2E stubs
+go GREEN as plans 04-02 (edit), 04-03 (keyboard-switch), 04-04 (collapse) land.
+`nyquist_compliant` stays `false` until Plan 04 closes the last E2E gap.
 
 ---
 

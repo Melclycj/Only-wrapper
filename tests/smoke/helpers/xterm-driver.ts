@@ -210,3 +210,74 @@ export async function clickSidebarRow(id: string): Promise<void> {
     row?.click();
   }, id);
 }
+
+// ─── Phase 4 identity / context-menu / collapse / switch-key helpers ─────────
+//
+// Plans 02/03/04 produce the DOM these helpers address (Wave 0 E2E stubs use them
+// and go GREEN as those plans land). The contract:
+//   - a row's context menu opens on right-click at `.sidebar-row[data-session-id]`
+//     (Pitfall 5 / D-11 — the row, NOT the per-row buttons, is the collapsed-mode
+//     control surface).
+//   - menu items are `.context-menu-item` buttons addressed by visible text.
+//   - the collapse toggle carries `data-testid="sidebar-collapse"`.
+//   - the active session's identity header is `.identity-header`.
+
+/** Right-click the sidebar row for `id` to open its context menu. */
+export async function openContextMenu(id: string): Promise<void> {
+  await browser.execute((sid: string) => {
+    const row = document.querySelector<HTMLElement>(
+      `.sidebar-row[data-session-id="${sid}"]`,
+    );
+    row?.dispatchEvent(
+      new MouseEvent('contextmenu', { bubbles: true, cancelable: true }),
+    );
+  }, id);
+}
+
+/** Click the open context-menu item whose visible text matches `label`. */
+export async function clickMenuItem(label: string): Promise<void> {
+  await browser.execute((text: string) => {
+    const items = Array.from(
+      document.querySelectorAll<HTMLElement>('.context-menu-item'),
+    );
+    const match = items.find(
+      (el) => (el.textContent ?? '').trim() === text,
+    );
+    match?.click();
+  }, label);
+}
+
+/** Toggle the sidebar collapse state via its `data-testid="sidebar-collapse"` control. */
+export async function toggleCollapse(): Promise<void> {
+  await browser.execute(() => {
+    const btn = document.querySelector<HTMLElement>(
+      '[data-testid="sidebar-collapse"]',
+    );
+    btn?.click();
+  });
+}
+
+/**
+ * Drive the global switch chord for `intent` via `browser.keys`. Position intents
+ * use Cmd/Ctrl+<n> (1-based); next/prev use Cmd/Ctrl+Shift+]/[. The platform's
+ * primary modifier is chosen by `process.platform` (Meta on macOS, Control else).
+ */
+export async function pressSwitchChord(
+  intent: { kind: 'position'; index: number } | { kind: 'next' } | { kind: 'prev' },
+): Promise<void> {
+  const primary = process.platform === 'darwin' ? 'Meta' : 'Control';
+  if (intent.kind === 'position') {
+    await browser.keys([primary, String(intent.index + 1)]);
+    return;
+  }
+  const bracket = intent.kind === 'next' ? ']' : '[';
+  await browser.keys([primary, 'Shift', bracket]);
+}
+
+/** Read the visible text of the active session's identity header (`.identity-header`). */
+export async function readIdentityHeader(): Promise<string> {
+  return browser.execute(() => {
+    const el = document.querySelector<HTMLElement>('.identity-header');
+    return (el?.textContent ?? '').trim();
+  });
+}
