@@ -64,6 +64,17 @@ export interface SidebarProps {
   onContextMenu: (id: LogicalId, x: number, y: number) => void;
   /** Open the edit form modal for `id` (D-04) — used by the context menu's Edit item. */
   onEdit: (id: LogicalId) => void;
+  /**
+   * Collapsed mode (D-10/D-11): when true the `.sidebar` folds to an icon-only rail
+   * — `.row-name`/`.status-badge`/`.row-controls` hide; each row keeps its identifying
+   * icon (emoji or the color-badge-with-initial), a small status-color dot (NAV-01),
+   * and a hover tooltip with the name. The right-click context menu (wired at the
+   * `.sidebar-row` level) is the ONLY control surface when collapsed (Pitfall 5).
+   * State is component-local in SessionManager (persistence is Phase 5 — D-11).
+   */
+  collapsed: boolean;
+  /** Toggle the collapsed/expanded rail (the pinned chevron control). */
+  onToggleCollapse: () => void;
 }
 
 // A session has a live PTY only while 'running'. The RESTART affordance is offered
@@ -83,9 +94,29 @@ export function Sidebar({
   onRestart,
   onContextMenu,
   onEdit,
+  collapsed,
+  onToggleCollapse,
 }: SidebarProps): React.JSX.Element {
   return (
-    <nav className="sidebar" aria-label="Sessions">
+    <nav
+      className={collapsed ? 'sidebar collapsed' : 'sidebar'}
+      aria-label="Sessions"
+    >
+      {/* Pinned chevron toggle (D-10): folds the rail to icon-only and back. The state
+          stays where the user leaves it (component-local — persistence is Phase 5). */}
+      <button
+        type="button"
+        className="sidebar-collapse"
+        data-testid="sidebar-collapse"
+        aria-pressed={collapsed}
+        aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        onClick={onToggleCollapse}
+      >
+        <span className="sidebar-collapse-chevron" aria-hidden="true">
+          {collapsed ? '»' : '«'}
+        </span>
+      </button>
       {sessions.map((s) => {
         const style = STATUS_STYLE[s.status];
         const isActive = s.logicalId === activeId;
@@ -122,6 +153,15 @@ export function Sidebar({
             }}
           >
             {renderIcon(s.icon, s.name)}
+            {/* Collapsed-rail status dot (NAV-01): keeps running/stopped legible in the
+                icon-only rail. Carries the `status-dot` class too so it shares the badge
+                dot's swatch styling and stays measurable when the badge itself is hidden.
+                Hidden in expanded mode (the full status badge shows there instead). */}
+            <span
+              className="collapsed-status-dot status-dot"
+              style={{ '--accent': style.accent } as React.CSSProperties}
+              aria-hidden="true"
+            />
             <span className="row-name">{s.name}</span>
             <span
               className="status-badge"
@@ -166,6 +206,13 @@ export function Sidebar({
               >
                 Close
               </button>
+            </span>
+            {/* Custom rail tooltip (D-11 / RESEARCH Pattern 6): shown on row
+                hover/focus-visible when collapsed, reading the session name + status
+                label. Preferred over native `title=` (instant, on-brand, a11y-friendly).
+                Only visible in collapsed mode (CSS-gated under `.sidebar.collapsed`). */}
+            <span className="rail-tooltip" role="tooltip">
+              {s.name} · {style.label}
             </span>
           </div>
         );

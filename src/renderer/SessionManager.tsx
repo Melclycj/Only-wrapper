@@ -59,6 +59,10 @@ export function SessionManager(): React.JSX.Element {
     x: number;
     y: number;
   } | null>(null);
+  // Sidebar collapsed/expanded (D-10/D-11): a pinned chevron folds the rail to icon-only
+  // and back. Component-local — the state stays where the user leaves it; PERSISTENCE
+  // across app restarts is Phase 5 (D-11), so this is intentionally NOT mirrored to main.
+  const [collapsed, setCollapsed] = useState(false);
 
   // Guards the boot effect so a fast double-mount (React StrictMode dev) does not
   // auto-add two default sessions.
@@ -306,6 +310,8 @@ export function SessionManager(): React.JSX.Element {
         onRestart={handleRestart}
         onContextMenu={handleContextMenu}
         onEdit={handleEdit}
+        collapsed={collapsed}
+        onToggleCollapse={() => setCollapsed((c) => !c)}
       />
       {/* Flex-column terminal area (RESEARCH Open Q2): the identity header sits above
           the .viewport-stack; SessionView panes keep inset:0 inside the stack. */}
