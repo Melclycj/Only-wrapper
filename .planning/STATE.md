@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: paused
-stopped_at: Phase 4 context gathered
-last_updated: "2026-06-05T02:01:35.975Z"
-last_activity: 2026-06-05 -- Phase 4 planning complete
+status: executing
+stopped_at: Completed 04-01-PLAN.md
+last_updated: "2026-06-05T12:13:30Z"
+last_activity: 2026-06-05 -- Phase 04 Plan 01 (session identity foundation) complete
 progress:
   total_phases: 8
   completed_phases: 3
-  total_plans: 10
-  completed_plans: 10
-  percent: 38
+  total_plans: 14
+  completed_plans: 11
+  percent: 42
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-03)
 
 **Core value:** Real terminal fidelity — `claude --rc`, `codex`, `vim`, `ssh`, REPLs all behave exactly like a native terminal inside the wrapper.
-**Current focus:** Phase 03 — multi-session-session-lifecycle
+**Current focus:** Phase 04 — Session Identity + Sidebar UI
 
 ## Current Position
 
-Phase: 4
-Plan: Not started
-Status: 03-03 Task 1 + gap-closure complete — STILL AWAITING the 03-03 human-verify checkpoint (orchestrator re-runs it). Gap-closure (3 atomic commits) surfaced at the verify checkpoint: (1) shutdown-crash fix — guard PTY webContents.send against a destroyed window; (2) D-03a — new ptyClose bridge (13-key surface); (3) D-03a — stop→destructive Close behind a DESIGN.md confirm modal, keep-as-stopped Stop button removed (ptyStop API retained, not surfaced). No SUMMARY written; plan NOT marked complete.
-Last activity: 2026-06-05 -- Phase 4 planning complete
+Phase: 04 (Session Identity + Sidebar UI) — EXECUTING
+Plan: 2 of 4
+Status: Executing Phase 04 (Plan 01 complete)
+Last activity: 2026-06-05 -- Phase 04 Plan 01 (session identity foundation) complete
 
-Progress: [██████░░░░] 67% (Phase 3 plans: 2/3)
+Progress: [██████████] 25% (Phase 4 plans: 1/4)
 
 ## Performance Metrics
 
@@ -62,6 +62,7 @@ Progress: [██████░░░░] 67% (Phase 3 plans: 2/3)
 | Phase 02 P04 | ~12min | 3 tasks | 1 file |
 | Phase 03 P01 | 56min | 3 tasks | 9 files |
 | Phase 03 P02 | 13min | 3 tasks | 10 files |
+| Phase 04 P01 | ~7min | 3 tasks | 19 files |
 
 ## Accumulated Context
 
@@ -94,6 +95,10 @@ Recent decisions affecting current work:
 - [Phase 03-03 D-03a]: stop → DESTRUCTIVE Close (kill PTY + remove SessionRecord) behind a DESIGN.md confirm modal; the keep-as-stopped Stop BUTTON is removed but PtyManager.stop + window.api.ptyStop are RETAINED ("keep the function, disable the button") and stay unit-tested
 - [Phase 03-03 D-03a]: ptyClose is the 13th bridge key (pty:close channel, mirrors ptyStop fire-and-forget); EXPECTED_API_KEYS + security.guard updated in lockstep to 13. Close removes the row so the reconcile poll (which only ADDS missing ids) never re-adds it
 - [Phase 03-03 gap-closure]: PtyManager.send() guards webContents.send with w.isDestroyed()/webContents.isDestroyed(); win.on('closed') calls detachWindow() before disposeAll() so node-pty's final shutdown flush never crashes a destroyed window (TERM-06/08)
+- [Phase 04-01]: matchSwitchKey (main-side, electron-free) uses ONE rule for both platforms — primary = meta||control (macOS Cmd OR Windows Ctrl); Cmd/Ctrl+1-9 → position, Cmd/Ctrl+Shift+]/[ → next/prev; Alt/no-primary/non-keyDown → null. A1-defensive: accepts logical `key` OR physical `code` (Digit1/BracketRight) so the NAV-05 E2E confirms real Electron strings in one line
+- [Phase 04-01]: ptyUpdateProfile (14th) + onSwitchSession (15th) are the new bridge keys; EXPECTED_API_KEYS → 15; security.guard.test.ts went RED→GREEN with NO code change (dynamic Object.keys(exposed)===EXPECTED_API_KEYS assertion)
+- [Phase 04-01]: PtyManager.updateProfile id-validates (unknown → no-op) + type-guards each string field; create() prefers a non-empty stored record.shell over resolveShell() (A2, Pitfall 3) so an edited shell takes effect on restart; startupCommand is carried on the record but NEVER written to a PTY — TERM-05 auto-run stays deferred (T-04-04, grep-verified)
+- [Phase 04-01]: Interface-first wave — 5 React/xterm/electron-free pure modules (switch-keys/session-switch/icon-spec/session-edit/emoji-set) + the 2 bridge keys define the contracts Plans 04-02..04 build against; 3 E2E smoke stubs stay RED until those plans land (nyquist_compliant flips true in 04-04)
 
 ### Pending Todos
 
@@ -112,6 +117,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-04T18:21:52.160Z
-Stopped at: Phase 4 context gathered
-Resume file: .planning/phases/04-session-identity-sidebar-ui/04-CONTEXT.md
+Last session: 2026-06-05T12:13:30Z
+Stopped at: Completed 04-01-PLAN.md
+Resume file: None
