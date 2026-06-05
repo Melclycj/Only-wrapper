@@ -126,8 +126,24 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. User can switch to any session using keyboard shortcuts (Ctrl/Cmd+1–9 for positions, and next/previous shortcuts) without touching the mouse
   5. Switching to a session updates the main terminal panel immediately; the previously active session remains running and visible again on re-activation
 
-**Plans:** TBD
+**Plans:** 4 plans
 **UI hint:** yes
+
+**Wave 1**
+
+- [ ] 04-01-PLAN.md — Foundation: Wave 0 RED stubs + 5 pure modules + atomic 15-key bridge lockstep (ptyUpdateProfile/onSwitchSession) + PtyManager.updateProfile
+
+**Wave 2** *(blocked on Wave 1)*
+
+- [ ] 04-02-PLAN.md — Create/edit + identity slice: ContextMenu + IconPicker + SessionEditModal + IdentityHeader + color-badge-with-initial (SESS-01..04, IDENT-03, NAV-01/03)
+
+**Wave 3** *(blocked on Wave 2)*
+
+- [ ] 04-03-PLAN.md — Keyboard-switch slice: main before-input-event + onSwitchSession sub + NAV-05 E2E (NAV-05, app-wins D-13)
+
+**Wave 4** *(blocked on Wave 3)*
+
+- [ ] 04-04-PLAN.md — Collapsible-sidebar slice: chevron toggle + icon-only rail + status dot + tooltip + Nyquist sign-off (NAV-01/02, SESS-03)
 
 ### Phase 5: Persistence + Shell Discovery
 
@@ -202,7 +218,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 1. Project Scaffold + Dev Infrastructure | 3/3 | Complete    | 2026-06-03 |
 | 2. PTY Core + Terminal Fidelity | 4/4 | Complete    | 2026-06-04 |
 | 3. Multi-Session + Session Lifecycle | 3/3 | Complete    | 2026-06-04 |
-| 4. Session Identity + Sidebar UI | 0/TBD | Not started | - |
+| 4. Session Identity + Sidebar UI | 0/4 | Not started | - |
 | 5. Persistence + Shell Discovery | 0/TBD | Not started | - |
 | 6. Robustness + Flow-Control Polish | 0/TBD | Not started | - |
 | 7. Terminal Search + Scrollback Config | 0/TBD | Not started | - |
