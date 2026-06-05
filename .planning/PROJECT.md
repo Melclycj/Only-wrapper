@@ -19,15 +19,15 @@ It is **not** a new shell and **not** a full terminal replacement. It is a sessi
 - [x] Switch active session without stopping or restarting its process; keep background sessions alive with current scrollback — *Phase 3 (TERM-06; user-verified keep-alive + scrollback)*
 - [x] Restart a session (new process ID, same logical session ID) and show the 5-state status (not started / running / stopped / exited / error) with DESIGN.md badge colors — *Phase 3 (TERM-07/08)*
   - Note: "stop" shipped as a **destructive Close + confirm modal** (D-03a revision at the Phase-3 verify checkpoint), not a keep-as-`stopped` row. The auto-run **startup command (TERM-05) was deferred** — the `startupCommand` profile field persists for the Phase 4 create/edit form.
+- [x] Create / edit terminal sessions with a custom name, icon (emoji + color badge), working directory, shell, and startup command via a real form — *Phase 4 (SESS-01..04; name/icon apply live, cwd/shell/startup apply on restart; startup-command auto-run TERM-05 still deferred — field is stored only)*
+- [x] Stable internal session ID that survives rename / icon-change / restart / tab-switch — distinct from the PTY process ID — *Phase 1 (IDENT-01/02) + Phase 4 (IDENT-03; rename/re-icon preserve logicalId, human-verified)*
+- [x] Collapsible sidebar listing sessions (icon + name + status), icon still identifies each session when collapsed, plus mouse-free keyboard session switching — *Phase 4 (NAV-01/02/03/05; Cmd/Ctrl+1–9 + Shift+[ / ] "app-wins" over the focused terminal)*
 
 ### Active
 
 <!-- Current scope. Building toward these. All are hypotheses until shipped. -->
 
-- [ ] Create terminal sessions with custom name, icon, working directory, shell, and optional startup command
-- [ ] Stable internal session ID that survives rename/icon-change/restart/tab-switch — distinct from the underlying PTY process ID
 - [ ] Real interactive terminal surface via a true PTY (not one-shot command execution) — full keyboard input, Ctrl+C/Ctrl+D, arrow keys, copy/paste, resize, ANSI colors, long-running and interactive programs
-- [ ] Collapsible sidebar listing sessions (icon + name + running/stopped status), with icon still identifying the session when collapsed
 - [ ] Normal shell mode plus a configured working directory; manual `cd` and launch tools from any accessible folder. *(Optional startup-command mode deferred — descoped from Phase 3; revisit with the Phase 4 form.)*
 - [ ] Persist session metadata locally (ID, name, icon, cwd, shell, startup command, order, last active) and restore profiles on app reopen
 - [ ] Persist user's session order in the sidebar
@@ -95,4 +95,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-05 — Phase 3 complete (multi-session + lifecycle: concurrent PTY sessions, non-destructive switching, identity-preserving restart, 5-state status, destructive Close per D-03a; startup command TERM-05 deferred).*
+*Last updated: 2026-06-05 — Phase 4 complete (session identity + sidebar UI: create/edit form, emoji+color icon picker, slim identity header, collapsible icon-only rail, right-click context menu, mouse-free keyboard switching "app-wins" over the terminal; human UAT approved. startup-command auto-run TERM-05 still deferred — field stored only). Next: Phase 5 — Persistence + Shell Discovery.*
