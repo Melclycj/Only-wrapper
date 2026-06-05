@@ -19,10 +19,13 @@
 // bridge to main is window.api.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { LogicalId, SessionRecord } from '../shared/types';
+import type { LogicalId, SessionIconSpec, SessionRecord } from '../shared/types';
 import { SessionView } from './SessionView';
 import { Sidebar } from './Sidebar';
 import { ConfirmModal } from './ConfirmModal';
+import { ContextMenu } from './ContextMenu';
+import { SessionEditModal } from './SessionEditModal';
+import { IdentityHeader } from './IdentityHeader';
 // addSession is the SOLE spawn path (T-03-09) — kept in a React/xterm-free module
 // so the no-double-spawn invariant is unit-testable in the Node env.
 import { addSession } from './session-add';
@@ -43,6 +46,15 @@ export function SessionManager(): React.JSX.Element {
   // is open for that id; null → no modal. Set by handleCloseRequest, cleared by
   // confirmClose/cancelClose.
   const [closingId, setClosingId] = useState<LogicalId | null>(null);
+  // The session whose EDIT form modal is open (D-04). Non-null → SessionEditModal is
+  // open for that id; null → closed. Hosted exactly like `closingId`.
+  const [editingId, setEditingId] = useState<LogicalId | null>(null);
+  // The open right-click context menu (D-03): the target id + viewport coords, or null.
+  const [menuState, setMenuState] = useState<{
+    id: LogicalId;
+    x: number;
+    y: number;
+  } | null>(null);
 
   // Guards the boot effect so a fast double-mount (React StrictMode dev) does not
   // auto-add two default sessions.
@@ -98,6 +110,51 @@ export function SessionManager(): React.JSX.Element {
       );
     })();
   }, []);
+
+  // ── Context menu (D-03): right-click a row → open the menu at the cursor. ──
+  const handleContextMenu = useCallback(
+    (id: LogicalId, x: number, y: number) => {
+      setMenuState({ id, x, y });
+    },
+    [],
+  );
+
+  const closeMenu = useCallback(() => setMenuState(null), []);
+
+  // ── Edit (D-04): open the create/edit form modal for a session. ──
+  const handleEdit = useCallback((id: LogicalId) => {
+    setEditingId(id);
+  }, []);
+
+  const cancelEdit = useCallback(() => setEditingId(null), []);
+
+  // ── Live edit half (D-02): name/icon apply IMMEDIATELY without a respawn. We map
+  //    the row in place (NEVER mint a new logicalId — SESS-04/IDENT-02) AND mirror the
+  //    name/icon to main via ptyUpdateProfile so a later restart/reconcile that
+  //    rebuilds the record from main's fields does NOT revert the live edit (Pitfall 4). ──
+  const handleSaveLive = useCallback(
+    (id: LogicalId, name: string, icon: SessionIconSpec) => {
+      setSessions((prev) =>
+        prev.map((row) =>
+          row.logicalId === id ? { ...row, name, icon } : row,
+        ),
+      );
+      window.api.ptyUpdateProfile(id, { name, icon });
+    },
+    [],
+  );
+
+  // ── Restart edit half (D-02): cwd/shell/startupCommand persist to main and take
+  //    effect on the NEXT restart (no live respawn here). ──
+  const handleSaveProfile = useCallback(
+    (
+      id: LogicalId,
+      fields: { cwd: string; shell: string; startupCommand: string },
+    ) => {
+      window.api.ptyUpdateProfile(id, fields);
+    },
+    [],
+  );
 
   // ── Add: the SOLE ptyCreate spawn path (T-03-09). One spawn per add. ──
   const onAdd = useCallback(() => {
@@ -198,6 +255,18 @@ export function SessionManager(): React.JSX.Element {
       : null;
   const closingIsRunning = closingSession?.status === 'running';
 
+  // The active session record (drives the identity header — D-05).
+  const activeRecord =
+    activeId !== null
+      ? (sessions.find((s) => s.logicalId === activeId) ?? null)
+      : null;
+
+  // The session targeted by the open edit modal (if any) — seeds the form fields.
+  const editingSession =
+    editingId !== null
+      ? (sessions.find((s) => s.logicalId === editingId) ?? null)
+      : null;
+
   return (
     <div className="ide-layout">
       <Sidebar
@@ -207,17 +276,22 @@ export function SessionManager(): React.JSX.Element {
         onAdd={onAdd}
         onClose={handleCloseRequest}
         onRestart={handleRestart}
-        onContextMenu={() => undefined}
-        onEdit={() => undefined}
+        onContextMenu={handleContextMenu}
+        onEdit={handleEdit}
       />
-      <div className="viewport-stack">
-        {sessions.map((s) => (
-          <SessionView
-            key={s.logicalId}
-            id={s.logicalId}
-            active={s.logicalId === activeId}
-          />
-        ))}
+      {/* Flex-column terminal area (RESEARCH Open Q2): the identity header sits above
+          the .viewport-stack; SessionView panes keep inset:0 inside the stack. */}
+      <div className="terminal-area">
+        <IdentityHeader session={activeRecord} />
+        <div className="viewport-stack">
+          {sessions.map((s) => (
+            <SessionView
+              key={s.logicalId}
+              id={s.logicalId}
+              active={s.logicalId === activeId}
+            />
+          ))}
+        </div>
       </div>
       <ConfirmModal
         open={closingSession !== null}
@@ -230,6 +304,33 @@ export function SessionManager(): React.JSX.Element {
         confirmLabel="Close"
         onConfirm={confirmClose}
         onCancel={cancelClose}
+      />
+      {menuState !== null && (
+        <ContextMenu
+          x={menuState.x}
+          y={menuState.y}
+          onClose={closeMenu}
+          items={[
+            { label: 'Edit', onSelect: () => setEditingId(menuState.id) },
+            { label: 'Restart', onSelect: () => handleRestart(menuState.id) },
+            {
+              label: 'Close',
+              onSelect: () => handleCloseRequest(menuState.id),
+            },
+          ]}
+        />
+      )}
+      <SessionEditModal
+        open={editingSession !== null}
+        session={editingSession}
+        onSaveLive={(name, icon) => {
+          if (editingId !== null) handleSaveLive(editingId, name, icon);
+        }}
+        onSaveProfile={(fields) => {
+          if (editingId !== null) handleSaveProfile(editingId, fields);
+          cancelEdit();
+        }}
+        onCancel={cancelEdit}
       />
     </div>
   );

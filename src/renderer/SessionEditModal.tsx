@@ -42,6 +42,9 @@ export function SessionEditModal({
 }: SessionEditModalProps): React.JSX.Element | null {
   const titleId = useId();
   const nameRef = useRef<HTMLInputElement>(null);
+  const cwdRef = useRef<HTMLInputElement>(null);
+  const shellRef = useRef<HTMLInputElement>(null);
+  const startupRef = useRef<HTMLInputElement>(null);
 
   // Local form state seeded from the session each time the modal opens for a target.
   const [name, setName] = useState('');
@@ -81,14 +84,24 @@ export function SessionEditModal({
   if (!open || session === null) return null;
 
   const handleSave = (): void => {
+    // Read each text field from the live DOM at save time, falling back to React
+    // state. Controlled inputs normally keep state and DOM in sync, but a programmatic
+    // fill (`input.value = …; dispatchEvent('input')`) can set the DOM value WITHOUT
+    // tripping React's onChange tracker — reading the ref captures it regardless, so
+    // the form is robust to both real typing and automated fills (the E2E contract).
+    const nameValue = nameRef.current?.value ?? name;
+    const cwdValue = cwdRef.current?.value ?? cwd;
+    const shellValue = shellRef.current?.value ?? shell;
+    const startupValue = startupRef.current?.value ?? startupCommand;
     // Empty name -> keep the existing name (D-02 discretion).
-    const effectiveName = name.trim().length > 0 ? name : session.name;
+    const effectiveName =
+      nameValue.trim().length > 0 ? nameValue : session.name;
     const { live, restart } = splitEdit({
       name: effectiveName,
       icon,
-      cwd,
-      shell,
-      startupCommand,
+      cwd: cwdValue,
+      shell: shellValue,
+      startupCommand: startupValue,
     });
     onSaveLive(live.name, live.icon);
     onSaveProfile(restart);
@@ -138,6 +151,7 @@ export function SessionEditModal({
             </label>
             <input
               id={`${titleId}-cwd`}
+              ref={cwdRef}
               type="text"
               className="edit-input"
               data-testid="edit-cwd"
@@ -152,6 +166,7 @@ export function SessionEditModal({
             </label>
             <input
               id={`${titleId}-shell`}
+              ref={shellRef}
               type="text"
               className="edit-input"
               data-testid="edit-shell"
@@ -166,6 +181,7 @@ export function SessionEditModal({
             </label>
             <input
               id={`${titleId}-startup`}
+              ref={startupRef}
               type="text"
               className="edit-input"
               data-testid="edit-startup"

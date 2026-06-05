@@ -174,12 +174,22 @@ body {
   color: var(--ink);
 }
 
-/* The terminal area — fills the rest; position:relative so the absolute panes
- * stack inside it. */
+/* The terminal area — fills the rest of the IDE row as a flex COLUMN so the slim
+ * identity header (D-05 / IDENT-03) sits above the viewport stack (RESEARCH Q2). */
+.terminal-area {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* The viewport stack — fills the remaining column height below the identity header;
+ * position:relative so the absolute SessionView panes (inset:0) stack inside it. */
 .viewport-stack {
   position: relative;
   flex: 1 1 auto;
-  height: 100%;
+  min-height: 0;
   background: var(--term-bg);
 }
 
