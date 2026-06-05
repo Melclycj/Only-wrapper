@@ -11,20 +11,20 @@ Requirements for the initial release. Derived from the user's FR-01–FR-21 spec
 
 - [x] **IDENT-01**: Each session has a stable internal session ID that does not change on rename, icon change, process restart, tab switch, startup-command change, or future browser-metadata linking (FR-01)
 - [x] **IDENT-02**: The logical session ID (stable, app-level) is stored and tracked separately from the terminal process/PID (temporary, per-spawn) (FR-02)
-- [ ] **IDENT-03**: Each session has a user-visible identity (name + icon + status) shown in both the sidebar and the session header (FR-03)
+- [x] **IDENT-03**: Each session has a user-visible identity (name + icon + status) shown in both the sidebar and the session header (FR-03)
 
 ### Session Management
 
-- [ ] **SESS-01**: User can create a new session specifying custom name, custom icon, initial working directory, shell, and optional startup command (FR-04)
-- [ ] **SESS-02**: User can set a custom name per session, shown in the sidebar tab, session header, and session settings (FR-05)
+- [x] **SESS-01**: User can create a new session specifying custom name, custom icon, initial working directory, shell, and optional startup command (FR-04)
+- [x] **SESS-02**: User can set a custom name per session, shown in the sidebar tab, session header, and session settings (FR-05)
 - [ ] **SESS-03**: User can assign an icon per session from emoji / a built-in icon list / a color badge; the icon stays visible when the sidebar is collapsed (FR-06)
-- [ ] **SESS-04**: User can rename a session and change its icon after creation without creating a new session ID (FR-07)
+- [x] **SESS-04**: User can rename a session and change its icon after creation without creating a new session ID (FR-07)
 
 ### Sidebar & Navigation
 
-- [ ] **NAV-01**: App displays sessions in a sidebar list, each item showing icon + session name + running/stopped status (FR-08)
+- [x] **NAV-01**: App displays sessions in a sidebar list, each item showing icon + session name + running/stopped status (FR-08)
 - [ ] **NAV-02**: Sidebar supports expanded and collapsed modes; in collapsed mode the icon still identifies the session (FR-09)
-- [ ] **NAV-03**: Clicking a session tab switches the main view to that session without stopping or restarting its terminal process (FR-10)
+- [x] **NAV-03**: Clicking a session tab switches the main view to that session without stopping or restarting its terminal process (FR-10)
 - [ ] **NAV-04**: App remembers and persists the user's session order in the sidebar (FR-11)
 - [ ] **NAV-05**: User can switch sessions via keyboard shortcuts (e.g. Ctrl/Cmd+1–9 and next/previous) without using the mouse (research addition)
 
@@ -103,14 +103,14 @@ Populated during roadmap creation. Each v1 requirement maps to exactly one phase
 |-------------|-------|--------|
 | IDENT-01 | Phase 1: Project Scaffold + Dev Infrastructure | Complete |
 | IDENT-02 | Phase 1: Project Scaffold + Dev Infrastructure | Complete |
-| IDENT-03 | Phase 4: Session Identity + Sidebar UI | Pending |
-| SESS-01 | Phase 4: Session Identity + Sidebar UI | Pending |
-| SESS-02 | Phase 4: Session Identity + Sidebar UI | Pending |
+| IDENT-03 | Phase 4: Session Identity + Sidebar UI | Complete |
+| SESS-01 | Phase 4: Session Identity + Sidebar UI | Complete |
+| SESS-02 | Phase 4: Session Identity + Sidebar UI | Complete |
 | SESS-03 | Phase 4: Session Identity + Sidebar UI | Pending |
-| SESS-04 | Phase 4: Session Identity + Sidebar UI | Pending |
-| NAV-01 | Phase 4: Session Identity + Sidebar UI | Pending |
+| SESS-04 | Phase 4: Session Identity + Sidebar UI | Complete |
+| NAV-01 | Phase 4: Session Identity + Sidebar UI | Complete |
 | NAV-02 | Phase 4: Session Identity + Sidebar UI | Pending |
-| NAV-03 | Phase 4: Session Identity + Sidebar UI | Pending |
+| NAV-03 | Phase 4: Session Identity + Sidebar UI | Complete |
 | NAV-04 | Phase 5: Persistence + Shell Discovery | Pending |
 | NAV-05 | Phase 4: Session Identity + Sidebar UI | Pending |
 | TERM-01 | Phase 2: PTY Core + Terminal Fidelity | Complete |

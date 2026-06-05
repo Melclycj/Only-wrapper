@@ -26,17 +26,17 @@ See: .planning/PROJECT.md (updated 2026-06-03)
 ## Current Position
 
 Phase: 04 (Session Identity + Sidebar UI) — EXECUTING
-Plan: 2 of 4
-Status: Executing Phase 04 (Plan 01 complete)
-Last activity: 2026-06-05 -- Phase 04 Plan 01 (session identity foundation) complete
+Plan: 3 of 4
+Status: Executing Phase 04 (Plans 01–02 complete)
+Last activity: 2026-06-05 -- Phase 04 Plan 02 (create/edit + identity slice) complete
 
-Progress: [██████████] 25% (Phase 4 plans: 1/4)
+Progress: [████████████████████] 50% (Phase 4 plans: 2/4)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 10
+- Total plans completed: 11
 - Average duration: — min
 - Total execution time: 0 hours
 
@@ -63,6 +63,7 @@ Progress: [██████████] 25% (Phase 4 plans: 1/4)
 | Phase 03 P01 | 56min | 3 tasks | 9 files |
 | Phase 03 P02 | 13min | 3 tasks | 10 files |
 | Phase 04 P01 | ~7min | 3 tasks | 19 files |
+| Phase 04 P02 | ~10min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -99,6 +100,8 @@ Recent decisions affecting current work:
 - [Phase 04-01]: ptyUpdateProfile (14th) + onSwitchSession (15th) are the new bridge keys; EXPECTED_API_KEYS → 15; security.guard.test.ts went RED→GREEN with NO code change (dynamic Object.keys(exposed)===EXPECTED_API_KEYS assertion)
 - [Phase 04-01]: PtyManager.updateProfile id-validates (unknown → no-op) + type-guards each string field; create() prefers a non-empty stored record.shell over resolveShell() (A2, Pitfall 3) so an edited shell takes effect on restart; startupCommand is carried on the record but NEVER written to a PTY — TERM-05 auto-run stays deferred (T-04-04, grep-verified)
 - [Phase 04-01]: Interface-first wave — 5 React/xterm/electron-free pure modules (switch-keys/session-switch/icon-spec/session-edit/emoji-set) + the 2 bridge keys define the contracts Plans 04-02..04 build against; 3 E2E smoke stubs stay RED until those plans land (nyquist_compliant flips true in 04-04)
+- [Phase 04-02]: renderIcon is now a single exported source in Sidebar.tsx (IconPicker + IdentityHeader import it); the color branch renders a badge with COLOR_INITIAL (D-09). The edit modal is a controlled EDIT form (D-04, D-01 quick-add unchanged); name/icon apply live via setSessions (NO new logicalId — SESS-04) AND mirror to main via ptyUpdateProfile so a restart/reconcile rebuild does not revert (Pitfall 4); cwd/shell/startup persist under an "Applies on restart" hint
+- [Phase 04-02]: Rule-1 fix — SessionEditModal reads its text fields from refs at save time; React 19's controlled-input value-tracker suppresses onChange when a fill sets `input.value` directly then dispatches 'input' (the E2E contract), so reading the live DOM at save makes the form robust to both real typing and automated fills. session-edit.smoke.test.ts is GREEN (live rename, same logicalId); keyboard-switch/sidebar-collapse stubs stay RED for Plans 03/04
 
 ### Pending Todos
 

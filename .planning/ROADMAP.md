@@ -131,11 +131,11 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 1**
 
-- [ ] 04-01-PLAN.md — Foundation: Wave 0 RED stubs + 5 pure modules + atomic 15-key bridge lockstep (ptyUpdateProfile/onSwitchSession) + PtyManager.updateProfile
+- [x] 04-01-PLAN.md — Foundation: Wave 0 RED stubs + 5 pure modules + atomic 15-key bridge lockstep (ptyUpdateProfile/onSwitchSession) + PtyManager.updateProfile
 
 **Wave 2** *(blocked on Wave 1)*
 
-- [ ] 04-02-PLAN.md — Create/edit + identity slice: ContextMenu + IconPicker + SessionEditModal + IdentityHeader + color-badge-with-initial (SESS-01..04, IDENT-03, NAV-01/03)
+- [x] 04-02-PLAN.md — Create/edit + identity slice: ContextMenu + IconPicker + SessionEditModal + IdentityHeader + color-badge-with-initial (SESS-01..04, IDENT-03, NAV-01/03)
 
 **Wave 3** *(blocked on Wave 2)*
 
