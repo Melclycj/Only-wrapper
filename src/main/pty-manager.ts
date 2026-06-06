@@ -28,6 +28,7 @@ import type {
 import { newLogicalId } from '../shared/id-factory';
 import { resolveShell } from './shell-resolver';
 import { selectShellProvider, type DiscoveredShell } from './shell-discovery';
+import { selectReadinessProbe } from './readiness-probe';
 
 /** IPC channel names (payloads carry `id` so the design scales to N sessions). */
 export const PTY_CHANNELS = {
@@ -276,11 +277,70 @@ export class PtyManager {
     // signal the store to debounce-write (D-13).
     this.signalStore();
 
-    // Forward the UTF-8 string straight through — no binary re-encoding
-    // (would risk splitting a multibyte char and corrupting CJK/emoji — SC4).
-    child.onData((data) => {
-      this.send(PTY_CHANNELS.data, { id, data });
-    });
+    // TERM-05 startup-command auto-run (D-02/D-05/SC1/SC2). ONE hook here covers
+    // ALL three spawn entry points — new-with-command, Restart-respawn, and dormant
+    // Start-promotion — because every one of them funnels through create() (D-05).
+    //
+    //   - Empty/whitespace startupCommand → wire normal forwarding and skip the
+    //     probe entirely: a bare login shell, no injected input (SC2/TERM-03).
+    //   - Non-empty startupCommand → run the invisible readiness probe: a transient
+    //     onData interceptor BUFFERS bytes and NEVER calls this.send() for them
+    //     (D-02 invisibility — the load-bearing lever), the no-side-effect nonce
+    //     marker is written, and once probe.matches(buffer) confirms the shell has
+    //     genuinely processed a line, the interceptor disposes, the buffered probe
+    //     bytes are DISCARDED (never forwarded), normal forwarding is restored, and
+    //     the command is injected ONCE as `cmd + '\r'` (CR — a real Enter; lands in
+    //     shell history; bypasses the renderer bracketed-paste path that exists to
+    //     PREVENT auto-execute — SC1).
+    //
+    // Security V7 (T-05.1-03): lifecycle logging only — the command, the probe
+    // nonce, and the buffered (nonce-bearing) bytes are NEVER logged.
+    const cmd = record.startupCommand?.trim();
+    if (!cmd) {
+      // No startup command → normal bare shell (SC2/TERM-03). No probe, no inject.
+      this.wireNormalOnData(id, child);
+    } else {
+      // zsh + bash share the POSIX ':' no-op probe on macOS (D-03). Windows throws
+      // (Phase-8 stub) — an unverified Windows shell must fail loudly, not mis-fire.
+      const probe = selectReadinessProbe(process.platform).forShell(record.shell);
+      let buffer = '';
+      let settled = false;
+      const offProbe = child.onData((data) => {
+        // After the marker round-trips, forwarding is restored via wireNormalOnData;
+        // this guard covers any byte that races in before the listener swap settles.
+        if (settled) {
+          this.send(PTY_CHANNELS.data, { id, data });
+          return;
+        }
+        // Pre-match bytes are BUFFERED and NEVER sent — invisibility (D-02).
+        buffer += data;
+        if (probe.matches(buffer)) {
+          settled = true;
+          // TODO(Plan 03 / D-04): clear the READINESS_TIMEOUT_MS timer here so the
+          // timeout-flush-and-notice branch never fires after a successful match.
+          offProbe.dispose();
+          // The buffered probe bytes (marker echo + nonce-bearing prompt) are
+          // DISCARDED — they never reach the renderer (D-02 invisibility).
+          this.wireNormalOnData(id, child);
+          // Inject the user's saved command as a real Enter (CR 0x0D, NOT LF) so it
+          // echoes visibly and lands in shell history (SC1). This is the main-side
+          // write — NOT the renderer term.paste() bracketed-paste path (which exists
+          // specifically to PREVENT auto-execute). T-05.1-01: same trust boundary as
+          // the user typing their own saved command in their own shell.
+          child.write(cmd + '\r');
+        }
+      });
+      // Send the no-side-effect nonce probe to elicit a readiness round-trip. The
+      // marker is `buildPosixProbe`'s ': <nonce>\r' — no user data is interpolated
+      // (T-05.1-02), changes no shell state (D-01).
+      child.write(probe.marker);
+      // TODO(Plan 03 / D-04): on READINESS_TIMEOUT_MS with !settled → offProbe.dispose(),
+      // FLUSH the buffered prompt via this.send(PTY_CHANNELS.data, { id, data: buffer })
+      // so the bare shell is usable (SC4), wireNormalOnData(id, child), and emit the
+      // ready-fail notice on onPtyStatus — but NEVER best-effort inject the command
+      // (D-04). The timer is intentionally NOT implemented here (Plan 02 is happy-path
+      // only); READINESS_TIMEOUT_MS is added in Plan 03.
+    }
 
     child.onExit(({ exitCode }) => {
       console.log(`[pty] exit code=${exitCode} (session ${id})`);
@@ -312,6 +372,22 @@ export class PtyManager {
     });
 
     return { id, pid: ptyPid };
+  }
+
+  /**
+   * The shared normal-forwarding wiring (TERM-05 refactor). Forwards every PTY
+   * output chunk straight to the renderer as a `pty:data` event. Called on BOTH
+   * the empty-command path (a bare shell, immediately) AND the post-probe resume
+   * path (after the readiness marker round-trips and the probe bytes are
+   * discarded). ONE definition keeps the two paths byte-identical.
+   *
+   * The UTF-8 string is forwarded straight through — no binary re-encoding (would
+   * risk splitting a multibyte char and corrupting CJK/emoji — SC4).
+   */
+  private wireNormalOnData(id: LogicalId, child: IPty): void {
+    child.onData((data) => {
+      this.send(PTY_CHANNELS.data, { id, data });
+    });
   }
 
   /**
