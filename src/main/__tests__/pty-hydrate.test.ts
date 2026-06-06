@@ -176,4 +176,25 @@ describe('PtyManager hydrate + promotion (PERS-02 / Pattern 4 / D-13)', () => {
     expect(mgr.listSessions()).toHaveLength(0);
     expect(signal).toHaveBeenCalledTimes(1);
   });
+
+  // SC5 (TERM-05 / D-06) — a dormant restore-on-launch spawns NO pty, so there is
+  // nothing to inject a startupCommand into: auto-run is satisfied STRUCTURALLY by
+  // the dormant model. This stays GREEN (it asserts the EXISTING hydrate behavior),
+  // pinning the SC5 invariant so a future create()-probe hook can never auto-run a
+  // merely-restored (never-Started) session.
+  it('SC5: hydrate of a startupCommand-bearing record spawns no pty → never auto-runs (D-06)', () => {
+    const mgr = new PtyManager();
+    mgr.hydrate([
+      dormantRecord({
+        logicalId: 'restored-auto' as LogicalId,
+        startupCommand: 'echo NOPE',
+      }),
+    ]);
+    // Restore-on-launch does NOT spawn — so no PTY exists to write the command into.
+    expect(spawnMock).not.toHaveBeenCalled();
+    // The dormant record is present (visible, restartable) but stays not_started.
+    const rec = mgr.listSessions().find((r) => r.logicalId === 'restored-auto');
+    expect(rec?.status).toBe('not_started');
+    expect(rec?.startupCommand).toBe('echo NOPE'); // carried, but never injected on hydrate
+  });
 });
