@@ -25,13 +25,14 @@ It is **not** a new shell and **not** a full terminal replacement. It is a sessi
 - [x] Persist session metadata locally and restore profiles on app reopen — sessions reappear dormant (`not_started`, never `running`) in saved order with name/icon/cwd/shell/startup command intact, written through lowdb (debounced + quit-flushed, coerce-on-load, corrupt-file recovery) — *Phase 5 (PERS-01/02; SessionStore + PtyManager.hydrate dormant-restore + lifecycle wiring; close→reopen round-trip proven in the built app)*
 - [x] Persist the user's custom sidebar session order across restarts via drag-to-reorder (dnd-kit, validate-in-main `persistOrder`) — *Phase 5 (NAV-04)*
 - [x] Platform-aware shell selection — the session form shell field is a discovered `<select>` populated from the OS (macOS reads `/etc/shells` with `$SHELL` defaulted; no hardcoded paths), behind a provider seam — *Phase 5 (PERS-02 macOS; Windows provider is an intentional stub for Phase 8)*
+- [x] A session's saved startup command auto-runs once the shell is genuinely ready (invisible round-trip readiness probe, not a settle-delay) — the command is injected as if typed (lands in shell history) on start and restart, with a safe timeout fallback to a bare prompt + non-intrusive notice if the shell never becomes ready; bare-shell mode preserved when no command is set — *Phase 5.1 (TERM-05; un-deferred from Phase 3; user-verified native feel + 11/11 smoke; 2 code-review blockers fixed)*
 
 ### Active
 
 <!-- Current scope. Building toward these. All are hypotheses until shipped. -->
 
 - [ ] Real interactive terminal surface via a true PTY (not one-shot command execution) — full keyboard input, Ctrl+C/Ctrl+D, arrow keys, copy/paste, resize, ANSI colors, long-running and interactive programs
-- [ ] Normal shell mode plus a configured working directory; manual `cd` and launch tools from any accessible folder. *(Optional startup-command auto-run un-deferred to Phase 5.1 — TERM-05.)*
+- [ ] Normal shell mode plus a configured working directory; manual `cd` and launch tools from any accessible folder. *(Optional startup-command auto-run shipped in Phase 5.1 — TERM-05, now Validated.)*
 - [ ] Platform-aware shell selection for **Windows** (PowerShell/CMD/Git Bash/WSL) — provider seam shipped in Phase 5; Windows discovery deferred to Phase 8
 - [ ] Package as a local desktop app for both Windows and macOS from one codebase
 
@@ -96,4 +97,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-06 — Phase 5 complete (persistence + shell discovery: lowdb SessionStore with debounced/quit-flushed writes + coerce-on-load + corrupt recovery, dormant-restore via PtyManager.hydrate, window-bounds restore, shell-discovery `<select>` from `/etc/shells`, IdleCard + WelcomeEmptyState, drag-to-reorder via dnd-kit with validate-in-main persistOrder; verified 4/4 success criteria. 2 post-review criticals fixed inline — dormant-edit persistence (CR-02) + shell/cwd allowlist validation on the persist boundary (CR-01). 3 manual-UAT items pending in 05-HUMAN-UAT.md. Next: Phase 5.1 — TERM-05 startup-command auto-run.)*
+*Last updated: 2026-06-06 — Phase 5.1 complete (TERM-05 startup-command auto-run, un-deferred from Phase 3): an invisible one-shot readiness probe in PtyManager.create() writes a POSIX `:` nonce marker, withholds all pre-match PTY bytes from the renderer (D-02 invisibility), and on match injects `cmd + '\r'` once (SC1) so the command lands in shell history; bare-shell preserved when no command (SC2); restart re-runs (SC3); a 4s timeout flushes to a usable bare prompt with a non-intrusive ready-fail notice and never injects (D-04/SC4). Verified 5/5 success criteria + user-approved native-feel checkpoint; full suite GREEN (147 unit + 11/11 smoke). 2 code-review blockers fixed inline — spurious "— restarted —" on the notice path (CR-01) + restart onExit listener leak/double-inject (CR-02); 5 warnings + 3 info deferred to a follow-up todo. 3 session edit/lifecycle UX items captured as todos (edit-modal prefill, folder picker, Start control). Next: Phase 6 — robustness + flow-control polish.)*

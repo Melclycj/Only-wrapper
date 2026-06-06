@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
-stopped_at: Completed 05.1-03-PLAN.md (human-verify approved; phase pending orchestrator verification)
+status: ready
+stopped_at: Phase 05.1 complete and verified (TERM-05 done; 5/5 must-haves, human-verify approved, 2 code-review blockers fixed) — ready for Phase 6
 last_updated: "2026-06-06T15:20:50.121Z"
 last_activity: 2026-06-06
 progress:
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-03)
 
 **Core value:** Real terminal fidelity — `claude --rc`, `codex`, `vim`, `ssh`, REPLs all behave exactly like a native terminal inside the wrapper.
-**Current focus:** Phase 05.1 — term-05-startup-command-auto-run
+**Current focus:** Phase 6 — robustness-+-flow-control-polish (Phase 05.1 complete)
 
 ## Current Position
 
 Phase: 6
 Plan: Not started
-Status: All 3 plans complete — awaiting phase verification
+Status: Phase 05.1 (TERM-05) complete and verified — ready to start Phase 6
 Last activity: 2026-06-06
 
 Progress: [████████████████████] 100% (Phase 5.1 plans: 3/3)
