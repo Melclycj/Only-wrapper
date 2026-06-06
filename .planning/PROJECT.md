@@ -22,16 +22,17 @@ It is **not** a new shell and **not** a full terminal replacement. It is a sessi
 - [x] Create / edit terminal sessions with a custom name, icon (emoji + color badge), working directory, shell, and startup command via a real form — *Phase 4 (SESS-01..04; name/icon apply live, cwd/shell/startup apply on restart; startup-command auto-run TERM-05 still deferred — field is stored only)*
 - [x] Stable internal session ID that survives rename / icon-change / restart / tab-switch — distinct from the PTY process ID — *Phase 1 (IDENT-01/02) + Phase 4 (IDENT-03; rename/re-icon preserve logicalId, human-verified)*
 - [x] Collapsible sidebar listing sessions (icon + name + status), icon still identifies each session when collapsed, plus mouse-free keyboard session switching — *Phase 4 (NAV-01/02/03/05; Cmd/Ctrl+1–9 + Shift+[ / ] "app-wins" over the focused terminal)*
+- [x] Persist session metadata locally and restore profiles on app reopen — sessions reappear dormant (`not_started`, never `running`) in saved order with name/icon/cwd/shell/startup command intact, written through lowdb (debounced + quit-flushed, coerce-on-load, corrupt-file recovery) — *Phase 5 (PERS-01/02; SessionStore + PtyManager.hydrate dormant-restore + lifecycle wiring; close→reopen round-trip proven in the built app)*
+- [x] Persist the user's custom sidebar session order across restarts via drag-to-reorder (dnd-kit, validate-in-main `persistOrder`) — *Phase 5 (NAV-04)*
+- [x] Platform-aware shell selection — the session form shell field is a discovered `<select>` populated from the OS (macOS reads `/etc/shells` with `$SHELL` defaulted; no hardcoded paths), behind a provider seam — *Phase 5 (PERS-02 macOS; Windows provider is an intentional stub for Phase 8)*
 
 ### Active
 
 <!-- Current scope. Building toward these. All are hypotheses until shipped. -->
 
 - [ ] Real interactive terminal surface via a true PTY (not one-shot command execution) — full keyboard input, Ctrl+C/Ctrl+D, arrow keys, copy/paste, resize, ANSI colors, long-running and interactive programs
-- [ ] Normal shell mode plus a configured working directory; manual `cd` and launch tools from any accessible folder. *(Optional startup-command mode deferred — descoped from Phase 3; revisit with the Phase 4 form.)*
-- [ ] Persist session metadata locally (ID, name, icon, cwd, shell, startup command, order, last active) and restore profiles on app reopen
-- [ ] Persist user's session order in the sidebar
-- [ ] Platform-aware shell selection (PowerShell/CMD/Git Bash/WSL on Windows; zsh/bash on macOS) and path handling
+- [ ] Normal shell mode plus a configured working directory; manual `cd` and launch tools from any accessible folder. *(Optional startup-command auto-run un-deferred to Phase 5.1 — TERM-05.)*
+- [ ] Platform-aware shell selection for **Windows** (PowerShell/CMD/Git Bash/WSL) — provider seam shipped in Phase 5; Windows discovery deferred to Phase 8
 - [ ] Package as a local desktop app for both Windows and macOS from one codebase
 
 ### Out of Scope
@@ -95,4 +96,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-05 — Phase 4 complete (session identity + sidebar UI: create/edit form, emoji+color icon picker, slim identity header, collapsible icon-only rail, right-click context menu, mouse-free keyboard switching "app-wins" over the terminal; human UAT approved. startup-command auto-run TERM-05 still deferred — field stored only). Next: Phase 5 — Persistence + Shell Discovery.*
+*Last updated: 2026-06-06 — Phase 5 complete (persistence + shell discovery: lowdb SessionStore with debounced/quit-flushed writes + coerce-on-load + corrupt recovery, dormant-restore via PtyManager.hydrate, window-bounds restore, shell-discovery `<select>` from `/etc/shells`, IdleCard + WelcomeEmptyState, drag-to-reorder via dnd-kit with validate-in-main persistOrder; verified 4/4 success criteria. 2 post-review criticals fixed inline — dormant-edit persistence (CR-02) + shell/cwd allowlist validation on the persist boundary (CR-01). 3 manual-UAT items pending in 05-HUMAN-UAT.md. Next: Phase 5.1 — TERM-05 startup-command auto-run.)*
