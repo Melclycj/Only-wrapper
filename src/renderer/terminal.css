@@ -655,3 +655,196 @@ body {
   text-transform: uppercase;
   color: var(--ink-faint);
 }
+
+/* ── Idle card (D-04) — the dormant-session placeholder shown in .terminal-area when
+ * the active session is not_started. Floats on the dark --term-bg gutter so the
+ * terminal "lives here, but it's asleep". Tokens only — no new colors. ──────────── */
+
+/* The stage fills the viewport-stack region and centers the card on the gutter. */
+.idle-card-stage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  box-sizing: border-box;
+  background: var(--term-bg);
+}
+
+.idle-card {
+  width: min(440px, calc(100% - 48px));
+  box-sizing: border-box;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: 0 18px 48px oklch(0.255 0.018 264 / 0.28);
+  font-family: 'Nunito', system-ui, sans-serif;
+  color: var(--ink);
+}
+
+/* Identity region: icon tile → name → "Idle" status badge (reuses .status-badge). */
+.idle-card-identity {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.idle-card-identity .row-icon {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.idle-card-name {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--ink);
+}
+
+/* Config region: a recessed inset block of read-only label+value pairs. */
+.idle-card-config {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 12px;
+  background: var(--bg-sunk);
+}
+
+.idle-card-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.idle-card-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+.idle-card-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--ink);
+  word-break: break-all;
+}
+
+/* The startup-command "prompt" glyph — visually inert, a TERM-05 boundary cue. */
+.idle-card-prompt {
+  color: var(--ink-faint);
+}
+
+/* "Saved for reference — not run automatically…" helper under the startup command. */
+.idle-card-helper {
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--ink-faint);
+}
+
+/* Empty-startup placeholder. */
+.idle-card-empty {
+  font-style: italic;
+  color: var(--ink-faint);
+}
+
+/* Error-after-start inline line (red ramp — matches the error status accent). */
+.idle-card-error {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: oklch(0.58 0.16 25);
+}
+
+/* In-card Start button: blue outline/text → fills blue on hover ("go live"). */
+.idle-start-button {
+  align-self: stretch;
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: 1px solid oklch(0.62 0.14 248);
+  background: var(--surface);
+  color: oklch(0.62 0.14 248);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.idle-start-button:hover {
+  background: oklch(0.62 0.14 248);
+  color: #ffffff;
+}
+
+.idle-start-button:focus-visible {
+  outline: 2px solid oklch(0.62 0.14 248);
+  outline-offset: 2px;
+}
+
+/* ── Welcome / empty state (D-10) — shown when there are zero sessions. Centered on
+ * the warm --bg-sunk (a "no terminal yet" state, NOT the dark gutter). ─────────── */
+.welcome-state {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 32px;
+  padding: 48px;
+  box-sizing: border-box;
+  background: var(--bg-sunk);
+  font-family: 'Nunito', system-ui, sans-serif;
+  text-align: center;
+}
+
+.welcome-glyph {
+  font-size: 48px;
+  line-height: 1;
+}
+
+.welcome-heading {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--ink);
+}
+
+.welcome-body {
+  margin: 0;
+  max-width: 360px;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+/* The single high-emphasis action in this state: a filled blue primary CTA. */
+.welcome-cta {
+  padding: 10px 20px;
+  border-radius: 10px;
+  border: none;
+  background: oklch(0.62 0.14 248);
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.welcome-cta:hover {
+  background: oklch(0.58 0.14 248);
+}
+
+.welcome-cta:focus-visible {
+  outline: 2px solid oklch(0.62 0.14 248);
+  outline-offset: 2px;
+}
