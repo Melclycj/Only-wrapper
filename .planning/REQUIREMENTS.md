@@ -25,7 +25,7 @@ Requirements for the initial release. Derived from the user's FR-01–FR-21 spec
 - [x] **NAV-01**: App displays sessions in a sidebar list, each item showing icon + session name + running/stopped status (FR-08)
 - [x] **NAV-02**: Sidebar supports expanded and collapsed modes; in collapsed mode the icon still identifies the session (FR-09)
 - [x] **NAV-03**: Clicking a session tab switches the main view to that session without stopping or restarting its terminal process (FR-10)
-- [ ] **NAV-04**: App remembers and persists the user's session order in the sidebar (FR-11)
+- [x] **NAV-04**: App remembers and persists the user's session order in the sidebar (FR-11)
 - [x] **NAV-05**: User can switch sessions via keyboard shortcuts (e.g. Ctrl/Cmd+1–9 and next/previous) without using the mouse (research addition)
 
 ### Terminal Session
@@ -45,8 +45,8 @@ Requirements for the initial release. Derived from the user's FR-01–FR-21 spec
 
 ### Local Persistence
 
-- [ ] **PERS-01**: App saves session metadata locally — session ID, name, icon, working directory, shell, startup command, display order, last active time (FR-20)
-- [ ] **PERS-02**: On reopen, app restores saved session profiles (metadata only, not live processes) and lets the user start them again (FR-21)
+- [x] **PERS-01**: App saves session metadata locally — session ID, name, icon, working directory, shell, startup command, display order, last active time (FR-20)
+- [x] **PERS-02**: On reopen, app restores saved session profiles (metadata only, not live processes) and lets the user start them again (FR-21)
 
 ### Packaging
 
@@ -111,7 +111,7 @@ Populated during roadmap creation. Each v1 requirement maps to exactly one phase
 | NAV-01 | Phase 4: Session Identity + Sidebar UI | Complete |
 | NAV-02 | Phase 4: Session Identity + Sidebar UI | Complete |
 | NAV-03 | Phase 4: Session Identity + Sidebar UI | Complete |
-| NAV-04 | Phase 5: Persistence + Shell Discovery | Pending |
+| NAV-04 | Phase 5: Persistence + Shell Discovery | Complete |
 | NAV-05 | Phase 4: Session Identity + Sidebar UI | Complete |
 | TERM-01 | Phase 2: PTY Core + Terminal Fidelity | Complete |
 | TERM-02 | Phase 2: PTY Core + Terminal Fidelity | Complete |
@@ -125,8 +125,8 @@ Populated during roadmap creation. Each v1 requirement maps to exactly one phase
 | TERM-10 | Phase 7: Terminal Search + Scrollback Config | Pending |
 | TERM-11 | Phase 7: Terminal Search + Scrollback Config | Pending |
 | TERM-12 | Phase 6: Robustness + Flow-Control Polish | Pending |
-| PERS-01 | Phase 5: Persistence + Shell Discovery | Pending |
-| PERS-02 | Phase 5: Persistence + Shell Discovery | Pending |
+| PERS-01 | Phase 5: Persistence + Shell Discovery | Complete |
+| PERS-02 | Phase 5: Persistence + Shell Discovery | Complete |
 | PKG-01 | Phase 8: Cross-Platform Packaging | Pending |
 
 **Coverage:**

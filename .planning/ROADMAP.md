@@ -159,12 +159,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. The sidebar preserves the user's custom session ordering across restarts
   4. The shell selector in the session creation form is populated with available shells for the current platform (PowerShell/CMD/Git Bash/WSL on Windows; zsh/bash on macOS) with no hardcoded paths that break on non-standard installs
 
-**Plans:** 4 plans
+**Plans:** 1/4 plans executed
 **UI hint:** yes
 
 **Wave 1**
 
-- [ ] 05-01-PLAN.md — Foundation: Wave 0 RED stubs + 4 pure modules (store-schema/shell-discovery/window-bounds/session-reorder) + atomic 18-key bridge lockstep + lowdb install/external (PERS-01/02, NAV-04)
+- [x] 05-01-PLAN.md — Foundation: Wave 0 RED stubs + 4 pure modules (store-schema/shell-discovery/window-bounds/session-reorder) + atomic 18-key bridge lockstep + lowdb install/external (PERS-01/02, NAV-04)
 
 **Wave 2** *(blocked on Wave 1)*
 
@@ -253,7 +253,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 5.1 → 6 → 7 �
 | 2. PTY Core + Terminal Fidelity | 4/4 | Complete    | 2026-06-04 |
 | 3. Multi-Session + Session Lifecycle | 3/3 | Complete    | 2026-06-04 |
 | 4. Session Identity + Sidebar UI | 4/4 | Complete    | 2026-06-05 |
-| 5. Persistence + Shell Discovery | 0/4 | Not started | - |
+| 5. Persistence + Shell Discovery | 1/4 | In Progress|  |
 | 5.1. TERM-05 startup-command auto-run (INSERTED) | 0/TBD | Not started | - |
 | 6. Robustness + Flow-Control Polish | 0/TBD | Not started | - |
 | 7. Terminal Search + Scrollback Config | 0/TBD | Not started | - |
