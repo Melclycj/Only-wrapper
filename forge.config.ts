@@ -31,6 +31,18 @@ const config: ForgeConfig = {
       ) {
         return false;
       }
+      // Keep lowdb + its steno dependency (05-01, Pitfall 2). lowdb is marked
+      // `external` in vite.main.config.ts so it is NOT bundled into /.vite — without
+      // this keep-clause the packaged app would throw MODULE_NOT_FOUND lowdb at
+      // runtime (surfaces at Phase 8 packaging). Mirrors the node-pty keep-clause.
+      if (
+        file === '/node_modules/lowdb' ||
+        file.startsWith('/node_modules/lowdb/') ||
+        file === '/node_modules/steno' ||
+        file.startsWith('/node_modules/steno/')
+      ) {
+        return false;
+      }
       return true; // prune everything else (matches the Vite plugin default)
     },
   },

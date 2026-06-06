@@ -15,6 +15,10 @@ import type {
 // type-only: SwitchIntent is a plain discriminated union (no runtime electron) so
 // importing it from the main-side pure matcher keeps api-types renderer-safe (04-01).
 import type { SwitchIntent } from '../main/switch-keys';
+// type-only: DiscoveredShell is a plain { path; label } interface (no runtime
+// electron) so importing it from the main-side shell-discovery seam keeps
+// api-types renderer-safe (05-01).
+import type { DiscoveredShell } from '../main/shell-discovery';
 
 // ─── PTY payload types (02-02) ───────────────────────────────────────────────
 
@@ -133,6 +137,33 @@ export type ElectronAPI = {
    * Returns an unsubscribe fn. main → renderer, read-only inbound event.
    */
   onSwitchSession: (cb: (intent: SwitchIntent) => void) => () => void;
+
+  // ─── Persistence + discovery surface (05-01) — 3 new keys in EXPECTED_API_KEYS ─
+
+  /**
+   * Discover the platform-available shells for the edit-form dropdown (the 16th
+   * key, mirrors listSessions's request-response invoke). main runs the macOS
+   * provider this phase (reads /etc/shells + always includes the resolved $SHELL,
+   * filters to on-disk, de-dupes — D-05/D-06); the Windows enumeration is Phase 8.
+   */
+  discoverShells: () => Promise<DiscoveredShell[]>;
+  /**
+   * Persist the user's sidebar order (the 17th key, fire-and-forget send, mirrors
+   * ptyUpdateProfile). main VALIDATES the payload before any write (T-05-01): each
+   * `id` must be a known LogicalId AND `order` must be a finite number — a forged
+   * payload is a silent no-op, never writing arbitrary data to disk (NAV-04/D-08).
+   */
+  persistOrder: (orders: { id: LogicalId; order: number }[]) => void;
+  /**
+   * Persist UI preferences — sidebar collapse + window bounds (the 18th key,
+   * fire-and-forget send, mirrors ptyUpdateProfile). main VALIDATES before write
+   * (T-05-01): each of x/y/width/height must be finite, collapsed must be boolean.
+   * D-12 (collapse state + window size/position survive reopen).
+   */
+  persistUiState: (ui: {
+    collapsed?: boolean;
+    bounds?: { x: number; y: number; width: number; height: number };
+  }) => void;
 };
 
 // Window augmentation — import this in renderer entry point

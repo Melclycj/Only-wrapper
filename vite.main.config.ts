@@ -13,7 +13,12 @@ export default defineConfig({
       formats: ['cjs'],
     },
     rollupOptions: {
-      external: ['electron', 'node-pty'], // node-pty external even before Phase 2 installs it
+      // node-pty external even before Phase 2 installs it.
+      // lowdb (05-01, Pitfall 1): lowdb@7 is pure ESM with NO CJS entry. Marking it
+      // external keeps the dynamic `import('lowdb')` in SessionStore (Plan 05-02)
+      // resolving the real ESM package at runtime instead of being bundled/down-leveled
+      // to require() → ERR_REQUIRE_ESM. Mirrors exactly how node-pty is treated.
+      external: ['electron', 'node-pty', 'lowdb'],
     },
   },
 });

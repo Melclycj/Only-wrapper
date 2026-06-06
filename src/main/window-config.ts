@@ -58,6 +58,20 @@ export function buildWebPreferences(preloadPath: string): WebPreferencesConfig {
  * The lockstep (api-types + this array + preload + pty-manager channel triple) is
  * done in ONE atomic task; the guard asserts the EXACT 15-key set so no unreviewed
  * key (e.g. raw ipcRenderer) can leak (T-04-03).
+ *
+ * Phase 5 (05-01) REVIEWED EXPANSION (threat_model T-05-01): three persistence +
+ * discovery methods join the surface — an 18-key set:
+ *   - `discoverShells` (invoke, mirrors listSessions): main-only filesystem read of
+ *     the platform shell list for the edit-form dropdown (no renderer fs access).
+ *   - `persistOrder` (fire-and-forget send, mirrors ptyUpdateProfile): the renderer
+ *     sends the new sidebar order. SECURITY V5 / T-05-01 — main MUST validate-in-main
+ *     BEFORE any disk write: each `id` is a known LogicalId AND `order` is a finite
+ *     number. A forged payload is a silent no-op, never writing arbitrary data.
+ *   - `persistUiState` (fire-and-forget send, mirrors ptyUpdateProfile): the renderer
+ *     sends collapse + window-bounds prefs. SECURITY V5 / T-05-01 — main validates
+ *     each of x/y/width/height is finite and collapsed is boolean before writing.
+ * The lockstep is done in ONE atomic task; the guard asserts the EXACT 18-key set so
+ * no unreviewed key (e.g. raw ipcRenderer) can leak.
  */
 export const EXPECTED_API_KEYS = [
   'getVersion',
@@ -75,4 +89,7 @@ export const EXPECTED_API_KEYS = [
   'listSessions',
   'ptyUpdateProfile',
   'onSwitchSession',
+  'discoverShells',
+  'persistOrder',
+  'persistUiState',
 ] as const;

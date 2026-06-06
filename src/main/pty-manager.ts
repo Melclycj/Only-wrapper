@@ -25,6 +25,7 @@ import type {
 } from '../shared/types';
 import { newLogicalId } from '../shared/id-factory';
 import { resolveShell } from './shell-resolver';
+import { selectShellProvider, type DiscoveredShell } from './shell-discovery';
 
 /** IPC channel names (payloads carry `id` so the design scales to N sessions). */
 export const PTY_CHANNELS = {
@@ -45,6 +46,14 @@ export const PTY_CHANNELS = {
   // 04-01 identity: persist edited profile fields onto the kept record (no-op on
   // unknown id; type-guarded; startupCommand stored-only — TERM-05 deferred).
   updateProfile: 'pty:update-profile',
+  // 05-01 persistence + discovery channels. `discover` is request-response (invoke);
+  // `persistOrder`/`persistUi` are fire-and-forget (.on) and VALIDATE-IN-MAIN before
+  // any state mutation (T-05-01). The store wiring (lowdb) lands in Plan 05-02 — for
+  // now the setters guard + mutate in-memory record state so the channel surface is
+  // complete and security-validated now.
+  discover: 'shell:discover',
+  persistOrder: 'store:persist-order',
+  persistUi: 'store:persist-ui',
 } as const;
 
 /**
@@ -143,6 +152,14 @@ export class PtyManager {
   private win: BrowserWindow | null = null;
   /** True once the process-global IPC handlers are wired (idempotency guard — CR-01). */
   private ipcRegistered = false;
+  /**
+   * In-memory UI preferences (05-01, D-12). setUiState() validates-then-holds these;
+   * Plan 05-02 wires them through the lowdb store (scheduleSave on mutation).
+   */
+  private readonly uiState: {
+    collapsed?: boolean;
+    bounds?: { x: number; y: number; width: number; height: number };
+  } = {};
 
   /**
    * Spawn a login PTY and key it by a fresh LogicalId.
@@ -457,6 +474,66 @@ export class PtyManager {
     if (fields.icon) s.record.icon = fields.icon;
   }
 
+  /**
+   * Return the platform-available shells for the edit-form dropdown (05-01).
+   * Delegates to the per-platform provider (macOS reads /etc/shells + $SHELL,
+   * filters on-disk, de-dupes — D-05/D-06; Windows is a Phase-8 stub). The
+   * filesystem read is confined to main — the renderer never touches fs.
+   */
+  discoverShells(): DiscoveredShell[] {
+    return selectShellProvider(process.platform).discover();
+  }
+
+  /**
+   * Persist the user's sidebar order onto the kept records (05-01, NAV-04/D-08).
+   *
+   * VALIDATE-IN-MAIN (Shared Pattern B / T-05-01): each entry's `id` must be a
+   * KNOWN LogicalId AND its `order` must be a finite number before any mutation.
+   * Unknown ids and non-finite orders are silently skipped — a forged payload can
+   * never write arbitrary data. Plan 05-02 wires the lowdb store behind this setter
+   * (it currently mutates the in-memory record so the channel surface is complete).
+   */
+  setOrder(orders: unknown): void {
+    if (!Array.isArray(orders)) return; // forged/non-array payload → no-op (T-05-01)
+    for (const entry of orders) {
+      if (!entry || typeof entry !== 'object') continue;
+      const { id, order } = entry as { id?: unknown; order?: unknown };
+      if (typeof id !== 'string' || typeof order !== 'number' || !Number.isFinite(order)) {
+        continue; // type-guard each field (T-05-01)
+      }
+      const s = this.sessions.get(id as LogicalId);
+      if (!s) continue; // unknown/forged id → skip (never invent a record)
+      s.record.order = order;
+    }
+  }
+
+  /**
+   * Persist UI preferences — sidebar collapse + window bounds (05-01, D-12).
+   *
+   * VALIDATE-IN-MAIN (Shared Pattern B / T-05-01): `collapsed` (when present) must
+   * be a boolean; `bounds` (when present) must have finite x/y/width/height. A
+   * forged payload is a silent no-op. Plan 05-02 wires the lowdb store behind this
+   * setter; for now it guards + holds the value in-memory so the surface is complete.
+   */
+  setUiState(ui: unknown): void {
+    if (!ui || typeof ui !== 'object') return; // forged payload → no-op (T-05-01)
+    const { collapsed, bounds } = ui as { collapsed?: unknown; bounds?: unknown };
+    if (typeof collapsed === 'boolean') {
+      this.uiState.collapsed = collapsed;
+    }
+    if (bounds && typeof bounds === 'object') {
+      const { x, y, width, height } = bounds as Record<string, unknown>;
+      if (
+        typeof x === 'number' && Number.isFinite(x) &&
+        typeof y === 'number' && Number.isFinite(y) &&
+        typeof width === 'number' && Number.isFinite(width) &&
+        typeof height === 'number' && Number.isFinite(height)
+      ) {
+        this.uiState.bounds = { x, y, width, height };
+      }
+    }
+  }
+
   /** Kill every live PTY + clear any grace timer — orphan-safe cleanup (Pitfall 6, T-02-06/T-03-05). */
   disposeAll(): void {
     for (const session of this.sessions.values()) {
@@ -547,6 +624,19 @@ export class PtyManager {
         },
       ) => this.updateProfile(id, fields),
     );
+
+    // 05-01 persistence + discovery — inside the idempotency guard (T-03-02).
+    // discover is request-response (.handle); persistOrder/persistUi are
+    // fire-and-forget (.on) and validate-in-main before any mutation (T-05-01).
+    ipcMain.handle(PTY_CHANNELS.discover, () => this.discoverShells());
+
+    ipcMain.on(PTY_CHANNELS.persistOrder, (_event: IpcMainEvent, orders: unknown) =>
+      this.setOrder(orders),
+    );
+
+    ipcMain.on(PTY_CHANNELS.persistUi, (_event: IpcMainEvent, ui: unknown) =>
+      this.setUiState(ui),
+    );
   }
 
   /**
@@ -566,6 +656,10 @@ export class PtyManager {
     ipcMain.removeHandler(PTY_CHANNELS.list);
     ipcMain.removeAllListeners(PTY_CHANNELS.close); // D-03a destructive close (T-03-02)
     ipcMain.removeAllListeners(PTY_CHANNELS.updateProfile); // 04-01 identity (T-03-02)
+    // 05-01 persistence + discovery — symmetric teardown (T-03-02).
+    ipcMain.removeHandler(PTY_CHANNELS.discover);
+    ipcMain.removeAllListeners(PTY_CHANNELS.persistOrder);
+    ipcMain.removeAllListeners(PTY_CHANNELS.persistUi);
     this.ipcRegistered = false;
     this.win = null;
   }

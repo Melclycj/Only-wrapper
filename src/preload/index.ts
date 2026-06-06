@@ -11,6 +11,7 @@ import type {
   SessionIconSpec,
 } from '../shared/types';
 import type { SwitchIntent } from '../main/switch-keys';
+import type { DiscoveredShell } from '../main/shell-discovery';
 
 // The ONLY renderer↔main bridge (SC3, D-06, T-1-04)
 // Renderer accesses main process ONLY via window.api — never raw ipcRenderer
@@ -147,6 +148,30 @@ const api: ElectronAPI = {
     };
     ipcRenderer.on('session:switch', listener);
     return () => ipcRenderer.removeListener('session:switch', listener);
+  },
+
+  // ─── Persistence + discovery surface (05-01) ─────────────────────────────────
+
+  // discoverShells mirrors listSessions: request-response invoke. Main runs the
+  // platform shell discovery (filesystem read confined to main) and returns the
+  // dropdown list — the renderer never touches fs (the 16th key).
+  discoverShells: (): Promise<DiscoveredShell[]> =>
+    ipcRenderer.invoke('shell:discover'),
+
+  // persistOrder mirrors ptyUpdateProfile: fire-and-forget send (the 17th key).
+  // Main VALIDATES the payload before any write (T-05-01) — the renderer never
+  // reaches the store except through this narrow, main-validated method.
+  persistOrder: (orders: { id: LogicalId; order: number }[]): void => {
+    ipcRenderer.send('store:persist-order', orders);
+  },
+
+  // persistUiState mirrors ptyUpdateProfile: fire-and-forget send (the 18th key).
+  // Main VALIDATES collapse/bounds before any write (T-05-01).
+  persistUiState: (ui: {
+    collapsed?: boolean;
+    bounds?: { x: number; y: number; width: number; height: number };
+  }): void => {
+    ipcRenderer.send('store:persist-ui', ui);
   },
 };
 
