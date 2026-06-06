@@ -187,6 +187,57 @@ body {
   opacity: 0.85;
 }
 
+/* Drag-to-reorder (UI-SPEC §5 / D-08): a ⠿ handle glyph telegraphs draggability. It is
+ * hidden by default and fades in on row hover (like .row-controls) in --ink-faint so the
+ * resting list stays calm. The WHOLE row is the drag surface (dnd-kit listeners are on
+ * the row container with a pointer activation distance) so cursor: grab reads across the
+ * row; the handle is the visual cue. */
+.sidebar-row .row-drag-handle {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 12px;
+  margin-left: -2px;
+  color: var(--ink-faint);
+  font-size: 13px;
+  line-height: 1;
+  cursor: grab;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+  user-select: none;
+}
+
+.sidebar-row:hover .row-drag-handle,
+.sidebar-row.active .row-drag-handle {
+  opacity: 1;
+}
+
+.sidebar-row.dragging .row-drag-handle,
+.sidebar-row.dragging {
+  cursor: grabbing;
+}
+
+/* Dragging state (UI-SPEC §5): the lifted row gets a soft opacity, the blue focus-ring
+ * outline (the consistent focus affordance color), and a soft shadow matching the
+ * rail-tooltip. dnd-kit drives the transform/transition inline; this only styles the
+ * lifted appearance. */
+.sidebar-row.dragging {
+  opacity: 0.9;
+  outline: 2px solid oklch(0.62 0.14 248);
+  outline-offset: -1px;
+  box-shadow: 0 6px 18px oklch(0.32 0.012 70 / 0.14);
+  background: var(--bg-sunk);
+  z-index: 1;
+}
+
+/* The drag handle is hidden in the collapsed rail along with the rest of the row chrome
+ * (the collapsed rail still reflects saved order — D-08 — but expanded-mode dragging is
+ * the required path; full collapsed-rail DnD is optional). */
+.sidebar.collapsed .row-drag-handle {
+  display: none;
+}
+
 .add-session {
   margin-top: 6px;
   padding: 8px 10px;

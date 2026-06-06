@@ -38,6 +38,10 @@ import { closeSession } from './session-close';
 // intent) → next activeId. The keyboard chords are intercepted MAIN-side
 // (before-input-event, 04-03 Task 1) and pushed over window.api.onSwitchSession.
 import { resolveSwitch } from './session-switch';
+// reorder is the PURE drag-to-reorder reducer (NAV-04/SC3/D-08) — moves a row then
+// reindexes order densely 0..n-1. Kept React/dnd-kit-free so the invariant is unit-
+// testable in the Node env (session-reorder.test.ts).
+import { reorder } from './session-reorder';
 
 export function SessionManager(): React.JSX.Element {
   const [sessions, setSessions] = useState<SessionRecord[]>([]);
@@ -155,6 +159,22 @@ export function SessionManager(): React.JSX.Element {
         ),
       );
     })();
+  }, []);
+
+  // ── Drag-to-reorder (NAV-04/SC3/D-08): the user dropped row `fromId` onto `toId`.
+  //    Apply the PURE reorder() reducer for the optimistic local update (move + dense
+  //    reindex 0..n-1, Pitfall 6), then persist the new dense order via
+  //    window.api.persistOrder([{ id, order }]) — main VALIDATES each entry before any
+  //    write (T-05-01) and the write is debounced + SILENT (D-13: no save button, no
+  //    spinner, no toast). The next boot's listSessions() snapshot sorts by this order. ──
+  const handleReorder = useCallback((fromId: LogicalId, toId: LogicalId) => {
+    setSessions((prev) => {
+      const next = reorder(prev, fromId, toId);
+      window.api.persistOrder(
+        next.map((s) => ({ id: s.logicalId, order: s.order })),
+      );
+      return next;
+    });
   }, []);
 
   // ── Context menu (D-03): right-click a row → open the menu at the cursor. ──
@@ -343,6 +363,7 @@ export function SessionManager(): React.JSX.Element {
         onEdit={handleEdit}
         collapsed={collapsed}
         onToggleCollapse={handleToggleCollapse}
+        onReorder={handleReorder}
       />
       {/* Flex-column terminal area (RESEARCH Open Q2): the identity header sits above
           the .viewport-stack; SessionView panes keep inset:0 inside the stack. When the

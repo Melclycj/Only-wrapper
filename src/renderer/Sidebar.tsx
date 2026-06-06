@@ -7,6 +7,22 @@
 // shortcuts (all Phase 4). Style authority is DESIGN.md (Nunito, --surface/--line,
 // rounded rows); tokens live in terminal.css.
 
+import {
+  DndContext,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  closestCenter,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import type { LogicalId, SessionIconSpec, SessionRecord } from '../shared/types';
 import { STATUS_STYLE } from './status-colors';
 import { COLOR_INITIAL } from './icon-spec';
@@ -81,6 +97,13 @@ export interface SidebarProps {
   collapsed: boolean;
   /** Toggle the collapsed/expanded rail (the pinned chevron control). */
   onToggleCollapse: () => void;
+  /**
+   * Drag-to-reorder (NAV-04/SC3/D-08): the user dragged the row `fromId` onto the
+   * position of `toId`. SessionManager applies the pure `reorder()` reducer (optimistic
+   * local dense-reindex) and persists the new order via `window.api.persistOrder` —
+   * silently (no save UI, D-13). Only fired on a REAL move (fromId !== toId).
+   */
+  onReorder: (fromId: LogicalId, toId: LogicalId) => void;
 }
 
 // A session has a live PTY only while 'running'. The RESTART affordance is offered
@@ -89,6 +112,186 @@ export interface SidebarProps {
 // The destructive Close is offered on every row regardless of status.
 function isRunning(status: SessionRecord['status']): boolean {
   return status === 'running';
+}
+
+// Props for a single sortable row — the per-session subset of SidebarProps plus the
+// row's own record + active flag. Split out so each row can call useSortable() (a hook
+// must run at the top level of a component, not inside a .map() callback).
+interface SortableRowProps {
+  session: SessionRecord;
+  isActive: boolean;
+  onSelect: (id: LogicalId) => void;
+  onClose: (id: LogicalId) => void;
+  onRestart: (id: LogicalId) => void;
+  onStart: (id: LogicalId) => void;
+  onContextMenu: (id: LogicalId, x: number, y: number) => void;
+  onEdit: (id: LogicalId) => void;
+}
+
+// One sortable sidebar row. The WHOLE row is the drag surface (dnd-kit listeners spread
+// onto the row container) but a PointerSensor activation distance (configured on the
+// parent DndContext) means a plain click still fires onSelect and the nested control
+// buttons' stopPropagation still works — a drag only begins after the pointer travels
+// past the activation distance (UI-SPEC §5). A dedicated ⠿ drag-handle glyph telegraphs
+// draggability on hover; it shares the same row-level drag surface (no separate handle
+// listeners needed — the activation distance keeps clicks intact).
+function SortableSidebarRow({
+  session: s,
+  isActive,
+  onSelect,
+  onClose,
+  onRestart,
+  onStart,
+  onContextMenu,
+  onEdit,
+}: SortableRowProps): React.JSX.Element {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: s.logicalId });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  const stat = STATUS_STYLE[s.status];
+  const running = isRunning(s.status);
+  // A dormant (never-run) session shows Start ▶; a has-run non-running session
+  // (stopped/exited/error) shows Restart ↻ (D-03). Dormant rows also dim slightly.
+  const dormant = s.status === 'not_started';
+
+  return (
+    <div
+      ref={setNodeRef}
+      // dnd-kit `attributes` provides role="button" + tabIndex + aria-roledescription
+      // for keyboard drag a11y; spread FIRST so our explicit handlers below win and there
+      // is no duplicate-prop overwrite. We re-affirm role/tabIndex anyway for clarity.
+      {...attributes}
+      {...listeners}
+      role="button"
+      tabIndex={0}
+      className={
+        (isActive ? 'sidebar-row active' : 'sidebar-row') +
+        (isDragging ? ' dragging' : '')
+      }
+      style={style}
+      data-session-id={s.logicalId}
+      {...(dormant ? { 'data-dormant': '' } : {})}
+      {...(isDragging ? { 'data-dragging': '' } : {})}
+      aria-current={isActive ? 'true' : undefined}
+      onClick={() => onSelect(s.logicalId)}
+      onDoubleClick={() => onEdit(s.logicalId)}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        onContextMenu(s.logicalId, e.clientX, e.clientY);
+      }}
+      onKeyDown={(e) => {
+        // Compose with dnd-kit's keyboard sensor listener (spread above, then overridden
+        // here): first let dnd-kit handle the key (Space starts/ends a keyboard drag,
+        // arrows move it). If dnd-kit did NOT consume it (not in a drag) AND it is Enter,
+        // fall through to the legacy Enter-to-switch. Space is reserved for dnd-kit's
+        // keyboard reorder (a11y) so we no longer switch on Space.
+        listeners?.onKeyDown?.(e);
+        if (!e.defaultPrevented && e.key === 'Enter') {
+          e.preventDefault();
+          onSelect(s.logicalId);
+        }
+      }}
+    >
+      {/* Drag handle (⠿) — shown on hover, --ink-faint, cursor: grab→grabbing. The whole
+          row is the drag surface (listeners are on the container), so the handle is a
+          visual telegraph rather than the only grab point (UI-SPEC §5). aria-hidden — the
+          a11y reorder is driven by dnd-kit's keyboard sensor on the row itself. */}
+      <span className="row-drag-handle" aria-hidden="true">
+        ⠿
+      </span>
+      {renderIcon(s.icon, s.name)}
+      <span
+        className="collapsed-status-dot status-dot"
+        style={{ '--accent': stat.accent } as React.CSSProperties}
+        aria-hidden="true"
+      />
+      <span className="row-name">{s.name}</span>
+      <span
+        className="status-badge"
+        style={{ '--accent': stat.accent } as React.CSSProperties}
+        title={stat.label}
+      >
+        <span className="status-dot" />
+        {stat.label}
+      </span>
+      <span className="row-controls">
+        {!running &&
+          (dormant ? (
+            <button
+              type="button"
+              className="row-control row-control-start"
+              data-testid="start-session"
+              data-action="start"
+              title="Start session"
+              aria-label={`Start ${s.name}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                onStart(s.logicalId);
+              }}
+            >
+              <span aria-hidden="true">▶</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="row-control"
+              data-testid="restart-session"
+              data-action="restart"
+              title="Restart session"
+              aria-label={`Restart ${s.name}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                onRestart(s.logicalId);
+              }}
+            >
+              <span aria-hidden="true">↻</span>
+            </button>
+          ))}
+        <button
+          type="button"
+          className="row-control"
+          data-testid="edit-session"
+          data-action="edit"
+          title="Edit session"
+          aria-label={`Edit ${s.name}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit(s.logicalId);
+          }}
+        >
+          <span aria-hidden="true">✎</span>
+        </button>
+        <button
+          type="button"
+          className="row-control row-control-close"
+          data-testid="close-session"
+          data-action="close"
+          title="Close session"
+          aria-label={`Close ${s.name}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            onClose(s.logicalId);
+          }}
+        >
+          <span aria-hidden="true">✕</span>
+        </button>
+      </span>
+      <span className="rail-tooltip" role="tooltip">
+        {s.name} · {stat.label}
+      </span>
+    </div>
+  );
 }
 
 export function Sidebar({
@@ -103,7 +306,29 @@ export function Sidebar({
   onEdit,
   collapsed,
   onToggleCollapse,
+  onReorder,
 }: SidebarProps): React.JSX.Element {
+  // Pointer sensor with an activation DISTANCE so a plain click still switches the
+  // session and a click on a nested control still fires (a drag only starts after the
+  // pointer travels ~5px — UI-SPEC §5). A keyboard sensor provides a11y reorder.
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 5 },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+
+  // On drop: if the row moved onto a different row, hand (fromId, toId) up to
+  // SessionManager, which applies the pure reorder() reducer + persistOrder (D-13 silent).
+  const handleDragEnd = (event: DragEndEvent): void => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      onReorder(active.id as LogicalId, over.id as LogicalId);
+    }
+  };
+
   return (
     <nav
       className={collapsed ? 'sidebar collapsed' : 'sidebar'}
@@ -124,148 +349,35 @@ export function Sidebar({
           {collapsed ? '»' : '«'}
         </span>
       </button>
-      {sessions.map((s) => {
-        const style = STATUS_STYLE[s.status];
-        const isActive = s.logicalId === activeId;
-        const running = isRunning(s.status);
-        // A dormant (never-run) session shows Start ▶; a has-run non-running session
-        // (stopped/exited/error) shows Restart ↻ (D-03). Dormant rows also dim
-        // slightly (UI-SPEC §5 dormant-vs-live language).
-        const dormant = s.status === 'not_started';
-        // The row is a clickable container (switch on click). The close/restart
-        // controls are nested buttons — a row cannot itself be a <button> or the
-        // controls would be invalid nested interactives. clickSidebarRow() in the
-        // E2E driver calls .click() on `.sidebar-row[data-session-id]`, which still
-        // fires this onClick; the control buttons stopPropagation so a close/restart
-        // never doubles as a switch.
-        return (
-          <div
-            key={s.logicalId}
-            role="button"
-            tabIndex={0}
-            className={isActive ? 'sidebar-row active' : 'sidebar-row'}
-            data-session-id={s.logicalId}
-            {...(dormant ? { 'data-dormant': '' } : {})}
-            aria-current={isActive ? 'true' : undefined}
-            onClick={() => onSelect(s.logicalId)}
-            // Double-click is a convenience shortcut to the edit form (D-04); the
-            // primary affordance is the right-click context menu's "Edit" item.
-            onDoubleClick={() => onEdit(s.logicalId)}
-            // Right-click opens the context menu at the cursor (D-03). Attached at the
-            // .sidebar-row level so it also fires in collapsed mode (Pitfall 5 / D-11).
-            onContextMenu={(e) => {
-              e.preventDefault();
-              onContextMenu(s.logicalId, e.clientX, e.clientY);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                onSelect(s.logicalId);
-              }
-            }}
-          >
-            {renderIcon(s.icon, s.name)}
-            {/* Collapsed-rail status dot (NAV-01): keeps running/stopped legible in the
-                icon-only rail. Carries the `status-dot` class too so it shares the badge
-                dot's swatch styling and stays measurable when the badge itself is hidden.
-                Hidden in expanded mode (the full status badge shows there instead). */}
-            <span
-              className="collapsed-status-dot status-dot"
-              style={{ '--accent': style.accent } as React.CSSProperties}
-              aria-hidden="true"
+      {/* Drag-to-reorder (NAV-04/SC3/D-08): DndContext owns the pointer/keyboard sensors;
+          SortableContext holds the ordered list of session ids (vertical strategy). The
+          collapsed rail renders the SAME ordered rows (D-08 — render order = saved order;
+          SessionManager hands `sessions` pre-sorted by `order`), so the collapsed rail
+          reflects the persisted order; full collapsed-rail DnD is optional (D-08). */}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext
+          items={sessions.map((s) => s.logicalId)}
+          strategy={verticalListSortingStrategy}
+        >
+          {sessions.map((s) => (
+            <SortableSidebarRow
+              key={s.logicalId}
+              session={s}
+              isActive={s.logicalId === activeId}
+              onSelect={onSelect}
+              onClose={onClose}
+              onRestart={onRestart}
+              onStart={onStart}
+              onContextMenu={onContextMenu}
+              onEdit={onEdit}
             />
-            <span className="row-name">{s.name}</span>
-            <span
-              className="status-badge"
-              style={{ '--accent': style.accent } as React.CSSProperties}
-              title={style.label}
-            >
-              <span className="status-dot" />
-              {style.label}
-            </span>
-            <span className="row-controls">
-              {/* Non-running rows get a Start/Restart affordance (D-03). A dormant
-                  (never-run) session shows ▶ Start — it promotes the restored record
-                  to live (Plan 05-02 create({id})); a has-run session shows ↻ Restart
-                  (relaunch a self-exited session, identity preserved — D-03a). Running
-                  rows show neither. The ▶ control gets a blue "go" accent (.row-control-start). */}
-              {!running &&
-                (dormant ? (
-                  <button
-                    type="button"
-                    className="row-control row-control-start"
-                    data-testid="start-session"
-                    data-action="start"
-                    title="Start session"
-                    aria-label={`Start ${s.name}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onStart(s.logicalId);
-                    }}
-                  >
-                    <span aria-hidden="true">▶</span>
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    className="row-control"
-                    data-testid="restart-session"
-                    data-action="restart"
-                    title="Restart session"
-                    aria-label={`Restart ${s.name}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onRestart(s.logicalId);
-                    }}
-                  >
-                    <span aria-hidden="true">↻</span>
-                  </button>
-                ))}
-              {/* Inline Edit pencil (D-04): the expanded-mode affordance for the edit
-                  form, calling the SAME existing onEdit prop the context menu and
-                  double-click use. Always rendered (like Close); hidden in the
-                  collapsed rail along with the rest of .row-controls. */}
-              <button
-                type="button"
-                className="row-control"
-                data-testid="edit-session"
-                data-action="edit"
-                title="Edit session"
-                aria-label={`Edit ${s.name}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEdit(s.logicalId);
-                }}
-              >
-                <span aria-hidden="true">✎</span>
-              </button>
-              {/* Destructive Close on EVERY row (D-03a): kill + remove, behind the
-                  confirm modal. Replaces the old keep-as-stopped Stop button. */}
-              <button
-                type="button"
-                className="row-control row-control-close"
-                data-testid="close-session"
-                data-action="close"
-                title="Close session"
-                aria-label={`Close ${s.name}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onClose(s.logicalId);
-                }}
-              >
-                <span aria-hidden="true">✕</span>
-              </button>
-            </span>
-            {/* Custom rail tooltip (D-11 / RESEARCH Pattern 6): shown on row
-                hover/focus-visible when collapsed, reading the session name + status
-                label. Preferred over native `title=` (instant, on-brand, a11y-friendly).
-                Only visible in collapsed mode (CSS-gated under `.sidebar.collapsed`). */}
-            <span className="rail-tooltip" role="tooltip">
-              {s.name} · {style.label}
-            </span>
-          </div>
-        );
-      })}
+          ))}
+        </SortableContext>
+      </DndContext>
       <button
         type="button"
         className="add-session"
