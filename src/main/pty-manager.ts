@@ -14,6 +14,8 @@
 // map key. A PID (number) is never assigned into a LogicalId (branded string).
 
 import os from 'node:os';
+import fs from 'node:fs';
+import path from 'node:path';
 import * as pty from 'node-pty';
 import { ipcMain, type BrowserWindow, type IpcMainEvent } from 'electron';
 import type { IPty } from 'node-pty';
@@ -550,6 +552,21 @@ export class PtyManager {
    * mirrored here so a restart — which rebuilds the record from these fields — does
    * not revert a live edit (Pitfall 4). startupCommand is STORED ONLY: no code path
    * writes it to a PTY this phase (TERM-05 auto-run deferred, T-04-04).
+   *
+   * CR-02 (dual-map): the target is resolved from BOTH the live `sessions` map AND
+   * the `dormantRecords` map (mirroring setOrder). A boot-restored session lives in
+   * dormantRecords until Started, so editing its profile MUST land on the dormant
+   * record — otherwise the edit is silently dropped and lost on the next boot.
+   *
+   * CR-01 (validate-in-main, RCE-class): `shell` and `cwd` cross the untrusted IPC
+   * boundary and `create()` later spawns the shell as the executable in cwd. A
+   * forged `pty:update-profile` payload must NOT be able to persist an arbitrary
+   * binary or directory. So shell is accepted ONLY if it is empty (the "use the
+   * resolveShell() default" affordance create() honors) OR in the discovered
+   * allowlist; cwd is accepted ONLY if it is an absolute path to an EXISTING
+   * directory. Non-allowlisted shells / invalid cwds are ignored, keeping the prior
+   * value — the legitimate dropdown/edit flow only ever submits allowlisted shells
+   * and real directories, so it is unaffected.
    */
   updateProfile(
     id: LogicalId,
@@ -561,16 +578,58 @@ export class PtyManager {
       startupCommand?: string;
     },
   ): void {
-    const s = this.sessions.get(id);
-    if (!s) return; // unknown/forged id → no-op (T-04-01)
-    if (typeof fields.name === 'string') s.record.name = fields.name;
-    if (typeof fields.cwd === 'string') s.record.cwd = fields.cwd;
-    if (typeof fields.shell === 'string') s.record.shell = fields.shell;
-    if (typeof fields.startupCommand === 'string') {
-      s.record.startupCommand = fields.startupCommand; // stored-only (T-04-04)
+    // CR-02: resolve from BOTH maps — a restored (dormant) session is editable
+    // before it is ever Started (mirrors setOrder's dual-map handling).
+    const live = this.sessions.get(id);
+    const target = live?.record ?? this.dormantRecords.get(id);
+    if (!target) return; // truly unknown/forged id → no-op (T-04-01)
+
+    if (typeof fields.name === 'string') target.name = fields.name;
+
+    // CR-01: cwd must be an absolute path to an existing directory. statSync may
+    // throw (ENOENT) — guard it; a forged/relative/non-existent cwd is ignored,
+    // keeping the prior value so a malicious payload cannot redirect the spawn.
+    if (typeof fields.cwd === 'string' && this.isValidCwd(fields.cwd)) {
+      target.cwd = fields.cwd;
     }
-    if (fields.icon) s.record.icon = fields.icon;
+
+    // CR-01: only an empty shell (→ resolveShell() default in create()) OR an
+    // allowlisted discovered shell may persist. discoverShells() does disk I/O, so
+    // it is called at most ONCE per update and only when a string shell was sent.
+    if (typeof fields.shell === 'string' && this.isValidShell(fields.shell)) {
+      target.shell = fields.shell;
+    }
+
+    if (typeof fields.startupCommand === 'string') {
+      target.startupCommand = fields.startupCommand; // stored-only (T-04-04)
+    }
+    if (fields.icon) target.icon = fields.icon;
     this.signalStore(); // edited profile fields changed → debounce-write (D-13)
+  }
+
+  /**
+   * CR-01 cwd validation: accept only an ABSOLUTE path to an EXISTING directory.
+   * statSync throws on a missing path — caught so a forged payload is a silent
+   * reject (prior cwd kept), never a crash.
+   */
+  private isValidCwd(cwd: string): boolean {
+    if (!path.isAbsolute(cwd)) return false;
+    try {
+      return fs.statSync(cwd).isDirectory();
+    } catch {
+      return false; // non-existent / unreadable → reject, keep prior value
+    }
+  }
+
+  /**
+   * CR-01 shell validation: an EMPTY shell is valid (create() falls back to
+   * resolveShell() — the documented "use default" affordance); a NON-empty shell
+   * is valid ONLY if it is in the discovered allowlist. discoverShells() touches
+   * the filesystem, so it is invoked once here, guarded behind the empty check.
+   */
+  private isValidShell(shell: string): boolean {
+    if (shell.length === 0) return true; // empty → resolveShell() default (A2)
+    return this.discoverShells().some((d) => d.path === shell);
   }
 
   /**

@@ -83,7 +83,7 @@ vi.mock('../shell-resolver', () => ({
 }));
 
 import { PtyManager, type PtyCreateOptions } from '../pty-manager';
-import type { LogicalId } from '../../shared/types';
+import type { LogicalId, SessionRecord } from '../../shared/types';
 
 function fakeWindow(): never {
   return {
@@ -100,6 +100,7 @@ describe('PtyManager.updateProfile (SESS-01, T-04-01/02/04)', () => {
     spawnedChildren.length = 0;
     nextPid = 1000;
     spawnMock.mockClear();
+    vi.restoreAllMocks(); // isolate per-test discoverShells spies (CR-01)
   });
 
   it('is a no-op for an unknown/forged id (no throw)', () => {
@@ -115,10 +116,18 @@ describe('PtyManager.updateProfile (SESS-01, T-04-01/02/04)', () => {
     mgr.registerIpc(fakeWindow());
     const { id } = mgr.create(baseOpts);
 
+    // CR-01: shell must be allowlisted + cwd must be a real absolute dir. Use the
+    // process cwd (a real absolute dir, independent of the mocked node:os) as a
+    // valid cwd, and stub discoverShells so the edited shell is in the allowlist.
+    const validCwd = process.cwd();
+    vi.spyOn(mgr, 'discoverShells').mockReturnValue([
+      { path: '/bin/bash', label: 'bash' },
+    ]);
+
     mgr.updateProfile(id, {
       name: 'API',
       icon: { type: 'color', value: '#abc' },
-      cwd: '/tmp/proj',
+      cwd: validCwd,
       shell: '/bin/bash',
       startupCommand: 'npm run dev',
     });
@@ -126,7 +135,7 @@ describe('PtyManager.updateProfile (SESS-01, T-04-01/02/04)', () => {
     const rec = mgr.listSessions().find((s) => s.logicalId === id);
     expect(rec?.name).toBe('API');
     expect(rec?.icon).toEqual({ type: 'color', value: '#abc' });
-    expect(rec?.cwd).toBe('/tmp/proj');
+    expect(rec?.cwd).toBe(validCwd);
     expect(rec?.shell).toBe('/bin/bash');
     expect(rec?.startupCommand).toBe('npm run dev');
   });
@@ -155,6 +164,10 @@ describe('PtyManager.updateProfile (SESS-01, T-04-01/02/04)', () => {
     mgr.registerIpc(fakeWindow());
     const { id } = mgr.create(baseOpts);
 
+    // CR-01: the edited shell must be allowlisted to persist.
+    vi.spyOn(mgr, 'discoverShells').mockReturnValue([
+      { path: '/bin/bash', label: 'bash' },
+    ]);
     mgr.updateProfile(id, { shell: '/bin/bash' });
 
     const restartPromise = mgr.restart(id);
@@ -190,5 +203,177 @@ describe('PtyManager.updateProfile (SESS-01, T-04-01/02/04)', () => {
     const rec = mgr.listSessions().find((s) => s.logicalId === id);
     expect(rec?.startupCommand).toBe('rm -rf /'); // stored
     expect(child.write).not.toHaveBeenCalled(); // never executed
+  });
+});
+
+// ─── CR-02: dormant-session profile edits persist (dual-map) ──────────────────
+
+function dormantRecord(over: Partial<SessionRecord> = {}): SessionRecord {
+  return {
+    logicalId: 'restored-1' as LogicalId,
+    ptyPid: undefined,
+    name: 'Restored',
+    icon: { type: 'emoji', value: '🛋️' },
+    cwd: '/Users/dev/proj',
+    shell: '/bin/zsh',
+    startupCommand: undefined,
+    status: 'not_started',
+    order: 5,
+    lastActive: 1_700_000_000_000,
+    ...over,
+  };
+}
+
+describe('PtyManager.updateProfile — dormant editing (CR-02)', () => {
+  beforeEach(() => {
+    spawnCalls.length = 0;
+    spawnedChildren.length = 0;
+    nextPid = 1000;
+    spawnMock.mockClear();
+    vi.restoreAllMocks();
+  });
+
+  it('edits a DORMANT (hydrated, not-started) record AND signals the store', () => {
+    const mgr = new PtyManager();
+    const signal = vi.fn();
+    mgr.setStoreSignal(signal);
+    mgr.hydrate([dormantRecord({ logicalId: 'restored-1' as LogicalId })]);
+
+    mgr.updateProfile('restored-1' as LogicalId, {
+      name: 'Edited Dormant',
+      icon: { type: 'color', value: '#0af' },
+    });
+
+    // The dormant record reflects the edit via listSessions (CR-02 — no longer
+    // silently dropped), and the store was signalled so it persists on next boot.
+    const rec = mgr.listSessions().find((s) => s.logicalId === 'restored-1');
+    expect(rec?.name).toBe('Edited Dormant');
+    expect(rec?.icon).toEqual({ type: 'color', value: '#0af' });
+    expect(signal).toHaveBeenCalled();
+  });
+
+  it('persists an allowlisted shell + real cwd onto a DORMANT record', () => {
+    const mgr = new PtyManager();
+    mgr.hydrate([dormantRecord({ logicalId: 'restored-1' as LogicalId })]);
+    const validCwd = process.cwd();
+    vi.spyOn(mgr, 'discoverShells').mockReturnValue([
+      { path: '/bin/bash', label: 'bash' },
+    ]);
+
+    mgr.updateProfile('restored-1' as LogicalId, {
+      shell: '/bin/bash',
+      cwd: validCwd,
+    });
+
+    const rec = mgr.listSessions().find((s) => s.logicalId === 'restored-1');
+    expect(rec?.shell).toBe('/bin/bash');
+    expect(rec?.cwd).toBe(validCwd);
+  });
+});
+
+// ─── CR-01: shell allowlist + cwd validation at the persist boundary ──────────
+
+describe('PtyManager.updateProfile — validate-in-main (CR-01)', () => {
+  beforeEach(() => {
+    spawnCalls.length = 0;
+    spawnedChildren.length = 0;
+    nextPid = 1000;
+    spawnMock.mockClear();
+    vi.restoreAllMocks();
+  });
+
+  it('rejects a NON-allowlisted shell path, keeping the prior value', () => {
+    const mgr = new PtyManager();
+    mgr.registerIpc(fakeWindow());
+    const { id } = mgr.create(baseOpts);
+    const priorShell = mgr.listSessions().find((s) => s.logicalId === id)?.shell;
+
+    vi.spyOn(mgr, 'discoverShells').mockReturnValue([
+      { path: '/bin/zsh', label: 'zsh' },
+    ]);
+
+    // A forged payload trying to spawn an arbitrary binary on next restart.
+    mgr.updateProfile(id, { shell: '/evil/binary' });
+
+    const after = mgr.listSessions().find((s) => s.logicalId === id);
+    expect(after?.shell).toBe(priorShell); // unchanged — forged shell ignored
+  });
+
+  it('accepts an allowlisted shell path', () => {
+    const mgr = new PtyManager();
+    mgr.registerIpc(fakeWindow());
+    const { id } = mgr.create(baseOpts);
+
+    vi.spyOn(mgr, 'discoverShells').mockReturnValue([
+      { path: '/opt/homebrew/bin/fish', label: 'fish' },
+    ]);
+    mgr.updateProfile(id, { shell: '/opt/homebrew/bin/fish' });
+
+    const after = mgr.listSessions().find((s) => s.logicalId === id);
+    expect(after?.shell).toBe('/opt/homebrew/bin/fish');
+  });
+
+  it('accepts an empty shell (the resolveShell() default affordance)', () => {
+    const mgr = new PtyManager();
+    mgr.registerIpc(fakeWindow());
+    const { id } = mgr.create(baseOpts);
+    // No allowlist needed — empty is the documented "use default" sentinel.
+    const spy = vi.spyOn(mgr, 'discoverShells');
+    mgr.updateProfile(id, { shell: '' });
+
+    const after = mgr.listSessions().find((s) => s.logicalId === id);
+    expect(after?.shell).toBe(''); // empty persisted → create() falls back to default
+    expect(spy).not.toHaveBeenCalled(); // empty short-circuits the disk-touching discover
+  });
+
+  it('rejects a RELATIVE cwd, keeping the prior value', () => {
+    const mgr = new PtyManager();
+    mgr.registerIpc(fakeWindow());
+    const { id } = mgr.create(baseOpts);
+    const priorCwd = mgr.listSessions().find((s) => s.logicalId === id)?.cwd;
+
+    mgr.updateProfile(id, { cwd: 'relative/path' });
+
+    const after = mgr.listSessions().find((s) => s.logicalId === id);
+    expect(after?.cwd).toBe(priorCwd); // unchanged — relative rejected
+  });
+
+  it('rejects a NON-EXISTENT absolute cwd, keeping the prior value', () => {
+    const mgr = new PtyManager();
+    mgr.registerIpc(fakeWindow());
+    const { id } = mgr.create(baseOpts);
+    const priorCwd = mgr.listSessions().find((s) => s.logicalId === id)?.cwd;
+
+    mgr.updateProfile(id, { cwd: '/this/path/does/not/exist/at-all-xyz' });
+
+    const after = mgr.listSessions().find((s) => s.logicalId === id);
+    expect(after?.cwd).toBe(priorCwd); // unchanged — non-existent dir rejected
+  });
+
+  it('accepts a valid absolute existing directory cwd', () => {
+    const mgr = new PtyManager();
+    mgr.registerIpc(fakeWindow());
+    const { id } = mgr.create(baseOpts);
+    const validCwd = process.cwd();
+
+    mgr.updateProfile(id, { cwd: validCwd });
+
+    const after = mgr.listSessions().find((s) => s.logicalId === id);
+    expect(after?.cwd).toBe(validCwd);
+  });
+
+  it('regression: editing a LIVE session still works (name/icon)', () => {
+    const mgr = new PtyManager();
+    mgr.registerIpc(fakeWindow());
+    const { id } = mgr.create(baseOpts);
+
+    mgr.updateProfile(id, {
+      name: 'Live Edit',
+      icon: { type: 'color', value: '#f00' },
+    });
+
+    const after = mgr.listSessions().find((s) => s.logicalId === id);
+    expect(after?.name).toBe('Live Edit');
+    expect(after?.icon).toEqual({ type: 'color', value: '#f00' });
   });
 });
