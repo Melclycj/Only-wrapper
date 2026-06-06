@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: ready
-stopped_at: Completed Phase 05 (4/4 plans, verified 4/4; 2 review criticals fixed). Next: Phase 5.1
-last_updated: "2026-06-06T07:38:52.167Z"
+status: verifying
+stopped_at: Phase 5.1 context gathered
+last_updated: "2026-06-06T12:07:10.230Z"
 last_activity: 2026-06-06
 progress:
   total_phases: 9
@@ -145,6 +145,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-06T06:46:09.208Z
-Stopped at: Completed 05-02-PLAN.md (persistence vertical slice)
-Resume file: .planning/phases/05-persistence-shell-discovery/05-03-PLAN.md
+Last session: 2026-06-06T12:07:10.221Z
+Stopped at: Phase 5.1 context gathered
+Resume file: .planning/phases/05.1-term-05-startup-command-auto-run/05.1-CONTEXT.md
