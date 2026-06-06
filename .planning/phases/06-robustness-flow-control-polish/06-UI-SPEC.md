@@ -1,10 +1,11 @@
 ---
 phase: 6
 slug: robustness-flow-control-polish
-status: draft
+status: approved
 shadcn_initialized: false
 preset: none
 created: 2026-06-07
+reviewed_at: 2026-06-07T00:00:00Z
 ---
 
 # Phase 6 — UI Design Contract
