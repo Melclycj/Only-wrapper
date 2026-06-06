@@ -17,7 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: PTY Core + Terminal Fidelity** - Single real PTY session with full keyboard, ANSI, resize, flow control, Unicode, and fidelity validated via `claude --rc` / `vim` / Python REPL (completed 2026-06-04)
 - [x] **Phase 3: Multi-Session + Session Lifecycle** - N concurrent PTY sessions with ring-buffer replay, CSS show/hide tab panels, stop/restart, and the session status state machine (completed 2026-06-04)
 - [x] **Phase 4: Session Identity + Sidebar UI** - Full sidebar (icon + name + status badge, expanded/collapsed), session creation form, rename/re-icon, and keyboard session-switching shortcuts (completed 2026-06-05)
-- [ ] **Phase 5: Persistence + Shell Discovery** - Session profiles saved to disk and restored on reopen (always not_started), platform-aware shell resolver, and sidebar order persistence
+- [x] **Phase 5: Persistence + Shell Discovery** - Session profiles saved to disk and restored on reopen (always not_started), platform-aware shell resolver, and sidebar order persistence (completed 2026-06-06)
 - [ ] **Phase 5.1: TERM-05 startup-command auto-run** (INSERTED) - Auto-run a session's saved startup command into the PTY once the shell is ready, on start and restart
 - [ ] **Phase 6: Robustness + Flow-Control Polish** - HIGH/LOW watermark backpressure, spawn/cwd error handling, waiting-for-input heuristic, alt-screen reset, and session header quick controls
 - [ ] **Phase 7: Terminal Search + Scrollback Config** - Ctrl+F in-session search and configurable scrollback buffer size (global setting with sensible default)
@@ -159,7 +159,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. The sidebar preserves the user's custom session ordering across restarts
   4. The shell selector in the session creation form is populated with available shells for the current platform (PowerShell/CMD/Git Bash/WSL on Windows; zsh/bash on macOS) with no hardcoded paths that break on non-standard installs
 
-**Plans:** 3/4 plans executed
+**Plans:** 4/4 plans complete
 **UI hint:** yes
 
 **Wave 1**
@@ -176,7 +176,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 4** *(blocked on Wave 3 — has checkpoint)*
 
-- [ ] 05-04-PLAN.md — Drag-to-reorder slice: dnd-kit (gated [ASSUMED] verify) + sortable sidebar + persistOrder wiring + reorder smoke + Nyquist sign-off (NAV-04)
+- [x] 05-04-PLAN.md — Drag-to-reorder slice: dnd-kit (gated [ASSUMED] verify) + sortable sidebar + persistOrder wiring + reorder smoke + Nyquist sign-off (NAV-04)
 
 ### Phase 05.1: TERM-05 startup-command auto-run (INSERTED)
 
@@ -253,7 +253,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 5.1 → 6 → 7 �
 | 2. PTY Core + Terminal Fidelity | 4/4 | Complete    | 2026-06-04 |
 | 3. Multi-Session + Session Lifecycle | 3/3 | Complete    | 2026-06-04 |
 | 4. Session Identity + Sidebar UI | 4/4 | Complete    | 2026-06-05 |
-| 5. Persistence + Shell Discovery | 3/4 | In Progress|  |
+| 5. Persistence + Shell Discovery | 4/4 | Complete   | 2026-06-06 |
 | 5.1. TERM-05 startup-command auto-run (INSERTED) | 0/TBD | Not started | - |
 | 6. Robustness + Flow-Control Polish | 0/TBD | Not started | - |
 | 7. Terminal Search + Scrollback Config | 0/TBD | Not started | - |

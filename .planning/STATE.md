@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
+status: verifying
 stopped_at: Completed 05-02-PLAN.md (persistence vertical slice)
-last_updated: "2026-06-06T06:33:18.355Z"
+last_updated: "2026-06-06T06:46:27.338Z"
 last_activity: 2026-06-06 -- Completed Phase 05 Plan 02 (persistence vertical slice)
 progress:
   total_phases: 9
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 18
-  completed_plans: 17
-  percent: 44
+  completed_plans: 18
+  percent: 56
 ---
 
 # Project State
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-06-03)
 
 Phase: 05 (persistence-shell-discovery) — EXECUTING
 Plan: 4 of 4
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-06-06 -- Completed Phase 05 Plan 02 (persistence vertical slice)
 
 Progress: [████████████████████] 100% (Phase 4 plans: 4/4)
@@ -70,6 +70,7 @@ Progress: [████████████████████] 100% (P
 | Phase 05 P01 | 6min | 2 tasks | 17 files |
 | Phase 05 P02 | ~9min | 3 tasks | 6 files |
 | Phase 05 P03 | 16min | 3 tasks | 11 files |
+| Phase 5 P4 | 11min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -118,6 +119,7 @@ Recent decisions affecting current work:
 - [Phase 05-02]: Restored sessions hydrate into a SEPARATE PtyManager.dormantRecords map (Pattern 4 option b — no live pty, preserves the every-PtySession-has-a-pty invariant); listSessions() merges live+dormant sorted by order; create({id}) promotes a dormant id (same logicalId, stored cwd/shell); new-session order = max(existing)+1 not sessions.size (Pitfall 6); dormant rows are reorderable/closable pre-Start (NAV-04)
 - [Phase 05-02]: Store change-signal injected into PtyManager (setStoreSignal) so domain mutations stay store-agnostic; index.ts owns the snapshot push (syncStore = setSessions(listSessions)+setUi(getUiState)). whenReady: load→hydrate→setStoreSignal→createWindow(restore validateBounds before show, Pitfall 5); before-quit preventDefault→flush→app.quit re-entrancy guard gated on isDirty()+quitting flag (D-13, Pattern 3)
 - [Phase 05-02]: Store path resolved via dynamic `await import('electron')` inside load() (not static import, not require — passes no-require-imports lint + keeps module Vitest-importable, Pitfall 3); corrupt OR non-array-sessions store → .corrupt-<ts> backup + fresh start, never throws (D-13/T-05-04); smoke reads main-process state via process.getBuiltinModule (packaged main is ESM, require undefined)
+- [Phase ?]: Drag-to-reorder uses @dnd-kit/sortable (exact-pinned 6.3.1/10.0.0) with a PointerSensor activation distance so click-to-switch survives; reorder persists silently via the validated persistOrder IPC (D-13)
 
 ### Pending Todos
 
@@ -142,6 +144,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-06T06:32:56.336Z
+Last session: 2026-06-06T06:46:09.208Z
 Stopped at: Completed 05-02-PLAN.md (persistence vertical slice)
 Resume file: .planning/phases/05-persistence-shell-discovery/05-03-PLAN.md
