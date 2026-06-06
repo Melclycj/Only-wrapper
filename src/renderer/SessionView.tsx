@@ -220,6 +220,16 @@ export function SessionView({ id, active }: SessionViewProps): React.JSX.Element
         }
         hasRunBeforeRef.current = true;
       }
+      // TERM-05 D-04: a transient ready-fail notice (the startup-command probe
+      // timed out → the command was NOT auto-run, a bare usable shell remains).
+      // Render it as a dim inline line, consistent with the [process exited] /
+      // restart-separator treatment — additive and informational, it does NOT
+      // suppress or replace the lifecycle status badge (the notice rides this same
+      // onPtyStatus event but carries the live status untouched). The saved command
+      // stays on the IdleCard as the manual-run fallback (no IdleCard change).
+      if (p.notice) {
+        term.write(`\r\n\x1b[2m— ${p.notice} —\x1b[0m\r\n`);
+      }
     });
 
     // 8. Debounced resize → fit → ptyResize (Pattern 5, SC3). Guarded with

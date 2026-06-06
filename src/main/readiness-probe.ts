@@ -29,6 +29,14 @@ import crypto from 'node:crypto';
 export interface ShellReadinessProbe {
   /** Bytes to write to the PTY to elicit a detectable round-trip (no env/rc changes). */
   readonly marker: string;
+  /**
+   * The bare nonce token embedded in `marker` (e.g. `__JW_READY_<hex>__`). The
+   * caller (the create() probe hook) uses this to SCRUB any nonce-bearing bytes
+   * that race past the match-settle so the sentinel can never appear in the
+   * rendered scrollback under adversarial chunk timing (D-02 invisibility — RESEARCH
+   * Open Q3). Distinct from `marker`, which carries the `: ` no-op prefix + CR.
+   */
+  readonly nonce: string;
   /** True once `buffer` shows the shell PROCESSED the marker (not merely echoed it). */
   matches(buffer: string): boolean;
 }
@@ -63,6 +71,7 @@ export function buildPosixProbe(nonce: string): ShellReadinessProbe {
   const re = new RegExp(`${safe}[^\\n]*\\n[\\s\\S]*`);
   return {
     marker: `: ${nonce}\r`,
+    nonce,
     matches: (buffer: string): boolean => re.test(buffer),
   };
 }

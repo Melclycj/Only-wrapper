@@ -58,6 +58,15 @@ describe('readiness-probe pure helpers (Plan 05.1-01 Task 1)', () => {
     expect(probe.marker.startsWith(': __JW_READY_')).toBe(true);
     expect(probe.marker.endsWith('\r')).toBe(true);
   });
+
+  it('exposes the bare `nonce` token (no `: ` prefix / CR) for D-02 scrubbing (RESEARCH Open Q3)', () => {
+    expect(buildPosixProbe('NONCE').nonce).toBe('NONCE');
+    const probe = selectReadinessProbe('darwin').forShell('/bin/zsh');
+    expect(probe.nonce.startsWith('__JW_READY_')).toBe(true);
+    // The bare nonce carries neither the `: ` no-op prefix nor the CR terminator.
+    expect(probe.nonce.includes(': ')).toBe(false);
+    expect(probe.nonce.includes('\r')).toBe(false);
+  });
 });
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -141,12 +150,31 @@ vi.mock('../shell-resolver', () => ({
 import {
   PtyManager,
   PTY_CHANNELS,
-  // RED-by-design: Plans 02/03 ADD this constant; it is `undefined` until then,
-  // so advanceTimersByTime(READINESS_TIMEOUT_MS) cannot trip the (unimplemented)
-  // timeout path and the timeout assertion fails RED. (#Wave-0)
   READINESS_TIMEOUT_MS,
+  stripProbeEcho,
   type PtyCreateOptions,
 } from '../pty-manager';
+
+// ───────────────────────────────────────────────────────────────────────────
+// D-02 scrub helper — pure, no harness (RESEARCH Open Q3 hardening).
+// ───────────────────────────────────────────────────────────────────────────
+describe('stripProbeEcho (D-02 invisibility hardening)', () => {
+  it('removes the `: <nonce>` marker echo wherever it races past the settle', () => {
+    const out = stripProbeEcho('user@host % : __JW_READY_ab12__ ', '__JW_READY_ab12__');
+    expect(out).not.toContain('__JW_READY_ab12__');
+    expect(out).not.toContain(': __JW_READY_');
+  });
+
+  it('removes a bare nonce occurrence (no `: ` prefix) too', () => {
+    expect(stripProbeEcho('xx __JW_READY_ab12__ yy', '__JW_READY_ab12__')).toBe('xx  yy');
+  });
+
+  it('leaves nonce-free real shell output untouched', () => {
+    expect(stripProbeEcho('totally normal output\n', '__JW_READY_ab12__')).toBe(
+      'totally normal output\n',
+    );
+  });
+});
 
 function fakeWindow(): never {
   return {
@@ -199,7 +227,7 @@ function sentDataContains(win: ReturnType<typeof fakeWindow>, needle: string): b
   );
 }
 
-describe('create() readiness-probe hook (SC1/SC2/SC4/D-02 — RED until Plans 02/03)', () => {
+describe('create() readiness-probe hook (SC1/SC2/SC4/D-02 — GREEN as of Plan 03)', () => {
   beforeEach(() => {
     spawnedChildren.length = 0;
     nextPid = 3000;

@@ -110,6 +110,25 @@ export function isStringData(data: unknown): data is string {
   return typeof data === 'string';
 }
 
+/**
+ * D-02 invisibility hardening (RESEARCH Open Q3). Remove any leftover readiness-probe
+ * echo from a post-settle PTY chunk so the `__JW_READY_<hex>__` nonce sentinel can
+ * NEVER reach the renderer, even under adversarial chunk timing where the shell's
+ * echo of the `: <nonce>` marker races past the match-settle.
+ *
+ * Pure helper (unit-tested directly): strips the optional `: ` POSIX no-op prefix +
+ * the exact `nonce` token wherever it appears. The nonce is a unique self-generated
+ * sentinel, so this only ever removes our own probe bytes — real shell output never
+ * carries it. Returns the cleaned chunk (possibly empty → nothing to forward).
+ */
+export function stripProbeEcho(data: string, nonce: string): string {
+  if (!nonce || !data.includes(nonce)) return data;
+  // Escape regex metacharacters in the nonce (defensive — the sentinel is `_`-only).
+  const safe = nonce.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  // Drop a leading `: ` no-op prefix immediately before the nonce, then the nonce.
+  return data.replace(new RegExp(`(?:: )?${safe}`, 'g'), '');
+}
+
 /** Options for spawning a new PTY (renderer-supplied; validated before use). */
 export interface PtyCreateOptions {
   cols: number;
@@ -335,7 +354,14 @@ export class PtyManager {
         // After the marker round-trips, forwarding is restored via wireNormalOnData;
         // this guard covers any byte that races in before the listener swap settles.
         if (settled) {
-          this.send(PTY_CHANNELS.data, { id, data });
+          // D-02 hardening (RESEARCH Open Q3): under adversarial chunk timing the
+          // shell's echo of the `: <nonce>` marker can arrive AFTER the match
+          // settles. Scrub the nonce sentinel from any such racing chunk so it can
+          // never appear in the rendered scrollback. The nonce is our own unique
+          // token, so removing it (and a leading `: ` no-op prefix) only ever drops
+          // probe bytes — real shell output never contains it.
+          const scrubbed = stripProbeEcho(data, probe.nonce);
+          if (scrubbed) this.send(PTY_CHANNELS.data, { id, data: scrubbed });
           return;
         }
         // Pre-match bytes are BUFFERED and NEVER sent — invisibility (D-02).
