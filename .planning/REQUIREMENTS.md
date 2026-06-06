@@ -34,7 +34,7 @@ Requirements for the initial release. Derived from the user's FR-01–FR-21 spec
 - [x] **TERM-02**: Sessions run through a real PTY/pseudo-terminal layer (input → PTY → output → render), not one-shot run→capture→return command execution (FR-13)
 - [x] **TERM-03**: User can open a normal shell session with no automatic startup command, then manually `cd` into any accessible folder and launch tools (e.g. `codex`, `claude --rc`) from the current working directory (FR-14)
 - [x] **TERM-04**: Each session starts in its configured initial working directory (FR-15)
-- [ ] **TERM-05**: A session can optionally run a configured startup command after opening, separate from normal shell mode (FR-16) — **Phase 5.1** (un-deferred; descoped from Phase 3, re-homed to its own phase after Phase 5 persistence — runs the saved command into the PTY once the shell is ready, on start/restart)
+- [x] **TERM-05**: A session can optionally run a configured startup command after opening, separate from normal shell mode (FR-16) — **Phase 5.1** (un-deferred; descoped from Phase 3, re-homed to its own phase after Phase 5 persistence — runs the saved command into the PTY once the shell is ready, on start/restart)
 - [x] **TERM-06**: A running session remains alive when the user switches to another tab; switching only changes the visible view (FR-17)
 - [x] **TERM-07**: User can stop and restart a session; restart may create a new process ID but keeps the same logical session ID (FR-18)
 - [x] **TERM-08**: Each session shows a status: not started / running / stopped / exited / error (FR-19)
@@ -117,7 +117,7 @@ Populated during roadmap creation. Each v1 requirement maps to exactly one phase
 | TERM-02 | Phase 2: PTY Core + Terminal Fidelity | Complete |
 | TERM-03 | Phase 2: PTY Core + Terminal Fidelity | Complete |
 | TERM-04 | Phase 2: PTY Core + Terminal Fidelity | Complete |
-| TERM-05 | Phase 5.1: TERM-05 startup-command auto-run (INSERTED) | Pending |
+| TERM-05 | Phase 5.1: TERM-05 startup-command auto-run (INSERTED) | Complete |
 | TERM-06 | Phase 3: Multi-Session + Session Lifecycle | Complete |
 | TERM-07 | Phase 3: Multi-Session + Session Lifecycle | Complete |
 | TERM-08 | Phase 3: Multi-Session + Session Lifecycle | Complete |

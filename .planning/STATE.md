@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Completed 05.1-03-PLAN.md (human-verify approved)
-last_updated: "2026-06-07T00:40:00.000Z"
-last_activity: 2026-06-06 -- Completed Plan 03 (TERM-05 timeout/notice slice + cold-spawn E2E; human-verify approved)
+status: verifying
+stopped_at: Completed 05.1-03-PLAN.md (human-verify approved; phase pending orchestrator verification)
+last_updated: "2026-06-06T15:20:50.121Z"
+last_activity: 2026-06-06
 progress:
   total_phases: 9
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 21
   completed_plans: 21
-  percent: 58
+  percent: 67
 ---
 
 # Project State
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-06-03)
 
 ## Current Position
 
-Phase: 05.1 (term-05-startup-command-auto-run) — EXECUTING (all plans complete; pending orchestrator verification)
-Plan: 3 of 3 (complete)
+Phase: 6
+Plan: Not started
 Status: All 3 plans complete — awaiting phase verification
-Last activity: 2026-06-06 -- Completed Plan 03 (TERM-05 timeout/notice slice + cold-spawn E2E; human-verify approved)
+Last activity: 2026-06-06
 
 Progress: [████████████████████] 100% (Phase 5.1 plans: 3/3)
 
@@ -36,7 +36,7 @@ Progress: [████████████████████] 100% (P
 
 **Velocity:**
 
-- Total plans completed: 19
+- Total plans completed: 22
 - Average duration: — min
 - Total execution time: 0 hours
 
@@ -49,6 +49,7 @@ Progress: [████████████████████] 100% (P
 | 03 | 3 | - | - |
 | 04 | 4 | - | - |
 | 05 | 4 | - | - |
+| 05.1 | 3 | - | - |
 
 **Recent Trend:**
 
