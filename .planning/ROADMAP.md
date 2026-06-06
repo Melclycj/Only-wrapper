@@ -192,7 +192,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. The command is injected only once the shell is genuinely ready to accept input — no lost or garbled keystrokes on cold first spawn (the failure mode that caused the original Phase-3 deferral)
   5. For restored (dormant) sessions, the startup command is NOT auto-run on app launch — it runs only when the user explicitly starts the session (consistent with Phase 5's dormant-restore model)
 
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans executed
 **UI hint:** no
 
 **Wave 1**
@@ -205,7 +205,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 3** *(blocked on Wave 2 — has checkpoint)*
 
-- [ ] 05.1-03-PLAN.md — Timeout/notice fallback (D-04/SC4) + onPtyStatus notice reuse (zero new keys) + restart re-run (SC3) + cold-spawn E2E + Nyquist sign-off + canonical human-verify
+- [x] 05.1-03-PLAN.md — Timeout/notice fallback (D-04/SC4) + onPtyStatus notice reuse (zero new keys) + restart re-run (SC3) + cold-spawn E2E + Nyquist sign-off + canonical human-verify
 
 ### Phase 6: Robustness + Flow-Control Polish
 

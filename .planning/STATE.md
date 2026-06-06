@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 05.1-01-PLAN.md
-last_updated: "2026-06-06T13:10:52.422Z"
-last_activity: 2026-06-06 -- Completed Plan 01 (ReadinessProbe seam + Wave 0 scaffolds)
+stopped_at: Completed 05.1-03-PLAN.md (human-verify approved)
+last_updated: "2026-06-07T00:40:00.000Z"
+last_activity: 2026-06-06 -- Completed Plan 03 (TERM-05 timeout/notice slice + cold-spawn E2E; human-verify approved)
 progress:
   total_phases: 9
   completed_phases: 5
   total_plans: 21
-  completed_plans: 20
-  percent: 56
+  completed_plans: 21
+  percent: 58
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-06-03)
 
 ## Current Position
 
-Phase: 05.1 (term-05-startup-command-auto-run) — EXECUTING
-Plan: 3 of 3
-Status: Ready to execute
-Last activity: 2026-06-06 -- Completed Plan 01 (ReadinessProbe seam + Wave 0 scaffolds)
+Phase: 05.1 (term-05-startup-command-auto-run) — EXECUTING (all plans complete; pending orchestrator verification)
+Plan: 3 of 3 (complete)
+Status: All 3 plans complete — awaiting phase verification
+Last activity: 2026-06-06 -- Completed Plan 03 (TERM-05 timeout/notice slice + cold-spawn E2E; human-verify approved)
 
-Progress: [██████░░░░░░░░░░░░░░░] 33% (Phase 5.1 plans: 1/3)
+Progress: [████████████████████] 100% (Phase 5.1 plans: 3/3)
 
 ## Performance Metrics
 
@@ -74,6 +74,7 @@ Progress: [██████░░░░░░░░░░░░░░░] 33% 
 | Phase 5 P4 | 11min | 3 tasks | 6 files |
 | Phase 05.1 P01 | ~6min | 2 tasks | 4 files |
 | Phase 05.1 P02 | 8 | 1 tasks | 1 files |
+| Phase 05.1 P03 | ~20min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -126,6 +127,8 @@ Recent decisions affecting current work:
 - [Phase 05.1-01]: ReadinessProbe seam (src/main/readiness-probe.ts) mirrors shell-discovery.ts — electron/node-pty-free, Vitest-importable; pure buildPosixProbe(nonce) builds a `: <nonce>\r` POSIX-`:`-no-op marker (D-01, changes no shell state) + a send-vs-match matcher (true only on a produced line after a newline, false on the bare echo — Pitfall 1). MacReadinessProbe covers zsh+bash with one `__JW_READY_<hex>__` crypto-nonce sentinel; WindowsReadinessProbe.forShell() THROWS (Phase-8 stub, no safe no-op readiness probe — unlike WindowsShellProvider); selectReadinessProbe(platform) picker
 - [Phase 05.1-01]: Wave 0 probe-hook state-machine tests are RED-by-BEHAVIOR (the file imports cleanly; `READINESS_TIMEOUT_MS` is `undefined` until Plan 02/03) so pure-helper + SC5-hydrate stay GREEN — only the 2 tests that require the create() probe gate (withhold-probe-bytes D-02, inject-on-match-with-CR SC1) fail RED; D-04 notice reuses onPtyStatus (no new bridge key — security.guard.test.ts unchanged)
 - [Phase ?]: 05.1-02: TERM-05 auto-run happy path — create() runs invisible readiness probe then injects cmd + CR on match; READINESS_TIMEOUT_MS deferred to Plan 03 (timeout test stays RED by design)
+- [Phase 05.1-03]: Completed the probe state machine — READINESS_TIMEOUT_MS=4000ms timeout-flush-and-notice branch: on ready-timeout the buffer flushes to a usable bare prompt and the command is NEVER injected (safe-by-default, D-04/SC4). The D-04 ready-fail notice REUSES the existing onPtyStatus channel via optional PtyStatusPayload.notice — ZERO new bridge keys (EXPECTED_API_KEYS stays 18, security.guard GREEN unchanged; Open Q1 lighter path). Notice is a fixed literal (no startupCommand/nonce/buffer leak — V7). buildPosixProbe regex unchanged vs real cold zsh (Open Q3); defensive stripProbeEcho scrub guards D-02 nonce-absence. Real cold-spawn E2E GREEN (auto-run+history+nonce-absent+restart-rerun+bare-shell). VALIDATION nyquist_compliant:true
+- [Phase 05.1-03 HUMAN-VERIFY]: Canonical 🛋️ Parlour Claude RC scenario APPROVED 2026-06-06 — all 4 CONFIRMs passed (clean auto-run no garble/visible-nonce, ArrowUp history recall, restart re-runs after separator, empty command → bare shell). 3 session edit/lifecycle UX items surfaced but are OUT OF SCOPE for TERM-05 (Phase 03/04 concerns) — captured as todos in .planning/todos/pending/ (edit-modal cwd/startup prefill, folder picker, ▶ Start discoverability)
 
 ### Pending Todos
 
@@ -150,6 +153,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-06T13:10:27.368Z
-Stopped at: Completed 05.1-01-PLAN.md
-Resume file: .planning/phases/05.1-term-05-startup-command-auto-run/05.1-02-PLAN.md
+Last session: 2026-06-07T00:40:00.000Z
+Stopped at: Completed 05.1-03-PLAN.md (human-verify approved; phase pending orchestrator verification)
+Resume file: None
