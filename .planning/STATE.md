@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: completed
+status: executing
 stopped_at: Phase 5 UI-SPEC approved
-last_updated: "2026-06-06T04:38:44.744Z"
-last_activity: 2026-06-06 -- Phase 05 planning complete
+last_updated: "2026-06-06T05:43:17.095Z"
+last_activity: 2026-06-06 -- Phase 05 execution started
 progress:
   total_phases: 9
   completed_phases: 4
-  total_plans: 14
+  total_plans: 18
   completed_plans: 14
   percent: 44
 ---
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-03)
 
 **Core value:** Real terminal fidelity — `claude --rc`, `codex`, `vim`, `ssh`, REPLs all behave exactly like a native terminal inside the wrapper.
-**Current focus:** Phase 04 — Session Identity + Sidebar UI
+**Current focus:** Phase 05 — persistence-shell-discovery
 
 ## Current Position
 
-Phase: 5
-Plan: Not started
-Status: Phase 04 plans complete — Nyquist signed off
-Last activity: 2026-06-06 -- Phase 05 planning complete
+Phase: 05 (persistence-shell-discovery) — EXECUTING
+Plan: 1 of 4
+Status: Executing Phase 05
+Last activity: 2026-06-06 -- Phase 05 execution started
 
 Progress: [████████████████████] 100% (Phase 4 plans: 4/4)
 
