@@ -18,6 +18,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: Multi-Session + Session Lifecycle** - N concurrent PTY sessions with ring-buffer replay, CSS show/hide tab panels, stop/restart, and the session status state machine (completed 2026-06-04)
 - [x] **Phase 4: Session Identity + Sidebar UI** - Full sidebar (icon + name + status badge, expanded/collapsed), session creation form, rename/re-icon, and keyboard session-switching shortcuts (completed 2026-06-05)
 - [ ] **Phase 5: Persistence + Shell Discovery** - Session profiles saved to disk and restored on reopen (always not_started), platform-aware shell resolver, and sidebar order persistence
+- [ ] **Phase 5.1: TERM-05 startup-command auto-run** (INSERTED) - Auto-run a session's saved startup command into the PTY once the shell is ready, on start and restart
 - [ ] **Phase 6: Robustness + Flow-Control Polish** - HIGH/LOW watermark backpressure, spawn/cwd error handling, waiting-for-input heuristic, alt-screen reset, and session header quick controls
 - [ ] **Phase 7: Terminal Search + Scrollback Config** - Ctrl+F in-session search and configurable scrollback buffer size (global setting with sensible default)
 - [ ] **Phase 8: Cross-Platform Packaging** - Full production distributables for Windows and macOS: ASAR unpack, @electron/rebuild in CI, Electron Forge makers, ConPTY version check, and notarization stubs
@@ -158,8 +159,41 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. The sidebar preserves the user's custom session ordering across restarts
   4. The shell selector in the session creation form is populated with available shells for the current platform (PowerShell/CMD/Git Bash/WSL on Windows; zsh/bash on macOS) with no hardcoded paths that break on non-standard installs
 
-**Plans:** TBD
+**Plans:** 4 plans
 **UI hint:** yes
+
+**Wave 1**
+
+- [ ] 05-01-PLAN.md — Foundation: Wave 0 RED stubs + 4 pure modules (store-schema/shell-discovery/window-bounds/session-reorder) + atomic 18-key bridge lockstep + lowdb install/external (PERS-01/02, NAV-04)
+
+**Wave 2** *(blocked on Wave 1)*
+
+- [ ] 05-02-PLAN.md — Persistence slice: SessionStore (lowdb dynamic import, debounce/flush, corrupt recovery) + PtyManager.hydrate dormant-restore + lifecycle wiring + window-bounds restore + persistence smoke (PERS-01/02, NAV-04)
+
+**Wave 3** *(blocked on Wave 2)*
+
+- [ ] 05-03-PLAN.md — Shell-discovery + dormant-UI slice: shell dropdown + IdleCard + WelcomeEmptyState + boot rewrite (no poll/auto-spawn) + Start/Restart flip + collapse persist (PERS-02, NAV-04, SC4)
+
+**Wave 4** *(blocked on Wave 3 — has checkpoint)*
+
+- [ ] 05-04-PLAN.md — Drag-to-reorder slice: dnd-kit (gated [ASSUMED] verify) + sortable sidebar + persistOrder wiring + reorder smoke + Nyquist sign-off (NAV-04)
+
+### Phase 05.1: TERM-05 startup-command auto-run (INSERTED)
+
+**Goal:** A session's optional saved startup command runs automatically when the session starts — the command is written into the PTY as if the user typed it followed by Enter, once the shell is ready — so starting (or restarting) an agent session such as `claude --rc` relaunches the tool in its working directory without the user retyping it. This un-defers TERM-05, descoped from Phase 3 because the naive settle-delay injection was unreliable on cold first spawn.
+**Mode:** mvp
+**Depends on:** Phase 5
+**Requirements:** TERM-05
+**Success Criteria** (what must be TRUE):
+
+  1. A session with a saved startup command, when started, automatically executes that command after the shell is ready — the command appears in the terminal as if typed (it lands in shell history) and runs
+  2. A session with no startup command starts as a normal shell with no injected input (TERM-03 normal-shell mode stays intact)
+  3. Restarting a session re-runs its startup command after the shell is ready
+  4. The command is injected only once the shell is genuinely ready to accept input — no lost or garbled keystrokes on cold first spawn (the failure mode that caused the original Phase-3 deferral)
+  5. For restored (dormant) sessions, the startup command is NOT auto-run on app launch — it runs only when the user explicitly starts the session (consistent with Phase 5's dormant-restore model)
+
+**Plans:** TBD
+**UI hint:** no
 
 ### Phase 6: Robustness + Flow-Control Polish
 
@@ -211,7 +245,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 5.1 → 6 → 7 → 8
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -219,7 +253,8 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 2. PTY Core + Terminal Fidelity | 4/4 | Complete    | 2026-06-04 |
 | 3. Multi-Session + Session Lifecycle | 3/3 | Complete    | 2026-06-04 |
 | 4. Session Identity + Sidebar UI | 4/4 | Complete    | 2026-06-05 |
-| 5. Persistence + Shell Discovery | 0/TBD | Not started | - |
+| 5. Persistence + Shell Discovery | 0/4 | Not started | - |
+| 5.1. TERM-05 startup-command auto-run (INSERTED) | 0/TBD | Not started | - |
 | 6. Robustness + Flow-Control Polish | 0/TBD | Not started | - |
 | 7. Terminal Search + Scrollback Config | 0/TBD | Not started | - |
 | 8. Cross-Platform Packaging | 0/TBD | Not started | - |

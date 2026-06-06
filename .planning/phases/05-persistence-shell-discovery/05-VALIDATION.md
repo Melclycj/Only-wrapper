@@ -10,6 +10,8 @@ created: 2026-06-06
 # Phase 5 — Validation Strategy
 
 > Per-phase validation contract for feedback sampling during execution.
+> The Per-Task Verification Map below is filled at PLANNING time; Plan 05-04 Task 3 flips
+> `nyquist_compliant: true` + `wave_0_complete: true` once the full suite is green.
 
 ---
 
@@ -17,20 +19,20 @@ created: 2026-06-06
 
 | Property | Value |
 |----------|-------|
-| **Framework** | {pytest 7.x / jest 29.x / vitest / go test / other} |
-| **Config file** | {path or "none — Wave 0 installs"} |
-| **Quick run command** | `{quick command}` |
-| **Full suite command** | `{full command}` |
-| **Estimated runtime** | ~{N} seconds |
+| **Framework** | Vitest 4.1.8 (unit, Node env) + WebdriverIO 9.x (`@wdio/electron-service`) smoke |
+| **Config file** | `vitest.config.ts` (Node env; `src/**/__tests__/**/*.test.ts` + `src/**/*.guard.test.ts`) ; `wdio.conf.ts` (`tests/smoke/**/*.smoke.test.ts`) |
+| **Quick run command** | `npm run test:unit` (`vitest run`) |
+| **Full suite command** | `npm test` (`test:unit && test:smoke`) |
+| **Estimated runtime** | unit ~a few seconds; smoke ~30–90s (built-app launch) |
 
 ---
 
 ## Sampling Rate
 
-- **After every task commit:** Run `{quick run command}`
-- **After every plan wave:** Run `{full suite command}`
-- **Before `/gsd-verify-work`:** Full suite must be green
-- **Max feedback latency:** {N} seconds
+- **After every task commit:** Run `npm run test:unit` (fast; all pure helpers + the security guard)
+- **After every plan wave:** Run `npm test` (unit + WDIO smoke) — the smoke run is the ONLY place Pitfall 1 (lowdb ESM-in-CJS at runtime) is caught
+- **Before `/gsd-verify-work`:** Full suite must be green + a manual reopen check (canonical 🛋️ Parlour Claude RC reappears dormant after quit/reopen)
+- **Max feedback latency:** unit < 10s; smoke < 90s
 
 ---
 
@@ -38,19 +40,35 @@ created: 2026-06-06
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| {N}-01-01 | 01 | 1 | REQ-{XX} | T-{N}-01 / — | {expected secure behavior or "N/A"} | unit | `{command}` | ✅ / ❌ W0 | ⬜ pending |
+| 05-01-01 | 01 | 1 | PERS-01/02, NAV-04 | T-05-02 | coerceOnLoad forces not_started + clears ptyPid; buildShellList includes $SHELL/filters on-disk; reorder dense reindex; validateBounds rejects off-screen | unit (pure) | `npx vitest run src/main/__tests__/store-schema.test.ts src/main/__tests__/shell-discovery.test.ts src/main/__tests__/window-bounds.test.ts src/renderer/__tests__/session-reorder.test.ts` | ❌ W0 | ⬜ pending |
+| 05-01-02 | 01 | 1 | PERS-01/02, NAV-04 | T-05-01 / T-05-SC | exact 18-key bridge, no raw ipcRenderer; lowdb [VERIFIED] install + external + ignore allow-list; validate-in-main setters | unit (guard) | `npx vitest run src/shared/__tests__/security.guard.test.ts` | ✅ (update keys) | ⬜ pending |
+| 05-02-01 | 02 | 2 | PERS-01/02 | T-05-02 / T-05-04 / T-05-05 | round-trip 8 fields; corrupt→backup+fresh (no crash); fixed userData path; debounce/flush | unit | `npx vitest run src/main/__tests__/session-store.test.ts` | ❌ W0 (stub in 05-01) | ⬜ pending |
+| 05-02-02 | 02 | 2 | PERS-02, NAV-04 | T-05-02 / T-05-06 | hydrate dormant (no spawn); listSessions merges live+dormant; before-quit flush; validated bounds restore | unit | `npx vitest run src/main/__tests__` | n/a (existing dir) | ⬜ pending |
+| 05-02-03 | 02 | 2 | PERS-01/02 | T-05-04 (Pitfall 1) | lowdb dynamic import resolves in BUILT app; store file created + written | smoke (WDIO) | `npm run test:smoke -- --spec tests/smoke/persistence.smoke.test.ts` | ❌ W0 | ⬜ pending |
+| 05-03-01 | 03 | 3 | PERS-02 (SC4) | T-05-03 | shell dropdown only (no free-text); $SHELL always present | unit (guard) | `npx vitest run src/shared/__tests__/security.guard.test.ts` | ✅ | ⬜ pending |
+| 05-03-02 | 03 | 3 | PERS-02 | T-05-07 | IdleCard displays startupCommand, never executes it; welcome CTA present | type-check | `npx tsc --noEmit -p tsconfig.json` | n/a | ⬜ pending |
+| 05-03-03 | 03 | 3 | PERS-02, NAV-04 | T-05-02 | one-shot snapshot (no poll/auto-spawn); dormant→idle card+Start; collapse persists | unit + smoke | `npx vitest run && npm run test:smoke -- --spec tests/smoke/persistence.smoke.test.ts` | ✅ / ❌ W0 | ⬜ pending |
+| 05-04-02 | 04 | 4 | NAV-04 | T-05-01 / T-05-08 | drag-reorder → pure dense reindex → persistOrder (validated main-side); silent persist | unit | `npx vitest run src/renderer/__tests__/session-reorder.test.ts` | ✅ (from 05-01) | ⬜ pending |
+| 05-04-03 | 04 | 4 | NAV-04 | T-05-01 | reorder persists across restart; full suite green | smoke + full | `npm test` | ❌ W0 | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
+
+> Continuity check: no 3 consecutive map rows lack an `<automated>` verify — every task has one.
+> Plan 05-04 Task 1 is a `checkpoint:human-verify` legitimacy gate (no code → no automated verify; it precedes the dnd-kit install in 05-04-02, which IS automated-verified).
 
 ---
 
 ## Wave 0 Requirements
 
-- [ ] `{tests/test_file.py}` — stubs for REQ-{XX}
-- [ ] `{tests/conftest.py}` — shared fixtures
-- [ ] `{framework install}` — if no framework detected
-
-*If none: "Existing infrastructure covers all phase requirements."*
+- [ ] `src/main/__tests__/store-schema.test.ts` — D-01/SC2 (`coerceOnLoad`) — created Plan 05-01
+- [ ] `src/main/__tests__/session-store.test.ts` — PERS-01/02 round-trip, corrupt recovery, debounce/flush — RED stub in 05-01, GREEN in 05-02
+- [ ] `src/main/__tests__/shell-discovery.test.ts` — SC4/D-05/06/07 (pure parse + build + provider select) — created Plan 05-01
+- [ ] `src/main/__tests__/window-bounds.test.ts` — D-12 off-screen validation (Pitfall 5) — created Plan 05-01
+- [ ] `src/renderer/__tests__/session-reorder.test.ts` — NAV-04/SC3 dense reindex (Pitfall 6) — created Plan 05-01
+- [ ] `tests/smoke/persistence.smoke.test.ts` — restore round-trip + lowdb-ESM-in-built-app (Pitfall 1) — created Plan 05-02, extended Plan 05-03
+- [ ] `tests/smoke/reorder.smoke.test.ts` — drag-to-reorder persistence (NAV-04) — created Plan 05-04
+- [ ] `src/shared/__tests__/security.guard.test.ts` — goes RED at 15→18 keys, GREEN when preload matches — NO code change (reads EXPECTED_API_KEYS)
+- [ ] Framework install: none needed (Vitest + WDIO already configured)
 
 ---
 
@@ -58,9 +76,9 @@ created: 2026-06-06
 
 | Behavior | Requirement | Why Manual | Test Instructions |
 |----------|-------------|------------|-------------------|
-| {behavior} | REQ-{XX} | {reason} | {steps} |
-
-*If none: "All phase behaviors have automated verification."*
+| Full quit → relaunch restore | PERS-02/SC1 | WDIO cannot reliably fully-quit + relaunch the Forge app within one smoke session | Create `🛋️ Parlour Claude RC` (Icon 🛋️, a real project dir), quit the app fully, reopen → it reappears dormant with an idle card + ▶ Start, same name/icon/cwd; status is not_started (SC2) |
+| Real pointer drag gesture | NAV-04/SC3 | dnd-kit/HTML5 pointer DnD is hard to drive deterministically over CDP | Drag the 3rd sidebar row above the 1st, quit, reopen → the new order persists |
+| Shell dropdown lists discovered shells | SC4 | depends on the host's `/etc/shells` + `$SHELL` | Open the create/edit form → the Shell field is a dropdown listing the machine's login shells with `$SHELL` present and default-selected; no free-text input |
 
 ---
 
@@ -70,7 +88,7 @@ created: 2026-06-06
 - [ ] Sampling continuity: no 3 consecutive tasks without automated verify
 - [ ] Wave 0 covers all MISSING references
 - [ ] No watch-mode flags
-- [ ] Feedback latency < {N}s
+- [ ] Feedback latency < 90s
 - [ ] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** {pending / approved YYYY-MM-DD}
+**Approval:** pending (Plan 05-04 Task 3 flips nyquist_compliant + wave_0_complete true after the full suite is green)
