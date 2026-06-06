@@ -149,9 +149,24 @@ interface PtySession {
  */
 export class PtyManager {
   private readonly sessions = new Map<LogicalId, PtySession>();
+  /**
+   * Restored-but-not-yet-started session records (PERS-02, Pattern 4 option b).
+   * A dormant record has NO live pty — it is hydrated from the store on boot and
+   * lives here UNTIL create({id}) promotes it into a live PtySession. Keeping it
+   * in a SEPARATE map preserves the "every PtySession has a live pty" invariant
+   * (Pitfall 4 — no `write`/`resize`/`stop` ever touches an undefined pty).
+   */
+  private readonly dormantRecords = new Map<LogicalId, SessionRecord>();
   private win: BrowserWindow | null = null;
   /** True once the process-global IPC handlers are wired (idempotency guard — CR-01). */
   private ipcRegistered = false;
+  /**
+   * Store change-signal (05-02, D-13). Injected from index.ts as
+   * `() => store.scheduleSave()`. EVERY record mutation (create/close/updateProfile/
+   * setOrder/setUiState/hydrate-promotion) calls this so the lowdb store
+   * debounce-writes. No-op until set (e.g. in unit tests with no store wired).
+   */
+  private storeSignal: (() => void) | null = null;
   /**
    * In-memory UI preferences (05-01, D-12). setUiState() validates-then-holds these;
    * Plan 05-02 wires them through the lowdb store (scheduleSave on mutation).
@@ -172,11 +187,19 @@ export class PtyManager {
     // IDENT-02: restart passes the existing id (reuse); add passes none (mint).
     const id = opts.id ?? newLogicalId();
 
+    // PERS-02 promotion (Pattern 4 option b): when create() is called for a
+    // DORMANT id (the Start ▶ path), read its stored profile from dormantRecords
+    // and remove it from there — below it is spawned as a live PtySession under the
+    // SAME logicalId. A live record (restart) takes precedence over a dormant one.
+    const dormant = this.dormantRecords.get(id);
+    if (dormant) this.dormantRecords.delete(id);
+
     // A2 (04-01, Pitfall 3): prefer an EDITED shell stored on the kept record when
     // non-empty, else fall back to resolveShell()'s platform default. The edited
     // shell launches with no extra args (the user supplied a full invocation path);
     // resolveShell() supplies its own login args ('-l') in the fallback path.
-    const prior = this.sessions.get(id)?.record;
+    // A promoted dormant record's stored profile is the `prior` for a Start (▶).
+    const prior = this.sessions.get(id)?.record ?? dormant;
     const { shell, args } =
       prior?.shell && prior.shell.length
         ? { shell: prior.shell, args: [] as string[] }
@@ -184,7 +207,13 @@ export class PtyManager {
 
     // cwd default is resolved HERE, in main. The renderer never computes home —
     // it passes `cwd: undefined` and main owns the os.homedir() fallback (D-02).
-    const cwd = opts.cwd && opts.cwd.length ? opts.cwd : os.homedir();
+    // A promoted dormant record (Start ▶) respects its stored cwd when opts omits one.
+    const cwd =
+      opts.cwd && opts.cwd.length
+        ? opts.cwd
+        : prior?.cwd && prior.cwd.length
+          ? prior.cwd
+          : os.homedir();
 
     const child = pty.spawn(shell, args, {
       name: 'xterm-256color', // sets $TERM inside the child (SC4)
@@ -216,7 +245,10 @@ export class PtyManager {
       shell, // the edited shell (A2) or the resolveShell() default
       startupCommand: prior?.startupCommand, // stored-only carry-through (TERM-05 deferred)
       status: 'running',
-      order: opts.order ?? prior?.order ?? this.sessions.size,
+      // Pitfall 6: a NEW session's order is max(existing order)+1, NOT
+      // this.sessions.size — size collides with a restored record's order after an
+      // add/close cycle. A restart/promotion reuses prior.order; opts.order wins.
+      order: opts.order ?? prior?.order ?? this.nextOrder(),
       lastActive: Date.now(),
     };
 
@@ -237,6 +269,10 @@ export class PtyManager {
 
     // Broadcast the spawn → 'running' transition for live status badges (SC4).
     this.setStatus(id, 'running', { ptyPid });
+
+    // A spawn (new session OR a dormant promotion) mutates the persisted set —
+    // signal the store to debounce-write (D-13).
+    this.signalStore();
 
     // Forward the UTF-8 string straight through — no binary re-encoding
     // (would risk splitting a multibyte char and corrupting CJK/emoji — SC4).
@@ -268,6 +304,9 @@ export class PtyManager {
       }
       this.setStatus(id, status, { exitCode });
       this.send(PTY_CHANNELS.exit, { id, exitCode });
+      // The record's status/ptyPid changed → persist the new (dormant-on-restart)
+      // shape so a quit right after an exit restores the correct status (D-13).
+      this.signalStore();
     });
 
     return { id, pid: ptyPid };
@@ -289,6 +328,54 @@ export class PtyManager {
       s.record.status = status;
     }
     this.send(PTY_CHANNELS.status, { id, status, ...extra });
+  }
+
+  /**
+   * Inject the store change-signal (05-02, D-13). index.ts calls this with
+   * `() => store.scheduleSave()` after store.load()/hydrate() so every subsequent
+   * record mutation debounce-writes. Idempotent; null clears it.
+   */
+  setStoreSignal(cb: (() => void) | null): void {
+    this.storeSignal = cb;
+  }
+
+  /**
+   * Fire the store change-signal if one is wired AND push the current live+dormant
+   * snapshot to the store so the next debounced write persists the latest records.
+   * A no-op when no signal is set (unit tests, pre-wiring).
+   */
+  private signalStore(): void {
+    this.storeSignal?.();
+  }
+
+  /**
+   * Next display order for a brand-new session (Pitfall 6): max(order) over every
+   * KNOWN record — live AND dormant — plus 1. `-1` base so the first session gets
+   * order 0. Never `this.sessions.size` (collides with restored orders).
+   */
+  private nextOrder(): number {
+    let max = -1;
+    for (const s of this.sessions.values()) {
+      if (s.record.order > max) max = s.record.order;
+    }
+    for (const r of this.dormantRecords.values()) {
+      if (r.order > max) max = r.order;
+    }
+    return max + 1;
+  }
+
+  /**
+   * Hydrate the dormant-record map from the store on boot (PERS-02, Pattern 4
+   * option b). Each record is already coerced to `not_started` + ptyPid-cleared by
+   * the store (D-01/SC2). Records are stored WITHOUT spawning a pty — they become
+   * live only when create({id}) promotes them (the Start ▶ path). Replaces any
+   * prior dormant set (boot is a one-shot hydrate).
+   */
+  hydrate(records: SessionRecord[]): void {
+    this.dormantRecords.clear();
+    for (const rec of records) {
+      this.dormantRecords.set(rec.logicalId, rec);
+    }
   }
 
   /**
@@ -381,11 +468,16 @@ export class PtyManager {
   }
 
   /**
-   * Snapshot of all current SessionRecords (incl. stopped/exited ones kept for
-   * restart). Main is the source of truth (RESEARCH Open Q2) — Phase 5 persists this.
+   * Snapshot of all current SessionRecords — LIVE (incl. stopped/exited kept for
+   * restart) MERGED with DORMANT (restored-not-yet-started) records, sorted by
+   * `order` (PERS-02, Pattern 4). Main is the source of truth (RESEARCH Open Q2);
+   * this is exactly what the store persists, so it returns dormant rows too so the
+   * renderer renders restored sessions and a dormant→live promotion is seamless.
    */
   listSessions(): SessionRecord[] {
-    return Array.from(this.sessions.values()).map((s) => s.record);
+    const live = Array.from(this.sessions.values()).map((s) => s.record);
+    const dormant = Array.from(this.dormantRecords.values());
+    return [...live, ...dormant].sort((a, b) => a.order - b.order);
   }
 
   /** Write keystroke bytes to a PTY. Unknown/dead id OR non-string data → ignored. */
@@ -426,7 +518,12 @@ export class PtyManager {
    */
   close(id: LogicalId): void {
     const session = this.sessions.get(id);
-    if (!session) return; // unknown/forged id (T-03-01)
+    if (!session) {
+      // A dormant (restored-not-started) session can be discarded too — drop it
+      // from the dormant map and persist the shrink (no pty to kill).
+      if (this.dormantRecords.delete(id)) this.signalStore();
+      return; // unknown/forged id otherwise (T-03-01)
+    }
     if (session.killTimer) clearTimeout(session.killTimer);
     try {
       session.pty.kill();
@@ -434,6 +531,7 @@ export class PtyManager {
       // Already-dead children throw on kill; ignore.
     }
     this.sessions.delete(id);
+    this.signalStore(); // the persisted set shrank → debounce-write (D-13)
   }
 
   /**
@@ -472,6 +570,7 @@ export class PtyManager {
       s.record.startupCommand = fields.startupCommand; // stored-only (T-04-04)
     }
     if (fields.icon) s.record.icon = fields.icon;
+    this.signalStore(); // edited profile fields changed → debounce-write (D-13)
   }
 
   /**
@@ -501,10 +600,17 @@ export class PtyManager {
       if (typeof id !== 'string' || typeof order !== 'number' || !Number.isFinite(order)) {
         continue; // type-guard each field (T-05-01)
       }
-      const s = this.sessions.get(id as LogicalId);
-      if (!s) continue; // unknown/forged id → skip (never invent a record)
-      s.record.order = order;
+      // Apply to a live record OR a dormant (restored-not-started) record — a
+      // restored session can be reordered before it is ever started (NAV-04).
+      const live = this.sessions.get(id as LogicalId);
+      if (live) {
+        live.record.order = order;
+        continue;
+      }
+      const dormant = this.dormantRecords.get(id as LogicalId);
+      if (dormant) dormant.order = order; // unknown id otherwise → skip (T-05-01)
     }
+    this.signalStore(); // reordered set → debounce-write (NAV-04/D-13)
   }
 
   /**
@@ -532,6 +638,16 @@ export class PtyManager {
         this.uiState.bounds = { x, y, width, height };
       }
     }
+    this.signalStore(); // collapse/bounds changed → debounce-write (D-12/D-13)
+  }
+
+  /**
+   * Read the current validated UI preferences (collapse + bounds) so index.ts can
+   * push them into the store's ui slot on every change (05-02, D-12). Returns a
+   * shallow copy so callers cannot mutate the internal state.
+   */
+  getUiState(): { collapsed?: boolean; bounds?: { x: number; y: number; width: number; height: number } } {
+    return { ...this.uiState };
   }
 
   /** Kill every live PTY + clear any grace timer — orphan-safe cleanup (Pitfall 6, T-02-06/T-03-05). */
