@@ -159,7 +159,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. The sidebar preserves the user's custom session ordering across restarts
   4. The shell selector in the session creation form is populated with available shells for the current platform (PowerShell/CMD/Git Bash/WSL on Windows; zsh/bash on macOS) with no hardcoded paths that break on non-standard installs
 
-**Plans:** 1/4 plans executed
+**Plans:** 2/4 plans executed
 **UI hint:** yes
 
 **Wave 1**
@@ -168,7 +168,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 2** *(blocked on Wave 1)*
 
-- [ ] 05-02-PLAN.md — Persistence slice: SessionStore (lowdb dynamic import, debounce/flush, corrupt recovery) + PtyManager.hydrate dormant-restore + lifecycle wiring + window-bounds restore + persistence smoke (PERS-01/02, NAV-04)
+- [x] 05-02-PLAN.md — Persistence slice: SessionStore (lowdb dynamic import, debounce/flush, corrupt recovery) + PtyManager.hydrate dormant-restore + lifecycle wiring + window-bounds restore + persistence smoke (PERS-01/02, NAV-04)
 
 **Wave 3** *(blocked on Wave 2)*
 

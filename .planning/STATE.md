@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 5 UI-SPEC approved
-last_updated: "2026-06-06T05:58:50.223Z"
-last_activity: 2026-06-06 -- Phase 05 execution started
+stopped_at: Completed 05-02-PLAN.md (persistence slice)
+last_updated: "2026-06-06T06:10:12Z"
+last_activity: 2026-06-06 -- Completed Phase 05 Plan 02 (SessionStore + hydrate + lifecycle + smoke)
 progress:
   total_phases: 9
   completed_phases: 4
   total_plans: 18
-  completed_plans: 15
-  percent: 44
+  completed_plans: 16
+  percent: 47
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-06-03)
 ## Current Position
 
 Phase: 05 (persistence-shell-discovery) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
-Last activity: 2026-06-06 -- Phase 05 execution started
+Last activity: 2026-06-06 -- Completed Phase 05 Plan 02 (persistence vertical slice)
 
 Progress: [████████████████████] 100% (Phase 4 plans: 4/4)
 
@@ -68,6 +68,7 @@ Progress: [████████████████████] 100% (P
 | Phase 04 P03 | ~6min | 2 tasks | 3 files |
 | Phase 04 P04 | ~5min | 2 tasks | 4 files |
 | Phase 05 P01 | 6min | 2 tasks | 17 files |
+| Phase 05 P02 | ~9min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -112,6 +113,10 @@ Recent decisions affecting current work:
 - [Phase 05-01]: Four pure electron-free modules (store-schema coerceOnLoad, shell-discovery seam, window-bounds validateBounds, session-reorder dense reindex) + 18-key contextBridge lockstep define the Phase-5 contracts; interface-first wave, no user-visible behavior yet
 - [Phase 05-01]: lowdb@7.0.1 exact-pinned (CLAUDE.md convention), marked external in vite.main.config.ts + kept with steno in forge.config.ts ignore allow-list (Pitfall 1 ESM-in-CJS + Pitfall 2 packaging); dynamic import() must be smoke-tested in the BUILT app at 05-02
 - [Phase 05-01]: PtyManager.setOrder/setUiState accept unknown payloads and type-guard every field main-side before mutating (T-05-01); WindowsShellProvider stub returns resolved $SHELL so the dropdown is never empty cross-platform (D-05)
+- [Phase 05-02]: lowdb CORE stays a true external `await import('lowdb')` (verified surviving in the built main.js) while `lowdb/node` is Rollup-chunked self-contained (node:fs/path only, no require('lowdb')) — the correct Pitfall 1 outcome, smoke-proven against the BUILT app (just-wrapper-store.json created + parseable)
+- [Phase 05-02]: Restored sessions hydrate into a SEPARATE PtyManager.dormantRecords map (Pattern 4 option b — no live pty, preserves the every-PtySession-has-a-pty invariant); listSessions() merges live+dormant sorted by order; create({id}) promotes a dormant id (same logicalId, stored cwd/shell); new-session order = max(existing)+1 not sessions.size (Pitfall 6); dormant rows are reorderable/closable pre-Start (NAV-04)
+- [Phase 05-02]: Store change-signal injected into PtyManager (setStoreSignal) so domain mutations stay store-agnostic; index.ts owns the snapshot push (syncStore = setSessions(listSessions)+setUi(getUiState)). whenReady: load→hydrate→setStoreSignal→createWindow(restore validateBounds before show, Pitfall 5); before-quit preventDefault→flush→app.quit re-entrancy guard gated on isDirty()+quitting flag (D-13, Pattern 3)
+- [Phase 05-02]: Store path resolved via dynamic `await import('electron')` inside load() (not static import, not require — passes no-require-imports lint + keeps module Vitest-importable, Pitfall 3); corrupt OR non-array-sessions store → .corrupt-<ts> backup + fresh start, never throws (D-13/T-05-04); smoke reads main-process state via process.getBuiltinModule (packaged main is ESM, require undefined)
 
 ### Pending Todos
 
@@ -136,6 +141,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-06T05:57:58.684Z
-Stopped at: Phase 5 UI-SPEC approved
-Resume file: .planning/phases/05-persistence-shell-discovery/05-UI-SPEC.md
+Last session: 2026-06-06T06:10:12Z
+Stopped at: Completed 05-02-PLAN.md (persistence vertical slice)
+Resume file: .planning/phases/05-persistence-shell-discovery/05-03-PLAN.md
