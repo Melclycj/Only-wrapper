@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 5.1 context gathered
-last_updated: "2026-06-06T12:41:13.328Z"
-last_activity: 2026-06-06 -- Phase 05.1 planning complete
+stopped_at: Completed 05.1-01-PLAN.md
+last_updated: "2026-06-06T13:04:05.000Z"
+last_activity: 2026-06-06 -- Completed Phase 05.1 Plan 01 (ReadinessProbe seam + Wave 0 scaffolds)
 progress:
   total_phases: 9
   completed_phases: 5
-  total_plans: 18
-  completed_plans: 18
-  percent: 56
+  total_plans: 21
+  completed_plans: 19
+  percent: 58
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-03)
 
 **Core value:** Real terminal fidelity — `claude --rc`, `codex`, `vim`, `ssh`, REPLs all behave exactly like a native terminal inside the wrapper.
-**Current focus:** Phase 05.1 — TERM-05 startup-command auto-run (next)
+**Current focus:** Phase 05.1 — term-05-startup-command-auto-run
 
 ## Current Position
 
-Phase: 05.1
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-06-06 -- Phase 05.1 planning complete
+Phase: 05.1 (term-05-startup-command-auto-run) — EXECUTING
+Plan: 2 of 3
+Status: Executing Phase 05.1
+Last activity: 2026-06-06 -- Completed Plan 01 (ReadinessProbe seam + Wave 0 scaffolds)
 
-Progress: [████████████████████] 100% (Phase 5 plans: 4/4)
+Progress: [██████░░░░░░░░░░░░░░░] 33% (Phase 5.1 plans: 1/3)
 
 ## Performance Metrics
 
@@ -72,6 +72,7 @@ Progress: [████████████████████] 100% (P
 | Phase 05 P02 | ~9min | 3 tasks | 6 files |
 | Phase 05 P03 | 16min | 3 tasks | 11 files |
 | Phase 5 P4 | 11min | 3 tasks | 6 files |
+| Phase 05.1 P01 | ~6min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -121,6 +122,8 @@ Recent decisions affecting current work:
 - [Phase 05-02]: Store change-signal injected into PtyManager (setStoreSignal) so domain mutations stay store-agnostic; index.ts owns the snapshot push (syncStore = setSessions(listSessions)+setUi(getUiState)). whenReady: load→hydrate→setStoreSignal→createWindow(restore validateBounds before show, Pitfall 5); before-quit preventDefault→flush→app.quit re-entrancy guard gated on isDirty()+quitting flag (D-13, Pattern 3)
 - [Phase 05-02]: Store path resolved via dynamic `await import('electron')` inside load() (not static import, not require — passes no-require-imports lint + keeps module Vitest-importable, Pitfall 3); corrupt OR non-array-sessions store → .corrupt-<ts> backup + fresh start, never throws (D-13/T-05-04); smoke reads main-process state via process.getBuiltinModule (packaged main is ESM, require undefined)
 - [Phase ?]: Drag-to-reorder uses @dnd-kit/sortable (exact-pinned 6.3.1/10.0.0) with a PointerSensor activation distance so click-to-switch survives; reorder persists silently via the validated persistOrder IPC (D-13)
+- [Phase 05.1-01]: ReadinessProbe seam (src/main/readiness-probe.ts) mirrors shell-discovery.ts — electron/node-pty-free, Vitest-importable; pure buildPosixProbe(nonce) builds a `: <nonce>\r` POSIX-`:`-no-op marker (D-01, changes no shell state) + a send-vs-match matcher (true only on a produced line after a newline, false on the bare echo — Pitfall 1). MacReadinessProbe covers zsh+bash with one `__JW_READY_<hex>__` crypto-nonce sentinel; WindowsReadinessProbe.forShell() THROWS (Phase-8 stub, no safe no-op readiness probe — unlike WindowsShellProvider); selectReadinessProbe(platform) picker
+- [Phase 05.1-01]: Wave 0 probe-hook state-machine tests are RED-by-BEHAVIOR (the file imports cleanly; `READINESS_TIMEOUT_MS` is `undefined` until Plan 02/03) so pure-helper + SC5-hydrate stay GREEN — only the 2 tests that require the create() probe gate (withhold-probe-bytes D-02, inject-on-match-with-CR SC1) fail RED; D-04 notice reuses onPtyStatus (no new bridge key — security.guard.test.ts unchanged)
 
 ### Pending Todos
 
@@ -145,6 +148,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-06T12:07:10.221Z
-Stopped at: Phase 5.1 context gathered
-Resume file: .planning/phases/05.1-term-05-startup-command-auto-run/05.1-CONTEXT.md
+Last session: 2026-06-06T13:04:05.000Z
+Stopped at: Completed 05.1-01-PLAN.md
+Resume file: .planning/phases/05.1-term-05-startup-command-auto-run/05.1-02-PLAN.md

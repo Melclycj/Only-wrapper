@@ -197,7 +197,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 1**
 
-- [ ] 05.1-01-PLAN.md — Foundation: ReadinessProbe seam (mirrors shell-discovery.ts) + Wave 0 RED scaffolds (readiness-probe.test.ts, startup-command.smoke.test.ts) + SC5 hydrate extension (TERM-05)
+- [x] 05.1-01-PLAN.md — Foundation: ReadinessProbe seam (mirrors shell-discovery.ts) + Wave 0 RED scaffolds (readiness-probe.test.ts, startup-command.smoke.test.ts) + SC5 hydrate extension (TERM-05)
 
 **Wave 2** *(blocked on Wave 1)*
 
@@ -266,7 +266,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 5.1 → 6 → 7 �
 | 3. Multi-Session + Session Lifecycle | 3/3 | Complete    | 2026-06-04 |
 | 4. Session Identity + Sidebar UI | 4/4 | Complete    | 2026-06-05 |
 | 5. Persistence + Shell Discovery | 4/4 | Complete    | 2026-06-06 |
-| 5.1. TERM-05 startup-command auto-run (INSERTED) | 0/3 | Not started | - |
+| 5.1. TERM-05 startup-command auto-run (INSERTED) | 1/3 | In progress | - |
 | 6. Robustness + Flow-Control Polish | 0/TBD | Not started | - |
 | 7. Terminal Search + Scrollback Config | 0/TBD | Not started | - |
 | 8. Cross-Platform Packaging | 0/TBD | Not started | - |
