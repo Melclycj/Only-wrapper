@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
-stopped_at: Completed 05-02-PLAN.md (persistence vertical slice)
+status: ready
+stopped_at: Completed Phase 05 (4/4 plans, verified 4/4; 2 review criticals fixed). Next: Phase 5.1
 last_updated: "2026-06-06T07:38:52.167Z"
 last_activity: 2026-06-06
 progress:
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-03)
 
 **Core value:** Real terminal fidelity — `claude --rc`, `codex`, `vim`, `ssh`, REPLs all behave exactly like a native terminal inside the wrapper.
-**Current focus:** Phase 05 — persistence-shell-discovery
+**Current focus:** Phase 05.1 — TERM-05 startup-command auto-run (next)
 
 ## Current Position
 
 Phase: 05.1
 Plan: Not started
-Status: Phase complete — ready for verification
+Status: Phase 05 complete — verified 4/4 (3 manual-UAT items pending in 05-HUMAN-UAT.md); next is Phase 5.1
 Last activity: 2026-06-06
 
-Progress: [████████████████████] 100% (Phase 4 plans: 4/4)
+Progress: [████████████████████] 100% (Phase 5 plans: 4/4)
 
 ## Performance Metrics
 
