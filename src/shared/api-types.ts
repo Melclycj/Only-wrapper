@@ -68,6 +68,15 @@ export type PtyStatusPayload = {
   status: SessionStatus;
   ptyPid?: number;
   exitCode?: number;
+  /**
+   * Optional transient, NON-lifecycle informational message (TERM-05 D-04 ready-fail).
+   * Surfaced when the startup-command readiness probe times out: the command was NOT
+   * auto-run and a bare usable shell remains. It rides this EXISTING onPtyStatus
+   * subscription — it is NOT a new bridge key (EXPECTED_API_KEYS stays at 18) and is
+   * a fixed literal in main (no command/nonce/buffer interpolation — V7). The renderer
+   * renders it additively WITHOUT suppressing the lifecycle status badge.
+   */
+  notice?: string;
 };
 
 export type ElectronAPI = {

@@ -66,6 +66,27 @@ export const PTY_CHANNELS = {
  */
 export const STOP_GRACE_MS = 800;
 
+/**
+ * Bounded readiness wait for the TERM-05 startup-command auto-run probe
+ * (D-04 / RESEARCH Open Q2). After writing the no-side-effect nonce marker, the
+ * create() probe hook waits at most this long for the shell to genuinely process
+ * the marker (probe.matches). On expiry with the probe unsettled, the buffered
+ * shell output is FLUSHED to the renderer (a bare usable prompt — SC4), normal
+ * forwarding is restored, and a ready-fail notice is emitted — the command is
+ * NEVER best-effort injected (D-04: a bare shell beats garbled keystrokes).
+ * Named constant mirroring STOP_GRACE_MS; tunable from measured cold-spawn latency.
+ */
+export const READINESS_TIMEOUT_MS = 4000;
+
+/**
+ * Fixed (V7) ready-fail notice surfaced on timeout. It is a LITERAL string — it
+ * interpolates NO startupCommand, nonce, or buffered bytes, so no secret can leak
+ * to the renderer/logs (T-05.1-04). It rides the EXISTING onPtyStatus channel as
+ * an additive `notice` field — NOT a new bridge key (T-05.1-05).
+ */
+export const READINESS_FAIL_NOTICE =
+  "Startup command didn't auto-run — shell wasn't ready in time.";
+
 /** Dimension clamp bounds — resize-bomb DoS guard (Security V5, T-02-03). */
 export const MIN_DIMENSION = 1;
 export const MAX_DIMENSION = 1000;
@@ -305,6 +326,11 @@ export class PtyManager {
       const probe = selectReadinessProbe(process.platform).forShell(record.shell);
       let buffer = '';
       let settled = false;
+      // A single-slot holder for the readiness timer so the match-branch closure
+      // (defined before the timer is created) can clear it. On a successful match
+      // the timer is cleared so the timeout-flush-and-notice branch never fires
+      // (D-04). A const object sidesteps the use-before-assign / prefer-const bind.
+      const timerRef: { current?: NodeJS.Timeout } = {};
       const offProbe = child.onData((data) => {
         // After the marker round-trips, forwarding is restored via wireNormalOnData;
         // this guard covers any byte that races in before the listener swap settles.
@@ -316,8 +342,9 @@ export class PtyManager {
         buffer += data;
         if (probe.matches(buffer)) {
           settled = true;
-          // TODO(Plan 03 / D-04): clear the READINESS_TIMEOUT_MS timer here so the
-          // timeout-flush-and-notice branch never fires after a successful match.
+          // Clear the READINESS_TIMEOUT_MS timer so the timeout-flush-and-notice
+          // branch never fires after a successful match (D-04).
+          if (timerRef.current) clearTimeout(timerRef.current);
           offProbe.dispose();
           // The buffered probe bytes (marker echo + nonce-bearing prompt) are
           // DISCARDED — they never reach the renderer (D-02 invisibility).
@@ -334,12 +361,35 @@ export class PtyManager {
       // marker is `buildPosixProbe`'s ': <nonce>\r' — no user data is interpolated
       // (T-05.1-02), changes no shell state (D-01).
       child.write(probe.marker);
-      // TODO(Plan 03 / D-04): on READINESS_TIMEOUT_MS with !settled → offProbe.dispose(),
-      // FLUSH the buffered prompt via this.send(PTY_CHANNELS.data, { id, data: buffer })
-      // so the bare shell is usable (SC4), wireNormalOnData(id, child), and emit the
-      // ready-fail notice on onPtyStatus — but NEVER best-effort inject the command
-      // (D-04). The timer is intentionally NOT implemented here (Plan 02 is happy-path
-      // only); READINESS_TIMEOUT_MS is added in Plan 03.
+      // D-04 timeout-flush-and-notice branch (SC4): if the shell does not genuinely
+      // process the marker within READINESS_TIMEOUT_MS, give up on auto-run. FLUSH
+      // the buffered real shell output so a bare usable prompt appears (a bare shell
+      // beats garbled keystrokes — SC4), restore normal forwarding, and emit a
+      // non-intrusive ready-fail notice over the EXISTING pty:status channel. The
+      // command is NEVER best-effort injected (D-04). The notice carries the CURRENT
+      // lifecycle status ('running') so it is additive — it must not regress the badge.
+      timerRef.current = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        offProbe.dispose();
+        // Flush the buffered (real) shell output — the bare prompt becomes usable.
+        // Security V7 (T-05.1-04): the buffer is forwarded to the renderer as normal
+        // PTY data but is NEVER logged.
+        this.send(PTY_CHANNELS.data, { id, data: buffer });
+        // Restore normal forwarding for all subsequent bytes.
+        this.wireNormalOnData(id, child);
+        // Ready-fail notice: a FIXED literal (no command/nonce/buffer interpolation —
+        // T-05.1-04), riding the existing onPtyStatus channel with the live status so
+        // the badge is unaffected and no new bridge key is added (T-05.1-05).
+        const liveStatus = this.sessions.get(id)?.status ?? 'running';
+        this.send(PTY_CHANNELS.status, {
+          id,
+          status: liveStatus,
+          notice: READINESS_FAIL_NOTICE,
+        });
+        // Lifecycle logging only — never log the command/nonce/buffer (V7).
+        console.log(`[pty] readiness probe timed out (session ${id}) — auto-run skipped`);
+      }, READINESS_TIMEOUT_MS);
     }
 
     child.onExit(({ exitCode }) => {
