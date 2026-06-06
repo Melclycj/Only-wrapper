@@ -47,22 +47,25 @@ Exceptions (inherited from Phase 4, intentional — DO NOT "fix"): sidebar row p
 
 ---
 
-## Typography
-
-3 UI sizes + 1 mono role, 2 weights (regular 400 + semibold/bold). All Nunito except the mono role (JetBrains Mono). Pulled from the shipped CSS so new surfaces match Phase 4 exactly.
+**Canonical scale for the new surfaces this phase owns: 4 sizes, 2 weights.** All Nunito except the mono role (JetBrains Mono). Inherited Phase-4 values that this phase reuses unchanged are documented in the exceptions block below (mirroring the Spacing section) so they read as intentional continuity, not new declarations.
 
 | Role | Size | Weight | Line Height |
 |------|------|--------|-------------|
-| Body / control | 13px | 400 (regular) | 1.5 |
-| Row / input / dropdown | 14px | 400 (regular) | 1.4 |
-| Label (field labels, restart-hint, status badge) | 11–12px | 600–700 (semibold/bold) | 1.3 |
-| Heading (modal title, welcome heading) | 17–20px | 700 (bold) | 1.2 |
-| Mono (idle-card cwd / shell / startupCommand display) | 13px | 400 (regular) | 1.5 |
+| Label / caption (idle-card config labels, startup-command helper line) | 12px | 700 (bold) for labels · 400 (regular) for captions | 1.3–1.5 |
+| Body / control / mono (idle-card values, Start button label, body copy) | 13px | 400 (regular) · 700 on the Start button label | 1.5 |
+| Row / input / dropdown / primary CTA | 14px | 400 (regular) · 700 on the CTA | 1.4 |
+| Heading (welcome heading, idle-card session name) | 20px | 700 (bold) | 1.2 |
+
+**Canonical sizes: 12 / 13 / 14 / 20 px. Canonical weights: 400 (regular) + 700 (bold).** Every weight used by a new surface is one of these two; every size is one of these four.
+
+**Inherited typography exceptions (Phase 4 shipped — reused as-is, DO NOT re-baseline):** these already exist in `src/renderer/terminal.css` and are NOT new declarations by this phase — they are documented here only so the checker reads them as deliberate continuity (same pattern as the spacing exceptions):
+- `.status-badge` **11px / 700** — the idle-card status badge and sidebar-row badges reuse this shipped component verbatim (no new size introduced).
+- `.edit-label` / context-menu item labels at **600 weight** — the shell-dropdown field label reuses the shipped `.edit-label`; new idle-card labels use the canonical 700 instead.
+- Modal title (`.modal-dialog h2`) **17px / 700** and other Phase-4 chrome sizes (15 / 16 / 18px) — untouched by this phase. New headings use the canonical **20px**, not 17px.
 
 Notes:
-- Welcome heading: **20px / 700 / 1.2** (largest UI text this phase — slightly above the 17px modal title to anchor the empty state).
-- Status badge label: **11px / 600** (matches `.status-badge` shipped).
-- Idle-card field values render in **JetBrains Mono 13px** to read as literal paths/commands and reinforce "this is the saved config" (terminal language = not-yet-running).
+- Welcome heading and the idle-card session name share the single **20px / 700** heading token (anchors the empty state and the card's identity).
+- Idle-card field values render in **JetBrains Mono 13px / 400** to read as literal paths/commands and reinforce "this is the saved config" (terminal language = not-yet-running).
 
 ---
 
@@ -121,10 +124,10 @@ Tone: warm, first-person-friendly, parlour-not-dev-tool (DESIGN.md aesthetic). S
 Rendered in `.terminal-area` (inside `.viewport-stack` region) when the active session is `not_started`. Replaces the live xterm surface until Start.
 
 - **Container:** centered card, `width: min(440px, calc(100% - 48px))`, `background: var(--surface)`, `border: 1px solid var(--line)`, `border-radius: var(--radius)` (18px), `box-shadow: 0 18px 48px oklch(0.255 0.018 264 / 0.28)` (matches `.modal-dialog`), padding `24px`. Sits on the `--term-bg` gutter (so the card floats on the dark terminal background, signalling "the terminal lives here, but it's asleep").
-- **Identity region (top):** `renderIcon(icon, name)` at 28px tile + name (17px/700) + status badge ("Idle", slate dot). Reuse the `.identity-header` markup conventions (icon → name → badge), gap 8px.
-- **Config region:** a `--bg-sunk` inset block (`border-radius: 12px`, padding `16px`), three stacked label+value pairs. Labels: 12px/600 `--ink-soft`. Values: **JetBrains Mono 13px** `--ink`. Order: Working directory, Shell, Startup command.
-- **Displayed-not-executed cue (startup command):** the startup-command value renders in mono with a small leading **"$ "** prompt glyph in `--ink-faint` (reads like a terminal line you'd type) but is **visually inert** — no run button, no copy-as-command affordance. Directly beneath it: the helper line (`--ink-faint`, 11px, line-height 1.5) "Saved for reference — not run automatically…". This is the deliberate TERM-05 boundary cue.
-- **Start button (bottom):** full-width-ish primary button "▶ Start session", `background: var(--surface)`, `border: 1px solid oklch(0.62 0.14 248)`, text `oklch(0.62 0.14 248)` (blue = "go live"); hover fills `oklch(0.62 0.14 248)` bg + white text. `border-radius: 10px`, padding `8px 16px`, 13px/600. Focus-visible: 2px blue outline, offset 2px. This is the in-card launch point (second to the sidebar ▶).
+- **Identity region (top):** `renderIcon(icon, name)` at 28px tile + name (**20px/700**, the canonical heading token) + status badge ("Idle", slate dot — reuses the shipped `.status-badge`, inherited 11px/700). Reuse the `.identity-header` markup conventions (icon → name → badge), gap 8px.
+- **Config region:** a `--bg-sunk` inset block (`border-radius: 12px`, padding `16px`), three stacked label+value pairs. Labels: **12px/700** `--ink-soft`. Values: **JetBrains Mono 13px/400** `--ink`. Order: Working directory, Shell, Startup command.
+- **Displayed-not-executed cue (startup command):** the startup-command value renders in mono with a small leading **"$ "** prompt glyph in `--ink-faint` (reads like a terminal line you'd type) but is **visually inert** — no run button, no copy-as-command affordance. Directly beneath it: the helper line (`--ink-faint`, **12px/400**, line-height 1.5) "Saved for reference — not run automatically…". This is the deliberate TERM-05 boundary cue.
+- **Start button (bottom):** full-width-ish primary button "▶ Start session", `background: var(--surface)`, `border: 1px solid oklch(0.62 0.14 248)`, text `oklch(0.62 0.14 248)` (blue = "go live"); hover fills `oklch(0.62 0.14 248)` bg + white text. `border-radius: 10px`, padding `8px 16px`, **13px/700**. Focus-visible: 2px blue outline, offset 2px. This is the in-card launch point (second to the sidebar ▶).
 - **State coverage:** loading (n/a — record is local), empty startup-command (placeholder copy), error-after-start (inline red line; card stays).
 
 ### 2. Start / Restart control (D-03) — extends existing `.row-controls` + `ContextMenu`
