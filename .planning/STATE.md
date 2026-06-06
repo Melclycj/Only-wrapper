@@ -4,14 +4,14 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Completed 05.1-01-PLAN.md
-last_updated: "2026-06-06T13:04:05.000Z"
-last_activity: 2026-06-06 -- Completed Phase 05.1 Plan 01 (ReadinessProbe seam + Wave 0 scaffolds)
+last_updated: "2026-06-06T13:10:52.422Z"
+last_activity: 2026-06-06 -- Completed Plan 01 (ReadinessProbe seam + Wave 0 scaffolds)
 progress:
   total_phases: 9
   completed_phases: 5
   total_plans: 21
-  completed_plans: 19
-  percent: 58
+  completed_plans: 20
+  percent: 56
 ---
 
 # Project State
@@ -26,8 +26,8 @@ See: .planning/PROJECT.md (updated 2026-06-03)
 ## Current Position
 
 Phase: 05.1 (term-05-startup-command-auto-run) — EXECUTING
-Plan: 2 of 3
-Status: Executing Phase 05.1
+Plan: 3 of 3
+Status: Ready to execute
 Last activity: 2026-06-06 -- Completed Plan 01 (ReadinessProbe seam + Wave 0 scaffolds)
 
 Progress: [██████░░░░░░░░░░░░░░░] 33% (Phase 5.1 plans: 1/3)
@@ -73,6 +73,7 @@ Progress: [██████░░░░░░░░░░░░░░░] 33% 
 | Phase 05 P03 | 16min | 3 tasks | 11 files |
 | Phase 5 P4 | 11min | 3 tasks | 6 files |
 | Phase 05.1 P01 | ~6min | 2 tasks | 4 files |
+| Phase 05.1 P02 | 8 | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -124,6 +125,7 @@ Recent decisions affecting current work:
 - [Phase ?]: Drag-to-reorder uses @dnd-kit/sortable (exact-pinned 6.3.1/10.0.0) with a PointerSensor activation distance so click-to-switch survives; reorder persists silently via the validated persistOrder IPC (D-13)
 - [Phase 05.1-01]: ReadinessProbe seam (src/main/readiness-probe.ts) mirrors shell-discovery.ts — electron/node-pty-free, Vitest-importable; pure buildPosixProbe(nonce) builds a `: <nonce>\r` POSIX-`:`-no-op marker (D-01, changes no shell state) + a send-vs-match matcher (true only on a produced line after a newline, false on the bare echo — Pitfall 1). MacReadinessProbe covers zsh+bash with one `__JW_READY_<hex>__` crypto-nonce sentinel; WindowsReadinessProbe.forShell() THROWS (Phase-8 stub, no safe no-op readiness probe — unlike WindowsShellProvider); selectReadinessProbe(platform) picker
 - [Phase 05.1-01]: Wave 0 probe-hook state-machine tests are RED-by-BEHAVIOR (the file imports cleanly; `READINESS_TIMEOUT_MS` is `undefined` until Plan 02/03) so pure-helper + SC5-hydrate stay GREEN — only the 2 tests that require the create() probe gate (withhold-probe-bytes D-02, inject-on-match-with-CR SC1) fail RED; D-04 notice reuses onPtyStatus (no new bridge key — security.guard.test.ts unchanged)
+- [Phase ?]: 05.1-02: TERM-05 auto-run happy path — create() runs invisible readiness probe then injects cmd + CR on match; READINESS_TIMEOUT_MS deferred to Plan 03 (timeout test stays RED by design)
 
 ### Pending Todos
 
@@ -148,6 +150,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-06T13:04:05.000Z
+Last session: 2026-06-06T13:10:27.368Z
 Stopped at: Completed 05.1-01-PLAN.md
 Resume file: .planning/phases/05.1-term-05-startup-command-auto-run/05.1-02-PLAN.md

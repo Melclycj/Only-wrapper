@@ -192,7 +192,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. The command is injected only once the shell is genuinely ready to accept input — no lost or garbled keystrokes on cold first spawn (the failure mode that caused the original Phase-3 deferral)
   5. For restored (dormant) sessions, the startup command is NOT auto-run on app launch — it runs only when the user explicitly starts the session (consistent with Phase 5's dormant-restore model)
 
-**Plans:** 3/3 plans planned
+**Plans:** 2/3 plans executed
 **UI hint:** no
 
 **Wave 1**
@@ -201,7 +201,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 2** *(blocked on Wave 1)*
 
-- [ ] 05.1-02-PLAN.md — Core slice: wireNormalOnData() refactor + the invisible probe-then-inject happy path in create() (SC1/SC2/D-02/D-05; SC5 structural)
+- [x] 05.1-02-PLAN.md — Core slice: wireNormalOnData() refactor + the invisible probe-then-inject happy path in create() (SC1/SC2/D-02/D-05; SC5 structural)
 
 **Wave 3** *(blocked on Wave 2 — has checkpoint)*
 
@@ -266,7 +266,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 5.1 → 6 → 7 �
 | 3. Multi-Session + Session Lifecycle | 3/3 | Complete    | 2026-06-04 |
 | 4. Session Identity + Sidebar UI | 4/4 | Complete    | 2026-06-05 |
 | 5. Persistence + Shell Discovery | 4/4 | Complete    | 2026-06-06 |
-| 5.1. TERM-05 startup-command auto-run (INSERTED) | 1/3 | In progress | - |
+| 5.1. TERM-05 startup-command auto-run (INSERTED) | 2/3 | In Progress|  |
 | 6. Robustness + Flow-Control Polish | 0/TBD | Not started | - |
 | 7. Terminal Search + Scrollback Config | 0/TBD | Not started | - |
 | 8. Cross-Platform Packaging | 0/TBD | Not started | - |
