@@ -213,22 +213,25 @@ export function SessionView({ id, active }: SessionViewProps): React.JSX.Element
     //    the SAME instance, preserving scrollback (D-03). The restart/stop CONTROLS
     //    are wired in 03-03; this only establishes the seam + the separator.
     const offStatus = window.api.onPtyStatus(id, (p) => {
+      // TERM-05 D-04: a transient ready-fail notice (the startup-command probe
+      // timed out → the command was NOT auto-run, a bare usable shell remains).
+      // Render it as a dim inline line, consistent with the [process exited] /
+      // restart-separator treatment — additive and informational. The notice
+      // rides this same onPtyStatus event but carries the *current* live status
+      // (typically 'running'), so it must short-circuit BEFORE the running-
+      // transition branch: a notice event is informational only, NOT a lifecycle
+      // restart, and treating it as one writes a spurious "— restarted —" line.
+      // The saved command stays on the IdleCard as the manual-run fallback.
+      if (p.notice) {
+        term.write(`\r\n\x1b[2m— ${p.notice} —\x1b[0m\r\n`);
+        return;
+      }
       if (p.status === 'running') {
         if (hasRunBeforeRef.current) {
           const hhmm = new Date().toTimeString().slice(0, 5);
           term.write(`\r\n\x1b[2m— restarted ${hhmm} —\x1b[0m\r\n`);
         }
         hasRunBeforeRef.current = true;
-      }
-      // TERM-05 D-04: a transient ready-fail notice (the startup-command probe
-      // timed out → the command was NOT auto-run, a bare usable shell remains).
-      // Render it as a dim inline line, consistent with the [process exited] /
-      // restart-separator treatment — additive and informational, it does NOT
-      // suppress or replace the lifecycle status badge (the notice rides this same
-      // onPtyStatus event but carries the live status untouched). The saved command
-      // stays on the IdleCard as the manual-run fallback (no IdleCard change).
-      if (p.notice) {
-        term.write(`\r\n\x1b[2m— ${p.notice} —\x1b[0m\r\n`);
       }
     });
 
