@@ -1,7 +1,7 @@
 ---
 phase: 5
 slug: persistence-shell-discovery
-status: draft
+status: approved
 shadcn_initialized: false
 preset: none
 created: 2026-06-06
@@ -185,11 +185,11 @@ No third-party UI registries are used. Components are hand-rolled React + the ex
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
+- [x] Dimension 1 Copywriting: PASS
+- [x] Dimension 2 Visuals: PASS
+- [x] Dimension 3 Color: PASS
+- [x] Dimension 4 Typography: PASS (canonical 12/13/14/20px · 400/700; inherited Phase-4 values documented as continuity exceptions)
+- [x] Dimension 5 Spacing: FLAG (non-blocking — inherited Phase-4 2px-grid values documented as continuity; new surfaces use 4-multiple tokens)
+- [x] Dimension 6 Registry Safety: PASS (no third-party UI registry; npm deps are not registry blocks)
 
-**Approval:** pending
+**Approval:** approved 2026-06-06 (gsd-ui-checker, revision 1 — typography BLOCK resolved)
