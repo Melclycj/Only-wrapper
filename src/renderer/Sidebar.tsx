@@ -57,6 +57,12 @@ export interface SidebarProps {
   /** Restart a session (TERM-07 / IDENT-02) — same identity, new ptyPid. */
   onRestart: (id: LogicalId) => void;
   /**
+   * Start a dormant (`not_started`) session (D-03/D-11) — promotes the restored
+   * record to live via the existing ptyCreate/create({id}) path (Plan 05-02). The
+   * row control flips ▶ Start (not_started) ↔ ↻ Restart (has run).
+   */
+  onStart: (id: LogicalId) => void;
+  /**
    * Right-click a row (D-03): open the context menu at (x, y) for `id`. Wired at the
    * `.sidebar-row` level so it works in BOTH expanded and collapsed modes — the menu
    * is the only control surface when collapsed (Pitfall 5 / D-11).
@@ -92,6 +98,7 @@ export function Sidebar({
   onAdd,
   onClose,
   onRestart,
+  onStart,
   onContextMenu,
   onEdit,
   collapsed,
@@ -121,6 +128,10 @@ export function Sidebar({
         const style = STATUS_STYLE[s.status];
         const isActive = s.logicalId === activeId;
         const running = isRunning(s.status);
+        // A dormant (never-run) session shows Start ▶; a has-run non-running session
+        // (stopped/exited/error) shows Restart ↻ (D-03). Dormant rows also dim
+        // slightly (UI-SPEC §5 dormant-vs-live language).
+        const dormant = s.status === 'not_started';
         // The row is a clickable container (switch on click). The close/restart
         // controls are nested buttons — a row cannot itself be a <button> or the
         // controls would be invalid nested interactives. clickSidebarRow() in the
@@ -134,6 +145,7 @@ export function Sidebar({
             tabIndex={0}
             className={isActive ? 'sidebar-row active' : 'sidebar-row'}
             data-session-id={s.logicalId}
+            {...(dormant ? { 'data-dormant': '' } : {})}
             aria-current={isActive ? 'true' : undefined}
             onClick={() => onSelect(s.logicalId)}
             // Double-click is a convenience shortcut to the edit form (D-04); the
@@ -172,24 +184,43 @@ export function Sidebar({
               {style.label}
             </span>
             <span className="row-controls">
-              {/* Non-running rows get a Restart affordance (relaunch a self-exited
-                  session, identity preserved — D-03a). Running rows do not. */}
-              {!running && (
-                <button
-                  type="button"
-                  className="row-control"
-                  data-testid="restart-session"
-                  data-action="restart"
-                  title="Restart session"
-                  aria-label={`Restart ${s.name}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onRestart(s.logicalId);
-                  }}
-                >
-                  <span aria-hidden="true">↻</span>
-                </button>
-              )}
+              {/* Non-running rows get a Start/Restart affordance (D-03). A dormant
+                  (never-run) session shows ▶ Start — it promotes the restored record
+                  to live (Plan 05-02 create({id})); a has-run session shows ↻ Restart
+                  (relaunch a self-exited session, identity preserved — D-03a). Running
+                  rows show neither. The ▶ control gets a blue "go" accent (.row-control-start). */}
+              {!running &&
+                (dormant ? (
+                  <button
+                    type="button"
+                    className="row-control row-control-start"
+                    data-testid="start-session"
+                    data-action="start"
+                    title="Start session"
+                    aria-label={`Start ${s.name}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onStart(s.logicalId);
+                    }}
+                  >
+                    <span aria-hidden="true">▶</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="row-control"
+                    data-testid="restart-session"
+                    data-action="restart"
+                    title="Restart session"
+                    aria-label={`Restart ${s.name}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRestart(s.logicalId);
+                    }}
+                  >
+                    <span aria-hidden="true">↻</span>
+                  </button>
+                ))}
               {/* Inline Edit pencil (D-04): the expanded-mode affordance for the edit
                   form, calling the SAME existing onEdit prop the context menu and
                   double-click use. Always rendered (like Close); hidden in the

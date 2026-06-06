@@ -8,7 +8,12 @@
 /// <reference types="@wdio/electron-service" />
 /// <reference types="@wdio/mocha-framework" />
 
-import { sendKeys, readBuffer, resizeWindow } from './helpers/xterm-driver';
+import {
+  sendKeys,
+  readBuffer,
+  resizeWindow,
+  ensureSession,
+} from './helpers/xterm-driver';
 
 /**
  * Extract the column count that the shell printed in response to the MOST RECENT
@@ -57,6 +62,12 @@ async function readStableCols(): Promise<number> {
 }
 
 describe('PTY resize smoke (SC3)', () => {
+  // 05-03: boot no longer auto-spawns (D-10) — explicitly create the session this
+  // single-pane test drives.
+  before(async () => {
+    await ensureSession();
+  });
+
   it('reports a new column count via tput cols within 1s of a window resize', async () => {
     // Record the initial column count (settled `tput cols` output).
     const before = await readStableCols();

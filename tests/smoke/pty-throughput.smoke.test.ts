@@ -10,9 +10,20 @@
 /// <reference types="@wdio/electron-service" />
 /// <reference types="@wdio/mocha-framework" />
 
-import { sendKeys, readBuffer, waitForText } from './helpers/xterm-driver';
+import {
+  sendKeys,
+  readBuffer,
+  waitForText,
+  ensureSession,
+} from './helpers/xterm-driver';
 
 describe('PTY throughput smoke (SC5)', () => {
+  // 05-03: boot no longer auto-spawns (D-10) — explicitly create the session this
+  // single-pane test drives.
+  before(async () => {
+    await ensureSession();
+  });
+
   it('stays responsive and drops no output while emitting ~50MB', async () => {
     const nonce = `READY_${Date.now()}`;
 

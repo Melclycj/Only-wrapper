@@ -14,6 +14,34 @@
 
 /// <reference types="@wdio/globals/types" />
 
+/**
+ * Ensure at least one live terminal session exists before a single-pane test drives
+ * sendKeys/readBuffer (05-03: boot no longer auto-spawns a default session — D-10).
+ * If no `.xterm-rows` (a mounted terminal) is present, click "+ Add session" and wait
+ * for the terminal to mount + the shell prompt to render. Idempotent — a no-op when a
+ * session is already up (so multi-pane specs that add their own sessions are unaffected).
+ */
+export async function ensureSession(timeoutMs = 8000): Promise<void> {
+  // Readiness signal: a mounted SessionView exposes its xterm at `window.__term`
+  // (SessionView sets it on mount) AND renders the xterm helper textarea. The active
+  // pane uses the WebGL renderer, which does NOT populate `.xterm-rows` (the single-pane
+  // readBuffer reads `window.__term.buffer` in that case), so we key readiness off the
+  // term handle + the helper textarea (which sendKeys focuses), not `.xterm-rows`.
+  const ready = (): boolean =>
+    document.querySelector('textarea.xterm-helper-textarea') !== null &&
+    (window as unknown as { __term?: unknown }).__term !== undefined;
+  const has = await browser.execute(ready);
+  if (has) return;
+  await clickAddSession();
+  await browser.waitUntil(async () => browser.execute(ready), {
+    timeout: timeoutMs,
+    interval: 100,
+    timeoutMsg: `no terminal mounted within ${timeoutMs}ms after Add session`,
+  });
+  // Let the login shell paint its first prompt so the first sendKeys lands at a prompt.
+  await browser.pause(500);
+}
+
 /** Type `text` into the focused xterm terminal (keystroke-by-keystroke). */
 export async function sendKeys(text: string): Promise<void> {
   // Focus xterm's hidden textarea so keystrokes route into the terminal, then

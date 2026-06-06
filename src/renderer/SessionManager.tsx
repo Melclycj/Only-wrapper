@@ -26,6 +26,8 @@ import { ConfirmModal } from './ConfirmModal';
 import { ContextMenu } from './ContextMenu';
 import { SessionEditModal } from './SessionEditModal';
 import { IdentityHeader } from './IdentityHeader';
+import { IdleCard } from './IdleCard';
+import { WelcomeEmptyState } from './WelcomeEmptyState';
 // addSession is the SOLE spawn path (T-03-09) — kept in a React/xterm-free module
 // so the no-double-spawn invariant is unit-testable in the Node env.
 import { addSession } from './session-add';
@@ -36,12 +38,6 @@ import { closeSession } from './session-close';
 // intent) → next activeId. The keyboard chords are intercepted MAIN-side
 // (before-input-event, 04-03 Task 1) and pushed over window.api.onSwitchSession.
 import { resolveSwitch } from './session-switch';
-
-// How often the renderer reconciles its rendered session list against main's
-// authoritative listSessions() snapshot. Main is the source of truth, so a session
-// created OUTSIDE onAdd (e.g. a future Phase-5 persisted-snapshot restore) gets a
-// controlled pane shortly after it appears in main's record store.
-const RECONCILE_MS = 100;
 
 export function SessionManager(): React.JSX.Element {
   const [sessions, setSessions] = useState<SessionRecord[]>([]);
@@ -60,9 +56,23 @@ export function SessionManager(): React.JSX.Element {
     y: number;
   } | null>(null);
   // Sidebar collapsed/expanded (D-10/D-11): a pinned chevron folds the rail to icon-only
-  // and back. Component-local — the state stays where the user leaves it; PERSISTENCE
-  // across app restarts is Phase 5 (D-11), so this is intentionally NOT mirrored to main.
+  // and back. The toggle now MIRRORS the new value to main via persistUiState (D-12) so
+  // collapse survives a restart. Boot defaults to expanded — listSessions() does not
+  // carry the ui slot, so we do not over-engineer a boot read here (the persisted
+  // collapse + window bounds restore on the MAIN side; D-12 collapse round-trips through
+  // the store's debounced write and is honored by the window/lifecycle, not re-read into
+  // this renderer-local state).
   const [collapsed, setCollapsed] = useState(false);
+
+  // Toggle the rail AND persist the new collapsed value (D-12). Functional update so the
+  // persisted value always matches the next render state.
+  const handleToggleCollapse = useCallback(() => {
+    setCollapsed((c) => {
+      const next = !c;
+      window.api.persistUiState({ collapsed: next });
+      return next;
+    });
+  }, []);
 
   // Guards the boot effect so a fast double-mount (React StrictMode dev) does not
   // auto-add two default sessions.
@@ -126,6 +136,27 @@ export function SessionManager(): React.JSX.Element {
     })();
   }, []);
 
+  // ── Start control (D-03/D-11, PERS-02): promote a DORMANT (not_started) restored
+  //    session to live. We issue window.api.ptyCreate({ id }) for the dormant id —
+  //    main promotes it from the dormantRecords map (Plan 05-02 create({id})), spawning
+  //    a fresh PTY under the SAME logicalId reusing the stored cwd/shell (never
+  //    re-attaching to a persisted PID — D-01). We optimistically flip the row to
+  //    'running' with the returned pid; the onPtyStatus subscription then keeps it live.
+  //    Unlike a brand-new session (onAdd), Start does NOT mint a new id or append a row. ──
+  const handleStart = useCallback((id: LogicalId) => {
+    void (async () => {
+      // cols/rows are a sane initial PTY size; SessionView re-fits + ptyResizes on mount.
+      const { pid } = await window.api.ptyCreate({ id, cols: 80, rows: 24 });
+      setSessions((prev) =>
+        prev.map((row) =>
+          row.logicalId === id
+            ? { ...row, ptyPid: pid, status: 'running' }
+            : row,
+        ),
+      );
+    })();
+  }, []);
+
   // ── Context menu (D-03): right-click a row → open the menu at the cursor. ──
   const handleContextMenu = useCallback(
     (id: LogicalId, x: number, y: number) => {
@@ -172,38 +203,46 @@ export function SessionManager(): React.JSX.Element {
   );
 
   // ── Add: the SOLE ptyCreate spawn path (T-03-09). One spawn per add. ──
+  //
+  // RACE-SAFE naming/order (05-03 Rule 1 fix): two rapid adds must NOT collide on the
+  // same `Session N` / order. We spawn EXACTLY ONCE (T-03-09) with a provisional index,
+  // then derive the FINAL name + order from `prev.length` inside the functional append
+  // so concurrent adds index off the up-to-date list (the old pre-read-then-await
+  // captured a stale count — both adds saw length 0 and both became "Session 1" once the
+  // auto-spawn boot that masked it was removed).
   const onAdd = useCallback(() => {
     void (async () => {
-      // existingCount is read from state at call time via the functional update
-      // below so concurrent adds index correctly; addSession spawns exactly once.
-      let count = 0;
+      const record = await addSession(0, (opts) => window.api.ptyCreate(opts));
       setSessions((prev) => {
-        count = prev.length;
-        return prev;
+        const index = prev.length;
+        const placed: SessionRecord = {
+          ...record,
+          name: `Session ${index + 1}`,
+          order: index,
+        };
+        return [...prev, placed];
       });
-      const record = await addSession(count, (opts) =>
-        window.api.ptyCreate(opts),
-      );
-      setSessions((prev) => [...prev, record]);
       setActiveId(record.logicalId);
     })();
   }, []);
 
-  // ── Boot: hydrate from main (source of truth — RESEARCH Open Q2); if empty,
-  //    auto-add one default session so the app boots into a live terminal. ──
+  // ── Boot: one-shot hydrate from main (source of truth). Take a single listSessions()
+  //    snapshot, sort by `order`, and focus the FIRST session (D-09). If there are ZERO
+  //    sessions we render WelcomeEmptyState (D-10) — we DO NOT auto-spawn a default
+  //    session (the old auto-add-on-empty boot is gone; a corrupt-recovered empty store
+  //    also lands here, surfacing nothing scarier than the welcome state). The persisted
+  //    snapshot replaces the old reconcile poll — restored rows are dormant (not_started)
+  //    and become live only via the explicit Start ▶ (handleStart). ──
   useEffect(() => {
     if (bootedRef.current) return;
     bootedRef.current = true;
     void (async () => {
       const existing = await window.api.listSessions();
-      if (existing.length > 0) {
-        setSessions(existing);
-        setActiveId(existing[0].logicalId);
-      } else {
-        onAdd();
-      }
+      const sorted = [...existing].sort((a, b) => a.order - b.order);
+      setSessions(sorted);
+      setActiveId(sorted.length > 0 ? sorted[0].logicalId : null);
     })();
-  }, [onAdd]);
+  }, []);
 
   // ── Live status badges (TERM-08, SC4): subscribe per session; update that
   //    session's status on every transition; clean up all subs on change. ──
@@ -241,38 +280,9 @@ export function SessionManager(): React.JSX.Element {
     return off;
   }, []);
 
-  // ── Reconcile with main (source of truth — RESEARCH Open Q2 / Pitfall 5). ──
-  // The renderer's onAdd is the normal spawn path, but a session can also be created
-  // OUTSIDE it — main owns the authoritative record store (e.g. a future Phase-5
-  // persisted-snapshot restore populates listSessions() without going through onAdd).
-  // Such a session lands in main's listSessions() but has no rendered SessionView. We
-  // mirror main here: poll listSessions() and merge any id we don't yet render, so the
-  // session gets a controlled pane. Existing rows are NOT clobbered — live status comes
-  // from the onPtyStatus subscription; we only ADD ids we're missing (and adopt the
-  // first as active if we have none yet). Phase 5 replaces this poll with the persisted
-  // snapshot.
-  useEffect(() => {
-    let cancelled = false;
-    const reconcile = async (): Promise<void> => {
-      const snapshot = await window.api.listSessions();
-      if (cancelled) return;
-      setSessions((prev) => {
-        const known = new Set(prev.map((s) => s.logicalId));
-        const additions = snapshot.filter((s) => !known.has(s.logicalId));
-        if (additions.length === 0) return prev;
-        const next = [...prev, ...additions];
-        if (activeId === null && next.length > 0) {
-          setActiveId(next[0].logicalId);
-        }
-        return next;
-      });
-    };
-    const timer = setInterval(() => void reconcile(), RECONCILE_MS);
-    return () => {
-      cancelled = true;
-      clearInterval(timer);
-    };
-  }, [activeId]);
+  // NOTE (05-03): the old reconcile poll is GONE. Main's persisted snapshot is taken
+  // once on boot (above); a restored session lands as a dormant row that the user
+  // explicitly Starts (handleStart) — there is no background list-merge to drive.
 
   const onSelect = useCallback((id: LogicalId) => {
     // Switching is renderer-only visibility — the PTY is untouched (TERM-06). The
@@ -299,6 +309,26 @@ export function SessionManager(): React.JSX.Element {
       ? (sessions.find((s) => s.logicalId === editingId) ?? null)
       : null;
 
+  // The session targeted by the open context menu — drives the Start/Restart label flip.
+  const menuSession =
+    menuState !== null
+      ? (sessions.find((s) => s.logicalId === menuState.id) ?? null)
+      : null;
+  const menuIsDormant = menuSession?.status === 'not_started';
+
+  // Whether the active session is dormant (not_started) — render its IdleCard in place
+  // of a live xterm (D-04). SessionView is mounted ONLY for sessions that have started
+  // (have a live or once-live PTY); a never-started session must NEVER mount SessionView
+  // (its mount effect calls ptyResize on a non-existent PTY — Pitfall 4).
+  const activeIsDormant = activeRecord?.status === 'not_started';
+  const startedSessions = sessions.filter((s) => s.status !== 'not_started');
+
+  // Zero sessions → the welcome / empty state (D-10). Per UI-SPEC §4 the sidebar chrome
+  // + collapse toggle MAY remain (it keeps the "+ Add session" affordance live), so we
+  // keep the standard layout and render WelcomeEmptyState in the terminal area in place
+  // of the viewport-stack. Nothing auto-spawns; the CTA runs the same onAdd live-spawn.
+  const isEmpty = sessions.length === 0;
+
   return (
     <div className="ide-layout">
       <Sidebar
@@ -308,24 +338,37 @@ export function SessionManager(): React.JSX.Element {
         onAdd={onAdd}
         onClose={handleCloseRequest}
         onRestart={handleRestart}
+        onStart={handleStart}
         onContextMenu={handleContextMenu}
         onEdit={handleEdit}
         collapsed={collapsed}
-        onToggleCollapse={() => setCollapsed((c) => !c)}
+        onToggleCollapse={handleToggleCollapse}
       />
       {/* Flex-column terminal area (RESEARCH Open Q2): the identity header sits above
-          the .viewport-stack; SessionView panes keep inset:0 inside the stack. */}
+          the .viewport-stack; SessionView panes keep inset:0 inside the stack. When the
+          active session is dormant (not_started) we render its IdleCard IN PLACE OF a
+          live xterm (D-04) — only started sessions get a SessionView (Pitfall 4). When
+          there are zero sessions, WelcomeEmptyState fills the area (D-10). */}
       <div className="terminal-area">
-        <IdentityHeader session={activeRecord} />
-        <div className="viewport-stack">
-          {sessions.map((s) => (
-            <SessionView
-              key={s.logicalId}
-              id={s.logicalId}
-              active={s.logicalId === activeId}
-            />
-          ))}
-        </div>
+        {isEmpty ? (
+          <WelcomeEmptyState onCreate={onAdd} />
+        ) : (
+          <>
+            <IdentityHeader session={activeRecord} />
+            <div className="viewport-stack">
+              {startedSessions.map((s) => (
+                <SessionView
+                  key={s.logicalId}
+                  id={s.logicalId}
+                  active={s.logicalId === activeId && !activeIsDormant}
+                />
+              ))}
+              {activeIsDormant && activeRecord !== null && (
+                <IdleCard session={activeRecord} onStart={handleStart} />
+              )}
+            </div>
+          </>
+        )}
       </div>
       <ConfirmModal
         open={closingSession !== null}
@@ -346,7 +389,12 @@ export function SessionManager(): React.JSX.Element {
           onClose={closeMenu}
           items={[
             { label: 'Edit', onSelect: () => setEditingId(menuState.id) },
-            { label: 'Restart', onSelect: () => handleRestart(menuState.id) },
+            // D-03 parity: a dormant (not_started) target offers "Start" (promote);
+            // a has-run target offers "Restart". This is the collapsed-rail control
+            // surface where the per-row ▶/↻ buttons are hidden.
+            menuIsDormant
+              ? { label: 'Start', onSelect: () => handleStart(menuState.id) }
+              : { label: 'Restart', onSelect: () => handleRestart(menuState.id) },
             {
               label: 'Close',
               onSelect: () => handleCloseRequest(menuState.id),
