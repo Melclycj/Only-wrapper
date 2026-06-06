@@ -616,6 +616,27 @@ body {
   outline-offset: 1px;
 }
 
+/* The shell dropdown (D-05/SC4) — a native <select> styled to match .edit-input
+ * exactly (the field replaced the old free-text shell input; no arbitrary path can
+ * be typed). Same box-sizing/padding/border/radius/surface/ink/Nunito + the SAME
+ * blue :focus-visible outline. */
+.edit-select {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.edit-select:focus-visible {
+  outline: 2px solid oklch(0.62 0.14 248);
+  outline-offset: 1px;
+}
+
 /* The restart-applied fields are visually grouped under their hint so the user knows
  * cwd/shell/startup take effect on the next restart (D-02). */
 .edit-restart-group {

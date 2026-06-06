@@ -15,6 +15,7 @@
 
 import { useEffect, useId, useRef, useState } from 'react';
 import type { SessionIconSpec, SessionRecord } from '../shared/types';
+import type { DiscoveredShell } from '../main/shell-discovery';
 import { IconPicker } from './IconPicker';
 import { splitEdit } from './session-edit';
 
@@ -43,7 +44,7 @@ export function SessionEditModal({
   const titleId = useId();
   const nameRef = useRef<HTMLInputElement>(null);
   const cwdRef = useRef<HTMLInputElement>(null);
-  const shellRef = useRef<HTMLInputElement>(null);
+  const shellRef = useRef<HTMLSelectElement>(null);
   const startupRef = useRef<HTMLInputElement>(null);
 
   // Local form state seeded from the session each time the modal opens for a target.
@@ -55,6 +56,12 @@ export function SessionEditModal({
   const [cwd, setCwd] = useState('');
   const [shell, setShell] = useState('');
   const [startupCommand, setStartupCommand] = useState('');
+  // Discovered shells for the dropdown (D-05/SC4). `null` while the discoverShells()
+  // IPC is in flight → render a single disabled "Finding shells…" option; on resolve
+  // the list populates. The resolved $SHELL is ALWAYS present (main guarantees it —
+  // D-05 safety), so the selector is never empty. No free-text path exists (the
+  // renderer can no longer submit an arbitrary executable path — security V5/T-05-03).
+  const [shells, setShells] = useState<DiscoveredShell[] | null>(null);
 
   // Re-seed the form whenever a (new) target session opens — mirrors how the value
   // comes from main's record (D-06: shell is pre-filled, never recomputed here).
@@ -66,6 +73,22 @@ export function SessionEditModal({
     setShell(session.shell);
     setStartupCommand(session.startupCommand ?? '');
   }, [open, session]);
+
+  // Discover the platform shells when the modal opens (D-05/SC4). The list comes from
+  // main (reads /etc/shells + always includes the resolved $SHELL, on-disk-filtered —
+  // Plan 05-01); the renderer never recomputes it (D-06). We reset to `null` (in-flight)
+  // on each open so the "Finding shells…" option shows until the IPC resolves.
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    setShells(null);
+    void window.api.discoverShells().then((discovered) => {
+      if (!cancelled) setShells(discovered);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
 
   // Focus the first field on open + wire Esc=cancel (ConfirmModal skeleton).
   useEffect(() => {
@@ -91,7 +114,12 @@ export function SessionEditModal({
     // the form is robust to both real typing and automated fills (the E2E contract).
     const nameValue = nameRef.current?.value ?? name;
     const cwdValue = cwdRef.current?.value ?? cwd;
-    const shellValue = shellRef.current?.value ?? shell;
+    // Only trust the <select>'s DOM value once discovery has resolved — while the
+    // in-flight "Finding shells…" placeholder is shown the ref reads that label text,
+    // so fall back to the seeded `shell` (keeps the saved shell unchanged if the user
+    // saves before discovery lands).
+    const shellValue =
+      shells !== null ? (shellRef.current?.value ?? shell) : shell;
     const startupValue = startupRef.current?.value ?? startupCommand;
     // Empty name -> keep the existing name (D-02 discretion).
     const effectiveName =
@@ -164,15 +192,42 @@ export function SessionEditModal({
             <label className="edit-label" htmlFor={`${titleId}-shell`}>
               Shell
             </label>
-            <input
-              id={`${titleId}-shell`}
-              ref={shellRef}
-              type="text"
-              className="edit-input"
-              data-testid="edit-shell"
-              value={shell}
-              onChange={(e) => setShell(e.target.value)}
-            />
+            {shells === null ? (
+              // In-flight: a single disabled option until discoverShells() resolves
+              // (D-05). The selector is NEVER a free-text field — no arbitrary path
+              // can be submitted from the renderer (security V5/T-05-03).
+              <select
+                id={`${titleId}-shell`}
+                ref={shellRef}
+                className="edit-select"
+                data-testid="edit-shell"
+                disabled
+              >
+                <option>Finding shells…</option>
+              </select>
+            ) : (
+              // Resolved: one <option> per DiscoveredShell. The current record.shell
+              // is default-selected when present in the list, else the first entry
+              // (the resolved $SHELL, which main always includes — D-05 safety).
+              <select
+                id={`${titleId}-shell`}
+                ref={shellRef}
+                className="edit-select"
+                data-testid="edit-shell"
+                value={
+                  shells.some((s) => s.path === shell)
+                    ? shell
+                    : (shells[0]?.path ?? '')
+                }
+                onChange={(e) => setShell(e.target.value)}
+              >
+                {shells.map((s) => (
+                  <option key={s.path} value={s.path}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
           <div className="edit-field">
