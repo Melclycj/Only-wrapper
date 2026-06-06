@@ -612,7 +612,18 @@ export class PtyManager {
       };
       if (s.alive) {
         // Wait for the old PTY to exit before re-spawning (no two live ptys/id).
-        s.pty.onExit(() => respawn());
+        // Capture the disposable and guard with `respawned` so respawn() runs
+        // EXACTLY once: node-pty can deliver onExit to a stale listener (and the
+        // SIGTERM→SIGKILL path in stop() can race a second exit), which would
+        // otherwise fire a second create() — a second probe + second injected
+        // startup command — violating inject-ONCE and one-live-pty-per-id (CR-02).
+        let respawned = false;
+        const off = s.pty.onExit(() => {
+          if (respawned) return;
+          respawned = true;
+          off.dispose();
+          respawn();
+        });
         this.stop(id);
       } else {
         // Already exited/stopped — re-spawn immediately under the same id.

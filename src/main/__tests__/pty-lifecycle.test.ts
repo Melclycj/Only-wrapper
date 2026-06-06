@@ -47,8 +47,8 @@ interface FakeChild {
   resize: ReturnType<typeof vi.fn>;
   pause: ReturnType<typeof vi.fn>;
   resume: ReturnType<typeof vi.fn>;
-  onData: (cb: DataCb) => void;
-  onExit: (cb: ExitCb) => void;
+  onData: (cb: DataCb) => { dispose: () => void };
+  onExit: (cb: ExitCb) => { dispose: () => void };
   _fireExit: (e: { exitCode: number; signal?: number }) => void;
   _fireData: (d: string) => void;
 }
@@ -69,12 +69,27 @@ function makeFakeChild(): FakeChild {
     resume: vi.fn(),
     onData: (cb: DataCb) => {
       dataCbs.push(cb);
+      return {
+        dispose: () => {
+          const i = dataCbs.indexOf(cb);
+          if (i >= 0) dataCbs.splice(i, 1);
+        },
+      };
     },
     onExit: (cb: ExitCb) => {
       exitCbs.push(cb);
+      // Mirror node-pty's IDisposable contract: disposing removes the listener.
+      return {
+        dispose: () => {
+          const i = exitCbs.indexOf(cb);
+          if (i >= 0) exitCbs.splice(i, 1);
+        },
+      };
     },
-    _fireExit: (e) => exitCbs.forEach((cb) => cb(e)),
-    _fireData: (d) => dataCbs.forEach((cb) => cb(d)),
+    // Iterate over a snapshot so a listener disposing itself on first fire
+    // (the CR-02 restart guard) does not perturb the in-flight iteration.
+    _fireExit: (e) => [...exitCbs].forEach((cb) => cb(e)),
+    _fireData: (d) => [...dataCbs].forEach((cb) => cb(d)),
   };
 }
 
