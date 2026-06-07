@@ -82,6 +82,17 @@ function detachWebgl(webgl: WebglAddon | null): void {
   webgl?.dispose();
 }
 
+// WR-04 (T-06-12) renderer-side defense-in-depth: a status `notice` (the SC2 error
+// path now carries a user-supplied cwd path / OS reason) is written into the terminal
+// inside ANSI wrappers. Strip C0 (0x00–0x1F incl. ESC 0x1B), DEL (0x7F), and C1
+// (0x80–0x9F) control characters first so a crafted path can't smuggle its own escape
+// sequences (terminal/ANSI injection). Tabs/newlines are control chars too, but a
+// notice is a single inline line so dropping them is correct (main also sanitizes —
+// this is layered defense). Pure string transform; never throws.
+function sanitizeNotice(notice: string): string {
+  return notice.replace(/[\x00-\x1f\x7f-\x9f]/g, '');
+}
+
 export interface SessionViewProps {
   /** The RESOLVED logical id of an already-spawned PTY (SessionManager owns the spawn). */
   id: LogicalId;
@@ -257,8 +268,17 @@ export function SessionView({
       }, IDLE_MS);
     });
 
-    // 6. Passive exit notice (D-04) — no auto-restart.
+    // 6. Passive exit notice (D-04) — no auto-restart. SC3/D-15 (abnormal-exit seam):
+    //    the only onPtyExit a LIVE SessionView sees is a self-exit or an abnormal exit
+    //    (a user Close unmounts the view; a user Restart goes through the restart seam in
+    //    the status handler below) — in every such case the process is gone and a CLEAN
+    //    frame is the correct end state. So full term.reset() (RIS \x1bc) FIRST — this
+    //    exits any alt-screen a killed vim/less left behind so a frozen frame never
+    //    survives — THEN write the exit notice on the clean primary screen. Unlike the
+    //    restart seam (which preserves scrollback via \x1b[?1049l), here the frame is
+    //    genuinely dead so dropping its scrollback is acceptable (RESEARCH Pitfall 4 / Q1).
     const offExit = window.api.onPtyExit(id, () => {
+      term.reset();
       term.write('\r\n\x1b[2m[process exited]\x1b[0m\r\n');
     });
 
@@ -277,11 +297,24 @@ export function SessionView({
       // restart, and treating it as one writes a spurious "— restarted —" line.
       // The saved command stays on the IdleCard as the manual-run fallback.
       if (p.notice) {
-        term.write(`\r\n\x1b[2m— ${p.notice} —\x1b[0m\r\n`);
+        // WR-04 (T-06-12): sanitize the notice of control chars before writing it inside
+        // the ANSI wrappers — defense-in-depth against ANSI injection via the cwd-bearing
+        // SC2 notice. This short-circuit MUST stay BEFORE the running branch (a notice
+        // event carries the CURRENT live status, usually 'running', and is informational
+        // only — treating it as a restart would write a spurious "— restarted —" line).
+        term.write(`\r\n\x1b[2m— ${sanitizeNotice(p.notice)} —\x1b[0m\r\n`);
         return;
       }
       if (p.status === 'running') {
         if (hasRunBeforeRef.current) {
+          // SC3/D-15 (restart seam): exit any alternate-screen buffer the prior process
+          // left active (e.g. a killed vim/less) with \x1b[?1049l. This is SURGICAL —
+          // it restores the PRIMARY screen and PRESERVES its scrollback (honors Phase-3
+          // D-03 scrollback-across-restart), unlike a full term.reset() which would wipe
+          // it (RESEARCH Pitfall 4 / Open Q1). It MUST run BEFORE the separator so the
+          // "— restarted —" line paints on the clean primary screen, not inside the
+          // stale alt-screen frame.
+          term.write('\x1b[?1049l');
           const hhmm = new Date().toTimeString().slice(0, 5);
           term.write(`\r\n\x1b[2m— restarted ${hhmm} —\x1b[0m\r\n`);
         }
