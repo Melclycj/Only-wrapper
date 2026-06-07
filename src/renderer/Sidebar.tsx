@@ -161,6 +161,13 @@ function SortableSidebarRow({
 
   const stat = STATUS_STYLE[s.status];
   const running = isRunning(s.status);
+  // SC2 (D-03): a renderer-only spawn-error message rides the SessionRow (not the
+  // shared SessionRecord). When the row is in 'error' with a captured message, surface
+  // it as the row's title= tooltip so the failure is visible in the sidebar too — the
+  // SAME message shown in the error card. Read defensively (the field is optional).
+  const errorMessage = (s as { errorMessage?: string }).errorMessage;
+  const rowTitle =
+    s.status === 'error' && errorMessage ? errorMessage : undefined;
   // A dormant (never-run) session shows Start ▶; a has-run non-running session
   // (stopped/exited/error) shows Restart ↻ (D-03). Dormant rows also dim slightly.
   const dormant = s.status === 'not_started';
@@ -181,6 +188,7 @@ function SortableSidebarRow({
       }
       style={style}
       data-session-id={s.logicalId}
+      {...(rowTitle ? { title: rowTitle } : {})}
       {...(dormant ? { 'data-dormant': '' } : {})}
       {...(isDragging ? { 'data-dragging': '' } : {})}
       aria-current={isActive ? 'true' : undefined}

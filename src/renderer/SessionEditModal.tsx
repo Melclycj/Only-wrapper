@@ -177,15 +177,33 @@ export function SessionEditModal({
             <label className="edit-label" htmlFor={`${titleId}-cwd`}>
               Working directory
             </label>
-            <input
-              id={`${titleId}-cwd`}
-              ref={cwdRef}
-              type="text"
-              className="edit-input"
-              data-testid="edit-cwd"
-              value={cwd}
-              onChange={(e) => setCwd(e.target.value)}
-            />
+            {/* cwd input + native folder picker (UI-SPEC §Interaction 4). The Browse…
+                button opens the native open-directory dialog (main owns it — V12); on a
+                chosen path it fills the field, on Cancel (null) the field is unchanged.
+                CR-01 still gates the value at save time (main-side, unchanged). */}
+            <div className="edit-cwd-row">
+              <input
+                id={`${titleId}-cwd`}
+                ref={cwdRef}
+                type="text"
+                className="edit-input"
+                data-testid="edit-cwd"
+                value={cwd}
+                onChange={(e) => setCwd(e.target.value)}
+              />
+              <button
+                type="button"
+                className="edit-browse-button"
+                data-testid="browse-cwd"
+                onClick={() => {
+                  void window.api.pickDirectory().then((p) => {
+                    if (p) setCwd(p);
+                  });
+                }}
+              >
+                Browse…
+              </button>
+            </div>
           </div>
 
           <div className="edit-field">

@@ -689,6 +689,43 @@ body {
   outline-offset: 1px;
 }
 
+/* cwd field + Browse… button on one row (UI-SPEC §Interaction 4). The input flexes;
+ * the button sits inline-end at the same height. */
+.edit-cwd-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.edit-cwd-row .edit-input {
+  flex: 1 1 auto;
+  width: auto;
+}
+
+/* Browse… — neutral secondary button matching the .edit-input height/treatment. */
+.edit-browse-button {
+  flex: 0 0 auto;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink-soft);
+  font-family: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.edit-browse-button:hover {
+  background: var(--bg-sunk);
+  color: var(--ink);
+}
+
+.edit-browse-button:focus-visible {
+  outline: 2px solid oklch(0.62 0.14 248);
+  outline-offset: 1px;
+}
+
 /* The shell dropdown (D-05/SC4) — a native <select> styled to match .edit-input
  * exactly (the field replaced the old free-text shell input; no arbitrary path can
  * be typed). Same box-sizing/padding/border/radius/surface/ink/Nunito + the SAME
@@ -858,6 +895,42 @@ body {
 }
 
 .idle-start-button:focus-visible {
+  outline: 2px solid oklch(0.62 0.14 248);
+  outline-offset: 2px;
+}
+
+/* SC2 error-card action row (D-04): Edit (neutral) + Retry (primary blue), gap 8px. */
+.idle-card-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.idle-card-actions .idle-start-button {
+  flex: 1 1 0;
+  align-self: auto;
+}
+
+/* Error-card Edit: neutral secondary button (matches the .edit-input neutral treatment),
+ * warms toward --bg-sunk on hover. Not the primary "go" affordance (that is Retry). */
+.idle-card-edit-button {
+  flex: 1 1 0;
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-soft);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.idle-card-edit-button:hover {
+  background: var(--bg-sunk);
+  color: var(--ink);
+}
+
+.idle-card-edit-button:focus-visible {
   outline: 2px solid oklch(0.62 0.14 248);
   outline-offset: 2px;
 }

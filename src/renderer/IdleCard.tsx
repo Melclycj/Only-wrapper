@@ -22,11 +22,29 @@ export interface IdleCardProps {
   session: SessionRecord;
   /** Promote the dormant session to live (the Start ▶ path) — SessionManager owns the spawn. */
   onStart: (id: LogicalId) => void;
+  /**
+   * SC2 (D-05): the specific spawn-error message captured from the onPtyStatus notice
+   * ('Working directory not found: <path>' or 'Couldn't start session: <reason>').
+   * Rendered in the JetBrains-Mono `.idle-card-value` role for the `error` branch so
+   * the failing path reads as a literal. Undefined for the dormant (not_started) branch.
+   */
+  errorMessage?: string;
+  /** Error-card Edit (D-04): open the edit modal to fix cwd/shell. */
+  onEdit?: (id: LogicalId) => void;
+  /** Error-card Retry (D-04): re-attempt the spawn via the existing Start path. */
+  onRetry?: (id: LogicalId) => void;
 }
 
-export function IdleCard({ session, onStart }: IdleCardProps): React.JSX.Element {
+export function IdleCard({
+  session,
+  onStart,
+  errorMessage,
+  onEdit,
+  onRetry,
+}: IdleCardProps): React.JSX.Element {
   const style = STATUS_STYLE[session.status];
   const startup = session.startupCommand ?? '';
+  const isError = session.status === 'error';
 
   return (
     <div className="idle-card-stage">
@@ -83,24 +101,58 @@ export function IdleCard({ session, onStart }: IdleCardProps): React.JSX.Element
           </div>
         </div>
 
-        {/* Error-after-start inline line (D-04 / UI-SPEC Copywriting): the card stays
-            visible if a Start fails; the row status flips to 'error'. */}
-        {session.status === 'error' && (
-          <p className="idle-card-error" data-testid="idle-card-error">
-            Couldn&apos;t start — check the shell and working directory, then try
-            Start again.
-          </p>
+        {/* SC2 error card (D-03/D-04 / UI-SPEC §Interaction 2): when a Start fails the
+            row flips to 'error' and the card stays visible (not a blank/dead terminal).
+            The specific message renders in the JetBrains-Mono .idle-card-value role so
+            the failing path reads as a literal; below it a helper line names the fix,
+            then a two-button recovery row (Edit → fix cwd/shell, Retry → re-spawn). */}
+        {isError && (
+          <>
+            <p
+              className="idle-card-value idle-card-error"
+              data-testid="idle-card-error"
+            >
+              {errorMessage ??
+                "Couldn't start session — check the working directory and shell."}
+            </p>
+            <p className="idle-card-helper">
+              Check the working directory and shell, then fix them or try again.
+            </p>
+          </>
         )}
 
-        {/* In-card launch point (second to the sidebar ▶). Fires the promote path. */}
-        <button
-          type="button"
-          className="idle-start-button"
-          data-testid="idle-start-session"
-          onClick={() => onStart(session.logicalId)}
-        >
-          <span aria-hidden="true">▶</span> Start session
-        </button>
+        {/* Action row. For the error branch: Edit (neutral) + Retry (primary blue).
+            For the dormant branch: the single Start button. */}
+        {isError ? (
+          <div className="idle-card-actions">
+            <button
+              type="button"
+              className="idle-card-edit-button"
+              data-testid="error-card-edit"
+              onClick={() => onEdit?.(session.logicalId)}
+            >
+              Edit
+            </button>
+            <button
+              type="button"
+              className="idle-start-button"
+              data-testid="error-card-retry"
+              onClick={() => onRetry?.(session.logicalId)}
+            >
+              Retry
+            </button>
+          </div>
+        ) : (
+          /* In-card launch point (second to the sidebar ▶). Fires the promote path. */
+          <button
+            type="button"
+            className="idle-start-button"
+            data-testid="idle-start-session"
+            onClick={() => onStart(session.logicalId)}
+          >
+            <span aria-hidden="true">▶</span> Start session
+          </button>
+        )}
       </div>
     </div>
   );

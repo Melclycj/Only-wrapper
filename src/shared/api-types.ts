@@ -37,6 +37,13 @@ export type PtyCreateOptions = {
   rows: number;
   cwd?: string;
   id?: LogicalId;
+  /**
+   * D-14 "Start without command": when true, main spawns a bare shell and SKIPS the
+   * TERM-05 readiness probe + startup-command injection for this ONE launch, even when
+   * a startupCommand is stored (it still auto-runs on the next normal Start). Flows
+   * through the existing ptyCreate bridge shape — no new bridge key.
+   */
+  skipStartupCommand?: boolean;
 };
 
 /** Result of a successful spawn — stable logical id + the live OS PID (IDENT-02). */

@@ -43,8 +43,17 @@ import { resolveSwitch } from './session-switch';
 // testable in the Node env (session-reorder.test.ts).
 import { reorder } from './session-reorder';
 
+/**
+ * Renderer-only row shape: the authoritative SessionRecord (main's source of truth)
+ * plus a transient `errorMessage` captured from the onPtyStatus `notice` when a spawn
+ * fails (SC2/D-03). It is NEVER persisted and NEVER crosses the bridge — it exists only
+ * to drive the error card + the sidebar tooltip, so no shared-type / bridge change is
+ * needed (Research Open Q2).
+ */
+type SessionRow = SessionRecord & { errorMessage?: string };
+
 export function SessionManager(): React.JSX.Element {
-  const [sessions, setSessions] = useState<SessionRecord[]>([]);
+  const [sessions, setSessions] = useState<SessionRow[]>([]);
   const [activeId, setActiveId] = useState<LogicalId | null>(null);
   // The session pending a destructive Close (D-03a). Non-null → the confirm modal
   // is open for that id; null → no modal. Set by handleCloseRequest, cleared by
@@ -86,7 +95,7 @@ export function SessionManager(): React.JSX.Element {
   // The onSwitchSession effect subscribes ONCE (it must not re-bind on every sessions
   // change, or a chord could race a listener teardown), so it reads the up-to-date
   // list through this ref instead of closing over the render-time `sessions` value.
-  const sessionsRef = useRef<SessionRecord[]>(sessions);
+  const sessionsRef = useRef<SessionRow[]>(sessions);
   sessionsRef.current = sessions;
 
   // ── Close control (D-03a, supersedes the old keep-as-stopped Stop): a destructive
@@ -151,13 +160,45 @@ export function SessionManager(): React.JSX.Element {
     void (async () => {
       // cols/rows are a sane initial PTY size; SessionView re-fits + ptyResizes on mount.
       const { pid } = await window.api.ptyCreate({ id, cols: 80, rows: 24 });
-      setSessions((prev) =>
-        prev.map((row) =>
-          row.logicalId === id
-            ? { ...row, ptyPid: pid, status: 'running' }
-            : row,
-        ),
-      );
+      // A failed spawn returns pid -1 (SC2): main has ALREADY broadcast status 'error'
+      // + the notice over onPtyStatus (captured by the subscription), so do NOT
+      // optimistically flip to 'running' — that would clobber the error card. Only a
+      // real pty (pid > 0) gets the optimistic running flip; the subscription then
+      // keeps it live. On the error path we also clear any stale ptyPid.
+      if (pid > 0) {
+        setSessions((prev) =>
+          prev.map((row) =>
+            row.logicalId === id
+              ? { ...row, ptyPid: pid, status: 'running', errorMessage: undefined }
+              : row,
+          ),
+        );
+      }
+    })();
+  }, []);
+
+  // ── Start without command (D-14): the same promote/spawn path as handleStart, but
+  //    threads skipStartupCommand:true so main spawns a bare shell skipping the TERM-05
+  //    auto-run for THIS launch even when a startupCommand is stored. The stored command
+  //    is untouched (it runs on the next normal Start). Flows through the existing
+  //    ptyCreate bridge shape — no new bridge key (Task 1 made main honor the flag). ──
+  const handleStartNoCmd = useCallback((id: LogicalId) => {
+    void (async () => {
+      const { pid } = await window.api.ptyCreate({
+        id,
+        cols: 80,
+        rows: 24,
+        skipStartupCommand: true,
+      });
+      if (pid > 0) {
+        setSessions((prev) =>
+          prev.map((row) =>
+            row.logicalId === id
+              ? { ...row, ptyPid: pid, status: 'running', errorMessage: undefined }
+              : row,
+          ),
+        );
+      }
     })();
   }, []);
 
@@ -212,14 +253,41 @@ export function SessionManager(): React.JSX.Element {
 
   // ── Restart edit half (D-02): cwd/shell/startupCommand persist to main and take
   //    effect on the NEXT restart (no live respawn here). ──
+  // Edit-prefill hydration (Research Open Q3): main is the source of truth for the
+  // restart-applied fields (cwd/shell/startupCommand) — it VALIDATES/trims them (CR-01
+  // + WR-05), so a submitted value may differ from what is actually persisted (an
+  // invalid cwd is ignored, whitespace is trimmed). Re-read listSessions() (no new
+  // bridge key) and merge the authoritative values back into the matching rows so the
+  // next edit-modal open prefills main's truth, not the optimistic local guess. Status
+  // and errorMessage are NOT disturbed (those are owned by the onPtyStatus subscription).
+  const rehydrateProfiles = useCallback(async () => {
+    const authoritative = await window.api.listSessions();
+    const byId = new Map(authoritative.map((r) => [r.logicalId, r]));
+    setSessions((prev) =>
+      prev.map((row) => {
+        const truth = byId.get(row.logicalId);
+        if (!truth) return row;
+        return {
+          ...row,
+          cwd: truth.cwd,
+          shell: truth.shell,
+          startupCommand: truth.startupCommand,
+        };
+      }),
+    );
+  }, []);
+
   const handleSaveProfile = useCallback(
     (
       id: LogicalId,
       fields: { cwd: string; shell: string; startupCommand: string },
     ) => {
       window.api.ptyUpdateProfile(id, fields);
+      // Re-read main's truth so the next edit prefills the persisted (validated/trimmed)
+      // values rather than the just-submitted optimistic ones (edit-prefill, Open Q3).
+      void rehydrateProfiles();
     },
-    [],
+    [rehydrateProfiles],
   );
 
   // ── Add: the SOLE ptyCreate spawn path (T-03-09). One spawn per add. ──
@@ -235,7 +303,7 @@ export function SessionManager(): React.JSX.Element {
       const record = await addSession(0, (opts) => window.api.ptyCreate(opts));
       setSessions((prev) => {
         const index = prev.length;
-        const placed: SessionRecord = {
+        const placed: SessionRow = {
           ...record,
           name: `Session ${index + 1}`,
           order: index,
@@ -243,8 +311,12 @@ export function SessionManager(): React.JSX.Element {
         return [...prev, placed];
       });
       setActiveId(record.logicalId);
+      // Edit-prefill hydration (Open Q3): pull main's authoritative cwd/shell/
+      // startupCommand for the freshly-spawned row so an immediate edit prefills the
+      // real resolved values (e.g. the home cwd / resolved shell main computed).
+      void rehydrateProfiles();
     })();
-  }, []);
+  }, [rehydrateProfiles]);
 
   // ── Boot: one-shot hydrate from main (source of truth). Take a single listSessions()
   //    snapshot, sort by `order`, and focus the FIRST session (D-09). If there are ZERO
@@ -270,11 +342,22 @@ export function SessionManager(): React.JSX.Element {
     const offs = sessions.map((s) =>
       window.api.onPtyStatus(s.logicalId, (p) => {
         setSessions((prev) =>
-          prev.map((row) =>
-            row.logicalId === p.id
-              ? { ...row, status: p.status, ptyPid: p.ptyPid ?? row.ptyPid }
-              : row,
-          ),
+          prev.map((row) => {
+            if (row.logicalId !== p.id) return row;
+            // SC2 (D-03/D-05): capture the spawn-error message from the notice when
+            // the transition is to 'error'; clear it on any transition AWAY from
+            // 'error' (a successful Retry → 'running' must not leave a stale message).
+            const errorMessage =
+              p.status === 'error'
+                ? (p.notice ?? row.errorMessage)
+                : undefined;
+            return {
+              ...row,
+              status: p.status,
+              ptyPid: p.ptyPid ?? row.ptyPid,
+              errorMessage,
+            };
+          }),
         );
       }),
     );
@@ -335,13 +418,27 @@ export function SessionManager(): React.JSX.Element {
       ? (sessions.find((s) => s.logicalId === menuState.id) ?? null)
       : null;
   const menuIsDormant = menuSession?.status === 'not_started';
+  // D-14: "Start without command" is offered on a STARTABLE row (not currently running)
+  // that has a saved startupCommand — the primary Start runs the command; this item
+  // spawns a bare shell skipping the TERM-05 auto-run for that one launch.
+  const menuCanStartNoCmd =
+    menuSession !== null &&
+    menuSession.status !== 'running' &&
+    (menuSession.startupCommand ?? '').trim().length > 0;
 
   // Whether the active session is dormant (not_started) — render its IdleCard in place
   // of a live xterm (D-04). SessionView is mounted ONLY for sessions that have started
   // (have a live or once-live PTY); a never-started session must NEVER mount SessionView
   // (its mount effect calls ptyResize on a non-existent PTY — Pitfall 4).
-  const activeIsDormant = activeRecord?.status === 'not_started';
-  const startedSessions = sessions.filter((s) => s.status !== 'not_started');
+  // SC2 (D-03): an 'error' session (a FAILED spawn — pid -1, no live PTY) renders the
+  // IdleCard error branch IN PLACE OF a SessionView, exactly like a dormant session
+  // (mounting SessionView would bind to a non-existent PTY — Pitfall 4). So both
+  // not_started AND error use the card; only genuinely-started sessions get a SessionView.
+  const activeIsCard =
+    activeRecord?.status === 'not_started' || activeRecord?.status === 'error';
+  const startedSessions = sessions.filter(
+    (s) => s.status !== 'not_started' && s.status !== 'error',
+  );
 
   // Zero sessions → the welcome / empty state (D-10). Per UI-SPEC §4 the sidebar chrome
   // + collapse toggle MAY remain (it keeps the "+ Add session" affordance live), so we
@@ -381,11 +478,17 @@ export function SessionManager(): React.JSX.Element {
                 <SessionView
                   key={s.logicalId}
                   id={s.logicalId}
-                  active={s.logicalId === activeId && !activeIsDormant}
+                  active={s.logicalId === activeId && !activeIsCard}
                 />
               ))}
-              {activeIsDormant && activeRecord !== null && (
-                <IdleCard session={activeRecord} onStart={handleStart} />
+              {activeIsCard && activeRecord !== null && (
+                <IdleCard
+                  session={activeRecord}
+                  onStart={handleStart}
+                  errorMessage={activeRecord.errorMessage}
+                  onEdit={handleEdit}
+                  onRetry={handleStart}
+                />
               )}
             </div>
           </>
@@ -416,6 +519,17 @@ export function SessionManager(): React.JSX.Element {
             menuIsDormant
               ? { label: 'Start', onSelect: () => handleStart(menuState.id) }
               : { label: 'Restart', onSelect: () => handleRestart(menuState.id) },
+            // D-14: "Start without command" — only for a startable row with a saved
+            // startupCommand. Spawns a bare shell skipping the TERM-05 auto-run for this
+            // launch (the primary Start above runs the command).
+            ...(menuCanStartNoCmd
+              ? [
+                  {
+                    label: 'Start without command',
+                    onSelect: () => handleStartNoCmd(menuState.id),
+                  },
+                ]
+              : []),
             {
               label: 'Close',
               onSelect: () => handleCloseRequest(menuState.id),
