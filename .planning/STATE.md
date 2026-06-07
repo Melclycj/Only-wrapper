@@ -4,12 +4,12 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Phase 6.1 context gathered
-last_updated: "2026-06-07T14:20:28.211Z"
-last_activity: 2026-06-07 -- Phase 06 Plan 03 (agent-state layer) complete
+last_updated: "2026-06-07T14:51:45.490Z"
+last_activity: 2026-06-07 -- Phase 06.1 execution started
 progress:
   total_phases: 10
   completed_phases: 6
-  total_plans: 25
+  total_plans: 29
   completed_plans: 24
   percent: 60
 ---
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-03)
 
 **Core value:** Real terminal fidelity — `claude --rc`, `codex`, `vim`, `ssh`, REPLs all behave exactly like a native terminal inside the wrapper.
-**Current focus:** Phase 06 — robustness-flow-control-polish
+**Current focus:** Phase 06.1 — terminal-lifecycle-state-machine-and-agent-state-detection-r
 
 ## Current Position
 
-Phase: 06 (robustness-flow-control-polish) — EXECUTING
-Plan: 4 of 4
-Status: Ready to execute
-Last activity: 2026-06-07 -- Phase 06 Plan 03 (agent-state layer) complete
+Phase: 06.1 (terminal-lifecycle-state-machine-and-agent-state-detection-r) — EXECUTING
+Plan: 2 of 4
+Status: Executing Phase 06.1
+Last activity: 2026-06-08 -- Completed 06.1-01-PLAN.md (Wave 0 foundation)
 
-Progress: [███████████████░░░░░] 75% (Phase 06 plans: 3/4)
+Progress: [█████░░░░░░░░░░░░░░░░] 25% (Phase 06.1 plans: 1/4)
 
 ## Performance Metrics
 
@@ -79,6 +79,7 @@ Progress: [███████████████░░░░░] 75% (Ph
 | Phase 06 P01 | ~12min | 3 tasks | 16 files |
 | Phase 06 P02 | ~18min | 2 tasks | 12 files |
 | Phase 06 P03 | ~20min | 3 tasks | 5 files |
+| Phase 06.1 P01 | ~30min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -133,6 +134,7 @@ Recent decisions affecting current work:
 - [Phase ?]: 05.1-02: TERM-05 auto-run happy path — create() runs invisible readiness probe then injects cmd + CR on match; READINESS_TIMEOUT_MS deferred to Plan 03 (timeout test stays RED by design)
 - [Phase 05.1-03]: Completed the probe state machine — READINESS_TIMEOUT_MS=4000ms timeout-flush-and-notice branch: on ready-timeout the buffer flushes to a usable bare prompt and the command is NEVER injected (safe-by-default, D-04/SC4). The D-04 ready-fail notice REUSES the existing onPtyStatus channel via optional PtyStatusPayload.notice — ZERO new bridge keys (EXPECTED_API_KEYS stays 18, security.guard GREEN unchanged; Open Q1 lighter path). Notice is a fixed literal (no startupCommand/nonce/buffer leak — V7). buildPosixProbe regex unchanged vs real cold zsh (Open Q3); defensive stripProbeEcho scrub guards D-02 nonce-absence. Real cold-spawn E2E GREEN (auto-run+history+nonce-absent+restart-rerun+bare-shell). VALIDATION nyquist_compliant:true
 - [Phase 06-01]: Interface-first foundation wave — pure shared/agent-state.ts classifier (AgentState overlay, NOT a 6th SessionStatus — D-06; IDLE_MS=800 D-08; conservative anchored PROMPT_RE: trailing ?, [y/n] variants, (y/n)/(yes/no), ❯ — naked $/% and trailing ':' are FREE not WAITING; ReDoS-safe linear+anchored V7/T-06-03), the {kind:'clear'} matchClearKey riding the EXISTING session:switch channel (Cmd+K mac / Ctrl+Shift+K win; plain Ctrl+K → null to keep readline kill-line — D-13), and the 19-key pickDirectory bridge lockstep define the Phase-6 contracts Plans 02/03/04 build against. pickDirectory is the ONLY new bridge key (the Clear chord adds none)
+- [Phase 06.1-01]: Wave-0 interface-first foundation SUPERSEDING 06-01's classifier. agent-state.ts rewritten to the spike-validated frame-stability classify(lines: string[]): AgentState (D-09/D-10) — output-silence IDLE_MS/PROMPT_RE/classifyIdle DELETED, standalone ❯ caret DROPPED from the waiting decision (002 kill-finding: it false-fired 10/11 settles as Claude's ambient input caret; survives only as a non-decisive numbered-menu prefix, encoded ❯ so the literal glyph is absent). Exports TICK_MS=100/SETTLE_MS=500 (Nyquist tick ≤250ms, settle 400–600ms). New agent-state-replay.test.ts is the offline @xterm/headless@5.5.0 oracle reproducing the spike ground truth "11 settles → exactly 1 WAITING" (the capture is a FORENSIC log with no raw PTY bytes, so the oracle reconstructs each settle frame from recorded last+sig and runs it through headless + classify(), deterministic via the write callback). SessionRecord gains one-way configured?:boolean (D-02 ephemeral-vs-configured gate); SCHEMA_VERSION 1→2 with coerceOnLoad absent→true migration. Three honest-RED pty-lifecycle scaffolds pin the Plan-03 D-05/D-02 transitions (configured self-exit→Inactive not_started, ephemeral→gone, listConfiguredSessions()). TEMPORARY SessionView.tsx IDLE_MS/classifyIdle bridge (Rule 3) delegates to classify() so tsc stays clean until Plan 02 rewrites SEAM A. window-config.ts (19 keys) + status-colors.ts (D-14) untouched.
 - [Phase 06-01]: Folded the 05.1 review fixes — WR-02: readiness matcher (buildPosixProbe re) now fires ONLY when the nonce appears AFTER a newline boundary (a produced line, never the bare echo line: `\n[^\n]*<nonce>`); WR-03: matches() bounds the scan to the last 8 KB tail before testing; IN-02: Phase-8 per-shell comment on void shellPath; IN-03: startup-command smoke restart assertion anchored on the full '— restarted ' separator literal (not a bare indexOf). 3 Wave 0 RED scaffolds (pty-spawn-error describe.todo → Plan 02; alt-screen-reset + header-controls describe.skip → Plan 04) resolve cleanly. TerminalPane.tsx deleted (D-16, no live import; tsc + electron-forge package GREEN). npm test 171 GREEN
 - [Phase 05.1-03 HUMAN-VERIFY]: Canonical 🛋️ Parlour Claude RC scenario APPROVED 2026-06-06 — all 4 CONFIRMs passed (clean auto-run no garble/visible-nonce, ArrowUp history recall, restart re-runs after separator, empty command → bare shell). 3 session edit/lifecycle UX items surfaced but are OUT OF SCOPE for TERM-05 (Phase 03/04 concerns) — captured as todos in .planning/todos/pending/ (edit-modal cwd/startup prefill, folder picker, ▶ Start discoverability)
 - [Phase ?]: [Phase 06-02]: SC2 spawn-error vertical slice — create() pre-validates the RESOLVED cwd with isValidCwd verbatim (D-01); an explicit-but-missing cwd (opts OR stored record) errors 'Working directory not found: <path>' and NEVER silently spawns in ~ (D-02), node-pty untouched. try/catch covers the rare sync EACCES; the async fork-then-die abnormal exit (Pitfall 1, macOS) gets a generic 'shell exited immediately' notice (D-05). notice sanitized of control chars (WR-04); updateProfile trims startupCommand at persist (WR-05); dead stripProbeEcho/scrub removed (WR-01/IN-01). Renderer: IdleCard error branch (specific msg + Edit/Retry, error-card-edit/retry testids), per-row errorMessage from the notice (renderer-only SessionRow, no bridge change — Open Q2), error sessions render the IdleCard not a SessionView, failed spawn (pid -1) skips the optimistic running flip, handleStartNoCmd threads skipStartupCommand (D-14, no new key), Browse… → pickDirectory, edit-prefill via listSessions re-read after add/save (Open Q3). 181 unit tests GREEN, tsc clean, package builds
