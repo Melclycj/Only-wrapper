@@ -66,19 +66,32 @@ export interface SidebarProps {
   onSelect: (id: LogicalId) => void;
   onAdd: () => void;
   /**
-   * Destructively CLOSE a session (D-03a) — opens the confirm modal; on confirm main
-   * kills the PTY and REMOVES the SessionRecord (the row vanishes). Offered on EVERY
-   * row (running or finished/errored) so any session can be removed.
+   * REMOVE a session (D-03/D-06): for a live (Working-Area) row this kills the PTY but
+   * KEEPS the recipe — a configured session lands in the Inactive List, an ephemeral one
+   * is gone. Opens the confirm modal; on confirm SessionManager runs the remove path.
+   * Offered on every Working-Area row (running or errored card).
    */
   onClose: (id: LogicalId) => void;
+  /**
+   * Permanently DELETE a dormant (Inactive-List) session (D-03): kills nothing (no live
+   * PTY) and removes the SessionRecord entirely — the recipe is gone for good. Behind the
+   * same confirm modal as Remove (T-06.1-14). Only offered on Inactive-List entries.
+   */
+  onDelete: (id: LogicalId) => void;
   /** Restart a session (TERM-07 / IDENT-02) — same identity, new ptyPid. */
   onRestart: (id: LogicalId) => void;
   /**
-   * Start a dormant (`not_started`) session (D-03/D-11) — promotes the restored
+   * Start a dormant (`not_started`) session (D-03/D-06) — promotes the restored
    * record to live via the existing ptyCreate/create({id}) path (Plan 05-02). The
    * row control flips ▶ Start (not_started) ↔ ↻ Restart (has run).
    */
   onStart: (id: LogicalId) => void;
+  /**
+   * Start a dormant session as a BARE shell, skipping the saved TERM-05 startup command
+   * for THIS launch (D-06 / D-14). Shown on Inactive-List entries that have a saved
+   * startupCommand. Threads skipStartupCommand:true through the existing ptyCreate path.
+   */
+  onStartNoCmd: (id: LogicalId) => void;
   /**
    * Right-click a row (D-03): open the context menu at (x, y) for `id`. Wired at the
    * `.sidebar-row` level so it works in BOTH expanded and collapsed modes — the menu
@@ -123,8 +136,10 @@ interface SortableRowProps {
   isActive: boolean;
   onSelect: (id: LogicalId) => void;
   onClose: (id: LogicalId) => void;
+  onDelete: (id: LogicalId) => void;
   onRestart: (id: LogicalId) => void;
   onStart: (id: LogicalId) => void;
+  onStartNoCmd: (id: LogicalId) => void;
   onContextMenu: (id: LogicalId, x: number, y: number) => void;
   onEdit: (id: LogicalId) => void;
 }
@@ -141,8 +156,10 @@ function SortableSidebarRow({
   isActive,
   onSelect,
   onClose,
+  onDelete,
   onRestart,
   onStart,
+  onStartNoCmd,
   onContextMenu,
   onEdit,
 }: SortableRowProps): React.JSX.Element {
@@ -178,6 +195,9 @@ function SortableSidebarRow({
   // A dormant (never-run) session shows Start ▶; a has-run non-running session
   // (stopped/exited/error) shows Restart ↻ (D-03). Dormant rows also dim slightly.
   const dormant = s.status === 'not_started';
+  // D-06/D-14: a dormant entry with a saved startup command also offers a "Start without
+  // command" affordance (bare shell, skipping the TERM-05 auto-run for that one launch).
+  const hasStartupCmd = (s.startupCommand ?? '').trim().length > 0;
 
   return (
     <div
@@ -273,6 +293,25 @@ function SortableSidebarRow({
               <span aria-hidden="true">↻</span>
             </button>
           ))}
+        {/* D-06/D-14: "Start without command" on an Inactive-List entry that has a saved
+            startup command — a bare-shell launch that skips the TERM-05 auto-run for that
+            one launch (the primary ▶ Start runs the command). */}
+        {dormant && hasStartupCmd && (
+          <button
+            type="button"
+            className="row-control"
+            data-testid="start-no-cmd-session"
+            data-action="start-no-cmd"
+            title="Start without command"
+            aria-label={`Start ${s.name} without command`}
+            onClick={(e) => {
+              e.stopPropagation();
+              onStartNoCmd(s.logicalId);
+            }}
+          >
+            <span aria-hidden="true">⏵</span>
+          </button>
+        )}
         <button
           type="button"
           className="row-control"
@@ -287,20 +326,40 @@ function SortableSidebarRow({
         >
           <span aria-hidden="true">✎</span>
         </button>
-        <button
-          type="button"
-          className="row-control row-control-close"
-          data-testid="close-session"
-          data-action="close"
-          title="Close session"
-          aria-label={`Close ${s.name}`}
-          onClick={(e) => {
-            e.stopPropagation();
-            onClose(s.logicalId);
-          }}
-        >
-          <span aria-hidden="true">✕</span>
-        </button>
+        {/* D-03/D-06: an Inactive-List (dormant) entry gets a PERMANENT Delete; a live
+            (Working-Area) row gets Remove (kill PTY, keep recipe). Both are behind the
+            confirm modal; they differ in the verb + the SessionManager handler. */}
+        {dormant ? (
+          <button
+            type="button"
+            className="row-control row-control-close"
+            data-testid="delete-session"
+            data-action="delete"
+            title="Delete session permanently"
+            aria-label={`Delete ${s.name} permanently`}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(s.logicalId);
+            }}
+          >
+            <span aria-hidden="true">🗑</span>
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="row-control row-control-close"
+            data-testid="close-session"
+            data-action="close"
+            title="Remove session"
+            aria-label={`Remove ${s.name}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              onClose(s.logicalId);
+            }}
+          >
+            <span aria-hidden="true">✕</span>
+          </button>
+        )}
       </span>
       <span className="rail-tooltip" role="tooltip">
         {s.name} · {stat.label}
@@ -315,8 +374,10 @@ export function Sidebar({
   onSelect,
   onAdd,
   onClose,
+  onDelete,
   onRestart,
   onStart,
+  onStartNoCmd,
   onContextMenu,
   onEdit,
   collapsed,
@@ -343,6 +404,32 @@ export function Sidebar({
       onReorder(active.id as LogicalId, over.id as LogicalId);
     }
   };
+
+  // D-01 two-bucket partition: a labeled WORKING AREA (live sessions — anything that is
+  // not dormant; an errored card stays here per D-05) and an INACTIVE LIST (dormant
+  // `not_started` configured sessions, the restartable recipes). The partition is a pure
+  // render-time predicate over the (already order-sorted) `sessions` snapshot — NOT a new
+  // state machine; main remains authoritative (listSessions() merges live ∪ dormant).
+  const workingArea = sessions.filter((s) => s.status !== 'not_started');
+  const inactiveList = sessions.filter((s) => s.status === 'not_started');
+
+  // One row, reused in both sections (the SortableContext below spans the full ordered id
+  // list so cross-section drag-reorder stays intact).
+  const renderRow = (s: SessionRecord): React.JSX.Element => (
+    <SortableSidebarRow
+      key={s.logicalId}
+      session={s}
+      isActive={s.logicalId === activeId}
+      onSelect={onSelect}
+      onClose={onClose}
+      onDelete={onDelete}
+      onRestart={onRestart}
+      onStart={onStart}
+      onStartNoCmd={onStartNoCmd}
+      onContextMenu={onContextMenu}
+      onEdit={onEdit}
+    />
+  );
 
   return (
     <nav
@@ -374,23 +461,38 @@ export function Sidebar({
         collisionDetection={closestCenter}
         onDragEnd={handleDragEnd}
       >
+        {/* SortableContext spans the FULL ordered id list (D-08 render order = saved
+            order) so a drag can move a row anywhere; the two visual sections below split
+            the SAME ordered rows by bucket. */}
         <SortableContext
           items={sessions.map((s) => s.logicalId)}
           strategy={verticalListSortingStrategy}
         >
-          {sessions.map((s) => (
-            <SortableSidebarRow
-              key={s.logicalId}
-              session={s}
-              isActive={s.logicalId === activeId}
-              onSelect={onSelect}
-              onClose={onClose}
-              onRestart={onRestart}
-              onStart={onStart}
-              onContextMenu={onContextMenu}
-              onEdit={onEdit}
-            />
-          ))}
+          {/* WORKING AREA (D-01): live sessions. The label is hidden in the collapsed
+              icon-only rail. Always rendered so the structure is stable for the smoke. */}
+          <div
+            className="sidebar-section sidebar-section-working"
+            data-testid="working-area"
+          >
+            <span className="sidebar-section-label" aria-hidden={collapsed}>
+              Working Area
+            </span>
+            {workingArea.map(renderRow)}
+          </div>
+          {/* INACTIVE LIST (D-01/D-06): dormant configured sessions — the restartable
+              recipes. Each entry carries Start ▶ / Start-without-command / Delete. Only
+              shown when there is at least one dormant session. */}
+          {inactiveList.length > 0 && (
+            <div
+              className="sidebar-section sidebar-section-inactive"
+              data-testid="inactive-list"
+            >
+              <span className="sidebar-section-label" aria-hidden={collapsed}>
+                Inactive List
+              </span>
+              {inactiveList.map(renderRow)}
+            </div>
+          )}
         </SortableContext>
       </DndContext>
       <button

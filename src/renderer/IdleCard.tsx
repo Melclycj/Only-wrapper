@@ -1,9 +1,11 @@
-// RENDERER ONLY — the dormant-session placeholder card (05-03, D-04).
+// RENDERER ONLY — the dormant-session placeholder card (05-03, D-04 / 06.1-04 D-06).
 //
-// Rendered in the .terminal-area when the active session is `not_started` (a restored-
-// but-not-yet-started session, or a session that has never run). It REPLACES the live
-// xterm surface until the user clicks Start, so a dormant session reads as "present but
-// asleep" rather than a confusing blank/dead terminal.
+// Rendered in the .terminal-area when the active session is `not_started` — i.e. an
+// Inactive-List entry (a restored configured session, or one Removed back to dormant)
+// that the user has selected but not yet Started. It REPLACES the live xterm surface
+// until the user clicks Start, so a dormant session reads as "present but asleep" rather
+// than a confusing blank/dead terminal. Start ▶ here mirrors the Inactive-List entry's
+// Start ▶; both spawn a FRESH process with no scrollback restore (D-04).
 //
 // TERM-05 BOUNDARY (D-04): the saved startupCommand is DISPLAYED read-only and is NEVER
 // written to a PTY. There is no run/copy-as-command affordance — the helper line states

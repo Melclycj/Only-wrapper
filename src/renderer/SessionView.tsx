@@ -199,6 +199,26 @@ export function SessionView({
     //     is NOT intercepted → forwarded to the PTY as SIGINT.
     term.attachCustomKeyEventHandler((e) => {
       if (e.type !== 'keydown') return true;
+      // KEYBOARD-FOCUS FIX (D-06): the header controls (Clear / Restart / Remove) are
+      // native Tab-focusable <button>s. xterm's custom key handler can still see a keydown
+      // when focus is NOT on its hidden helper textarea (e.g. the user Tabbed to a header
+      // button — the handler is bound at the terminal element and the event bubbles). When
+      // it then returned true, xterm processed Tab / Space / Enter and SWALLOWED them, so
+      // the focused button never received Space/Enter to activate and Tab never advanced
+      // focus natively. Returning FALSE here tells xterm NOT to handle the key and lets the
+      // browser perform its native default — focus traversal (Tab) + button activation
+      // (Space/Enter) — without ever feeding those keys to the PTY. xterm only legitimately
+      // handles keys while ITS textarea holds focus, so gating on the event target is the
+      // precise fix (copy/paste, intercepted below, still run only on the textarea).
+      const target = e.target as HTMLElement | null;
+      const onTerminalTextarea =
+        target?.classList?.contains('xterm-helper-textarea') ?? false;
+      if (!onTerminalTextarea) {
+        // Focus is on a header control (or elsewhere in the chrome) — let the browser
+        // handle Tab/Space/Enter natively; do not feed them to the PTY (return false so
+        // xterm does not consume the keystroke).
+        return false;
+      }
       if (e.metaKey && e.code === 'KeyC' && term.hasSelection()) {
         void navigator.clipboard.writeText(term.getSelection());
         return false;

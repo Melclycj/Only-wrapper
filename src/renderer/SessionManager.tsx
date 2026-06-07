@@ -108,15 +108,35 @@ export function SessionManager(): React.JSX.Element {
   const sessionsRef = useRef<SessionRow[]>(sessions);
   sessionsRef.current = sessions;
 
-  // ── Close control (D-03a, supersedes the old keep-as-stopped Stop): a destructive
-  //    close behind a confirm modal. NOTE: window.api.ptyStop + PtyManager.stop are
-  //    RETAINED per D-03a ("keep the function, disable the button") and stay unit-
-  //    tested, but are intentionally NOT surfaced as a UI control here. The Close flow
-  //    instead calls window.api.ptyClose (kill PTY + remove the SessionRecord).
+  // ── Remove vs Delete (D-03/D-06, two-bucket lifecycle — supersedes the single
+  //    destructive Close). BOTH go behind the SAME confirm modal (T-06.1-14); the verb
+  //    differs by where the row lives:
   //
-  //    handleCloseRequest opens the modal; confirmClose performs the close; cancelClose
-  //    dismisses it. ──
+  //      • REMOVE (a live, Working-Area session) → kill the PTY but KEEP the recipe.
+  //        - CONFIGURED (the user gave it metadata — D-02): window.api.ptyStop kills the
+  //          process; main keeps the configured record (persisted via
+  //          listConfiguredSessions) so it restores dormant on the next boot, and we
+  //          OPTIMISTICALLY flip the renderer row to `not_started` so it moves to the
+  //          Inactive List in THIS session too (the renderer is the presentation
+  //          authority between boots; the old reconcile poll is gone). No new bridge key.
+  //        - EPHEMERAL (a throwaway +New, never edited): window.api.ptyClose kills + drops
+  //          the record entirely — it is gone (never persisted, no Inactive entry).
+  //      • DELETE (an Inactive-List, dormant session) → permanent: window.api.ptyClose
+  //        removes the record for good (no live PTY to kill — close() drops the dormant
+  //        entry and persists the shrink).
+  //
+  //    `removeMode` distinguishes the two so confirm-time copy + the side effect match.
+  //    handleRemoveRequest / handleDeleteRequest open the modal; confirmRemove performs
+  //    it; cancelClose dismisses. ──
+  const [removeMode, setRemoveMode] = useState<'remove' | 'delete'>('remove');
+
   const handleCloseRequest = useCallback((id: LogicalId) => {
+    setRemoveMode('remove');
+    setClosingId(id);
+  }, []);
+
+  const handleDeleteRequest = useCallback((id: LogicalId) => {
+    setRemoveMode('delete');
     setClosingId(id);
   }, []);
 
@@ -127,18 +147,48 @@ export function SessionManager(): React.JSX.Element {
   const confirmClose = useCallback(() => {
     if (closingId === null) return;
     const id = closingId;
-    // Side effect: main kills the PTY AND deletes the record (close+remove). Because
-    // the record is gone from main, the reconcile poll (which only ADDS ids present in
-    // listSessions() but missing from state) will NOT re-add this row.
+    const row = sessions.find((s) => s.logicalId === id) ?? null;
+    // DELETE (Inactive-List) OR REMOVE of an ephemeral live session → permanent: main
+    // kills any PTY AND drops the record (close+remove). The row vanishes.
+    const isConfiguredLive =
+      removeMode === 'remove' &&
+      row !== null &&
+      row.configured === true &&
+      row.status !== 'not_started';
+    if (isConfiguredLive) {
+      // REMOVE a configured live session → kill the PTY (recipe kept). Flip the row to
+      // dormant so it lands in the Inactive List immediately (main persists it as a
+      // configured record; on the next boot coerceOnLoad restores it not_started).
+      window.api.ptyStop(id);
+      setSessions((prev) =>
+        prev.map((r) =>
+          r.logicalId === id
+            ? {
+                ...r,
+                status: 'not_started',
+                ptyPid: undefined,
+                agentState: undefined,
+                errorMessage: undefined,
+              }
+            : r,
+        ),
+      );
+      // The active session just left the Working Area → its SessionView unmounts and the
+      // IdleCard takes over; keep it active so the user sees where it went.
+      setClosingId(null);
+      return;
+    }
+    // Permanent removal (Delete, or Remove of an ephemeral/ueditable session): main kills
+    // the PTY AND deletes the record. Because the record is gone from main, no reconcile
+    // re-adds this row.
     window.api.ptyClose(id);
-    // Pure reducer: drop the row + reselect a valid active id (or null when empty).
     setSessions((prev) => {
       const result = closeSession(prev, activeId, id);
       setActiveId(result.activeId);
       return result.sessions;
     });
     setClosingId(null);
-  }, [closingId, activeId]);
+  }, [closingId, activeId, sessions, removeMode]);
 
   // ── Restart control (TERM-07 / SC3, IDENT-02): request-response. Main orchestrates
   //    stop → await-exit → respawn under the SAME logicalId, returning the NEW
@@ -265,9 +315,12 @@ export function SessionManager(): React.JSX.Element {
   //    rebuilds the record from main's fields does NOT revert the live edit (Pitfall 4). ──
   const handleSaveLive = useCallback(
     (id: LogicalId, name: string, icon: SessionIconSpec) => {
+      // D-02: any metadata edit auto-promotes the session to CONFIGURED (main sets
+      // configured=true in updateProfile). Mirror that on the renderer row so a later
+      // Remove keeps the recipe (→ Inactive List) rather than treating it as ephemeral.
       setSessions((prev) =>
         prev.map((row) =>
-          row.logicalId === id ? { ...row, name, icon } : row,
+          row.logicalId === id ? { ...row, name, icon, configured: true } : row,
         ),
       );
       window.api.ptyUpdateProfile(id, { name, icon });
@@ -296,6 +349,8 @@ export function SessionManager(): React.JSX.Element {
           cwd: truth.cwd,
           shell: truth.shell,
           startupCommand: truth.startupCommand,
+          // Carry main's configured truth (D-02 — never downgrade a kept session).
+          configured: truth.configured ?? row.configured,
         };
       }),
     );
@@ -307,6 +362,14 @@ export function SessionManager(): React.JSX.Element {
       fields: { cwd: string; shell: string; startupCommand: string },
     ) => {
       window.api.ptyUpdateProfile(id, fields);
+      // D-02: mirror the configured auto-promotion on the renderer row (any edit keeps
+      // the session). The cwd/shell/startupCommand values are re-read from main's truth
+      // below; here we only need to mark it configured.
+      setSessions((prev) =>
+        prev.map((row) =>
+          row.logicalId === id ? { ...row, configured: true } : row,
+        ),
+      );
       // Re-read main's truth so the next edit prefills the persisted (validated/trimmed)
       // values rather than the just-submitted optimistic ones (edit-prefill, Open Q3).
       void rehydrateProfiles();
@@ -516,8 +579,10 @@ export function SessionManager(): React.JSX.Element {
         onSelect={onSelect}
         onAdd={onAdd}
         onClose={handleCloseRequest}
+        onDelete={handleDeleteRequest}
         onRestart={handleRestart}
         onStart={handleStart}
+        onStartNoCmd={handleStartNoCmd}
         onContextMenu={handleContextMenu}
         onEdit={handleEdit}
         collapsed={collapsed}
@@ -539,7 +604,7 @@ export function SessionManager(): React.JSX.Element {
               agentState={activeRecord?.agentState}
               onClear={handleClear}
               onRestart={handleRestart}
-              onStart={handleStart}
+              onRemove={handleCloseRequest}
             />
             <div className="viewport-stack">
               {startedSessions.map((s) => (
@@ -565,13 +630,21 @@ export function SessionManager(): React.JSX.Element {
       </div>
       <ConfirmModal
         open={closingSession !== null}
-        title={`Close “${closingSession?.name ?? ''}”?`}
-        body={
-          closingIsRunning
-            ? 'This ends its running process and removes the session.'
-            : 'This removes the session from the sidebar.'
+        title={
+          removeMode === 'delete'
+            ? `Delete “${closingSession?.name ?? ''}” permanently?`
+            : `Remove “${closingSession?.name ?? ''}”?`
         }
-        confirmLabel="Close"
+        body={
+          removeMode === 'delete'
+            ? 'This permanently deletes the saved session — its recipe is gone for good.'
+            : closingSession?.configured === true
+              ? 'This ends its running process and moves the session to the Inactive List. You can start it again later.'
+              : closingIsRunning
+                ? 'This ends its running process and removes the session.'
+                : 'This removes the session from the sidebar.'
+        }
+        confirmLabel={removeMode === 'delete' ? 'Delete' : 'Remove'}
         onConfirm={confirmClose}
         onCancel={cancelClose}
       />
@@ -599,10 +672,11 @@ export function SessionManager(): React.JSX.Element {
                   },
                 ]
               : []),
-            {
-              label: 'Close',
-              onSelect: () => handleCloseRequest(menuState.id),
-            },
+            // D-03/D-06: a dormant (Inactive-List) target offers permanent Delete; a
+            // live (Working-Area) target offers Remove (kill PTY, keep recipe).
+            menuIsDormant
+              ? { label: 'Delete', onSelect: () => handleDeleteRequest(menuState.id) }
+              : { label: 'Remove', onSelect: () => handleCloseRequest(menuState.id) },
           ]}
         />
       )}
