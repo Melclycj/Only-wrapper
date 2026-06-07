@@ -254,7 +254,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Wave 1** *(blocked on Wave 0)*
 
 - [x] 06.1-02-PLAN.md — SessionView SEAM A (frame-stability tick over term.buffer.active) + SEAM B (MOUSE_RESET / no-reset restart) + extended alt-screen smoke (TERM-09/TERM-12, D-13/D-07)
-- [ ] 06.1-03-PLAN.md — Main-side two-bucket lifecycle: updateProfile configured auto-promotion + configured-self-exit→Inactive / ephemeral→gone + configured-only persistence (TERM-12, D-02/D-05)
+- [x] 06.1-03-PLAN.md — Main-side two-bucket lifecycle: updateProfile configured auto-promotion + configured-self-exit→Inactive / ephemeral→gone + configured-only persistence (TERM-12, D-02/D-05) — `4936b88`, `c568ff1`
 
 **Wave 2** *(blocked on Wave 1 — has checkpoint)*
 
