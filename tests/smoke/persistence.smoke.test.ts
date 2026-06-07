@@ -23,7 +23,53 @@
 /// <reference types="@wdio/electron-service" />
 /// <reference types="@wdio/mocha-framework" />
 
-import { clickAddSession } from './helpers/xterm-driver';
+import { clickAddSession, clickByTestId } from './helpers/xterm-driver';
+
+/** data-session-id of the LAST sidebar row (a freshly-added session is appended). */
+async function lastSessionId(): Promise<string> {
+  return browser.execute(() => {
+    const rows = document.querySelectorAll<HTMLElement>(
+      '.sidebar-row[data-session-id]',
+    );
+    return rows[rows.length - 1]?.getAttribute('data-session-id') ?? '';
+  });
+}
+
+/**
+ * CONFIGURE the session row `id` by editing its name (Plan 06.1-03, D-02): any metadata
+ * edit one-way auto-promotes the session to `configured`, and ONLY configured records
+ * persist (listConfiguredSessions). A bare `+ Add` session is ephemeral and is NOT written
+ * to disk by design, so a test that asserts an added session lands on disk must configure
+ * it first.
+ */
+async function configureRow(id: string, name: string): Promise<void> {
+  await browser.execute((sid: string) => {
+    const row = document.querySelector<HTMLElement>(
+      `.sidebar-row[data-session-id="${sid}"]`,
+    );
+    row?.dispatchEvent(
+      new MouseEvent('dblclick', { bubbles: true, cancelable: true }),
+    );
+  }, id);
+  await browser.waitUntil(
+    async () =>
+      browser.execute(
+        () =>
+          document.querySelector('[data-testid="session-edit-modal"]') !== null,
+      ),
+    { timeout: 5000, timeoutMsg: 'edit modal did not open' },
+  );
+  await browser.execute((v: string) => {
+    const input = document.querySelector<HTMLInputElement>(
+      '[data-testid="edit-name"]',
+    );
+    if (input) {
+      input.value = v;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+  }, name);
+  await clickByTestId('edit-save');
+}
 
 /**
  * Read the persistence store file from the MAIN process: returns its absolute path,
@@ -135,13 +181,16 @@ describe('Persistence smoke (SC1/SC2, D-13, D-10, Pitfall 1)', () => {
     expect(Array.isArray(store.parsed?.sessions)).toBe(true);
   });
 
-  it('a created session profile is written to the store file (SC1/SC2 round-trip)', async () => {
-    // Snapshot the persisted session count, add a session, then assert the store
-    // grew — the profile round-trips to disk (the debounce + signal path is real).
+  it('a configured session profile is written to the store file (SC1/SC2 round-trip, D-02)', async () => {
+    // Snapshot the persisted session count, add + CONFIGURE a session, then assert the
+    // store grew — the profile round-trips to disk (the debounce + signal path is real).
+    // D-02 (Plan 06.1-03): only CONFIGURED sessions persist; a bare +Add session is
+    // ephemeral and intentionally never written, so we edit it to promote it to configured.
     const before = await waitForStore();
     const beforeCount = (before.parsed?.sessions ?? []).length;
 
     await clickAddSession();
+    await configureRow(await lastSessionId(), `PersistCfg_${Date.now()}`);
 
     // Wait for the debounced write to land the new record on disk.
     let after = before;

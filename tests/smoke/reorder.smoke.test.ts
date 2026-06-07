@@ -21,7 +21,43 @@
 /// <reference types="@wdio/electron-service" />
 /// <reference types="@wdio/mocha-framework" />
 
-import { clickAddSession } from './helpers/xterm-driver';
+import { clickAddSession, clickByTestId } from './helpers/xterm-driver';
+
+/**
+ * CONFIGURE the session row `id` by editing its name (Plan 06.1-03, D-02): any metadata
+ * edit one-way auto-promotes the session to `configured`, and ONLY configured records
+ * persist (listConfiguredSessions). A bare `+ Add` session is ephemeral and is NOT written
+ * to disk, so an order persisted for it would never round-trip. We configure each row first
+ * so the reorder persistence is observable on disk.
+ */
+async function configureRow(id: string, name: string): Promise<void> {
+  await browser.execute((sid: string) => {
+    const row = document.querySelector<HTMLElement>(
+      `.sidebar-row[data-session-id="${sid}"]`,
+    );
+    row?.dispatchEvent(
+      new MouseEvent('dblclick', { bubbles: true, cancelable: true }),
+    );
+  }, id);
+  await browser.waitUntil(
+    async () =>
+      browser.execute(
+        () =>
+          document.querySelector('[data-testid="session-edit-modal"]') !== null,
+      ),
+    { timeout: 5000, timeoutMsg: 'edit modal did not open' },
+  );
+  await browser.execute((v: string) => {
+    const input = document.querySelector<HTMLInputElement>(
+      '[data-testid="edit-name"]',
+    );
+    if (input) {
+      input.value = v;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+  }, name);
+  await clickByTestId('edit-save');
+}
 
 /**
  * Read the persistence store file from the MAIN process (mirrors persistence.smoke):
@@ -110,6 +146,13 @@ describe('Reorder persistence smoke (NAV-04 / SC3 / D-08, D-13)', () => {
         },
       );
       ids = await rowIdsInDomOrder();
+    }
+
+    // D-02: only CONFIGURED sessions persist. Configure every row we are about to reorder
+    // (edit its name → configured=true) so the persisted order is observable on disk; a
+    // bare ephemeral +Add session is intentionally never written (Plan 06.1-03).
+    for (let i = 0; i < ids.length; i++) {
+      await configureRow(ids[i], `ReorderCfg_${i}_${Date.now()}`);
     }
 
     // Build a NEW dense order: move the LAST row to the front (the canonical "drag the
