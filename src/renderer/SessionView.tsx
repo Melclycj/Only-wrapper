@@ -29,7 +29,19 @@
 import { useEffect, useRef } from 'react';
 import type { LogicalId } from '../shared/types';
 import { createWatermark } from '../shared/flow-control';
-import { type AgentState, IDLE_MS, classifyIdle } from '../shared/agent-state';
+import { type AgentState, classify } from '../shared/agent-state';
+
+// TEMPORARY BRIDGE (Plan 06.1-01 → 06.1-02): Plan 01 removed the output-silence
+// `IDLE_MS`/`classifyIdle` exports and replaced them with the frame-stability
+// `classify(lines: string[])`. The full SEAM A rewrite (a setInterval tick over
+// `term.buffer.active`) lands in Plan 06.1-02. Until then this thin local shim keeps
+// SessionView compiling and functional against the NEW classifier: it keeps the
+// existing output-silence debounce but classifies the bounded tail by splitting it
+// into lines and delegating to the new pure `classify()`.
+// REMOVE in Plan 06.1-02 when SEAM A is rewritten.
+const IDLE_MS = 800;
+const classifyIdle = (tail: string): AgentState =>
+  classify(tail.split(/\r?\n/));
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
