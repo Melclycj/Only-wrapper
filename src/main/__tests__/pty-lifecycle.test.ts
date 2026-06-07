@@ -260,16 +260,14 @@ describe('PtyManager lifecycle (SC3, TERM-07)', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// RED scaffolds — the D-05 / D-02 two-bucket lifecycle (Plan 06.1-03 turns GREEN).
+// The D-05 / D-02 two-bucket lifecycle (implemented in Plan 06.1-03 — now GREEN).
 //
-// These pin the TARGET behavior of the new lifecycle so Plan 03 has an executable
-// contract. They are honest RED (they fail with an assertion against the CURRENT
-// onExit, which keeps a self-exited record live-but-dead in this.sessions instead
-// of dropping it to dormant / deleting it). DO NOT mark green or delete until Plan
-// 06.1-03 implements the self-exit → Inactive (configured) / gone (ephemeral) split
-// and listConfiguredSessions().
+// onExit routes a configured self-exit → Inactive List (dormant 'not_started',
+// order preserved), an ephemeral self-exit → gone, and leaves a user-stopped
+// restart precursor in place. updateProfile auto-promotes to configured (D-02) and
+// listConfiguredSessions() filters the persisted snapshot to configured records.
 // ─────────────────────────────────────────────────────────────────────────────
-describe('two-bucket self-exit lifecycle (D-05 / D-02) — RED until Plan 06.1-03', () => {
+describe('two-bucket self-exit lifecycle (D-05 / D-02)', () => {
   beforeEach(() => {
     spawnCalls.length = 0;
     spawnedChildren.length = 0;
@@ -285,7 +283,7 @@ describe('two-bucket self-exit lifecycle (D-05 / D-02) — RED until Plan 06.1-0
 
   const liveOpts: PtyCreateOptions = { cols: 80, rows: 24, cwd: '/tmp/project' };
 
-  it('configured self-exit → Inactive List (not_started), removed from the Working Area — RED until Plan 06.1-03', () => {
+  it('configured self-exit → Inactive List (not_started), removed from the Working Area', () => {
     const mgr = new PtyManager();
     mgr.registerIpc(fakeWindow());
     const { id } = mgr.create(liveOpts);
@@ -304,9 +302,33 @@ describe('two-bucket self-exit lifecycle (D-05 / D-02) — RED until Plan 06.1-0
     // dormant, restartable not_started entry (NOT the current live-but-dead 'exited').
     expect(rec).toBeDefined();
     expect(rec?.status).toBe('not_started');
+    // RESEARCH A2: the moved record PRESERVES its `order` so it reappears in the
+    // same sidebar position (the first/only session here → order 0).
+    expect(rec?.order).toBe(0);
+    // The pid is dropped (the OS process is gone — it is a dormant recipe now).
+    expect(rec?.ptyPid).toBeUndefined();
   });
 
-  it('ephemeral self-exit → gone (absent from listSessions) — RED until Plan 06.1-03', () => {
+  it('a user-stopped (restart precursor) is NOT moved to dormant — stays restartable in place (D-05)', () => {
+    const mgr = new PtyManager();
+    mgr.registerIpc(fakeWindow());
+    const { id } = mgr.create(liveOpts);
+    const child = spawnedChildren[0];
+
+    // Configure it, then USER-stop it (userStopped → 'stopped', NOT a self-exit).
+    mgr.updateProfile(id, { name: 'Parlour Claude RC' });
+    mgr.stop(id);
+    child._fireExit({ exitCode: 0 }); // userStopped=true → deriveStatus → 'stopped'
+
+    // A user stop is the restart precursor: the record must STAY as 'stopped' in the
+    // live map (so restart() can respawn under the same logicalId), NOT move to the
+    // Inactive List as 'not_started'.
+    const rec = mgr.listSessions().find((s) => s.logicalId === id);
+    expect(rec).toBeDefined();
+    expect(rec?.status).toBe('stopped');
+  });
+
+  it('ephemeral self-exit → gone (absent from listSessions)', () => {
     const mgr = new PtyManager();
     mgr.registerIpc(fakeWindow());
     // No updateProfile call → the session stays ephemeral (configured undefined).
@@ -321,7 +343,7 @@ describe('two-bucket self-exit lifecycle (D-05 / D-02) — RED until Plan 06.1-0
     expect(sessions.some((s) => s.logicalId === id)).toBe(false);
   });
 
-  it('listConfiguredSessions() returns only configured===true records (D-02) — RED until Plan 06.1-03', () => {
+  it('listConfiguredSessions() returns only configured===true records (D-02)', () => {
     const mgr = new PtyManager();
     mgr.registerIpc(fakeWindow());
 

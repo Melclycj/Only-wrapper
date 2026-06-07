@@ -474,8 +474,9 @@ export class PtyManager {
         exitCode,
         userStopped: s?.userStopped ?? false,
       });
-      // KEEP the SessionRecord (status updated) so the row stays restartable and
-      // listSessions() still returns it; drop ONLY the live pty handle (Pitfall 5).
+      // Update the kept record's status + drop the live pty handle (Pitfall 5). The
+      // D-05 two-bucket routing below decides whether the record STAYS in
+      // this.sessions (a user stop/restart precursor) or MOVES/vanishes (a self-exit).
       if (s) {
         s.alive = false;
         s.status = status;
@@ -499,8 +500,42 @@ export class PtyManager {
         });
       }
       this.send(PTY_CHANNELS.exit, { id, exitCode });
-      // The record's status/ptyPid changed → persist the new (dormant-on-restart)
-      // shape so a quit right after an exit restores the correct status (D-13).
+
+      // D-05 two-bucket self-exit routing. A `selfExit` is a process that ended on
+      // its OWN (not a user-initiated stop/restart) AFTER it had become live — i.e.
+      // an abnormal/clean exit that was NOT userStopped. The distinguishing signal is
+      // `userStopped`: a user Stop/Restart precursor sets it true (→ 'stopped') and
+      // must be LEFT in this.sessions so the restart path can respawn under the same
+      // logicalId (existing behavior, unchanged). A self-exit instead leaves the
+      // Working Area:
+      //   - configured (the user deliberately kept this session — D-02): MOVE the
+      //     record from this.sessions → this.dormantRecords coerced to 'not_started'
+      //     with the pid dropped and `order` PRESERVED (RESEARCH A2), so it reappears
+      //     in the Inactive List at the same sidebar position — "a stopped session is
+      //     a recipe, not a frozen process" surfaced as the dormant-restore model.
+      //   - ephemeral (a throwaway +New that was never edited): DELETE it from
+      //     this.sessions entirely — it is gone, never persisted, no Inactive entry.
+      // A spawn-failure (pid -1, the synchronous SC2 paths) returns from create()
+      // BEFORE this listener is wired and is never in this.sessions, so it never
+      // reaches this routing — it stays an error broadcast (pty-spawn-error.test.ts).
+      const selfExit =
+        !(s?.userStopped) && (status === 'exited' || status === 'error');
+      if (s && selfExit) {
+        if (s.record.configured === true) {
+          // Configured self-exit → Inactive List (dormant not_started, order kept).
+          this.sessions.delete(id);
+          this.dormantRecords.set(id, {
+            ...s.record,
+            status: 'not_started',
+            ptyPid: undefined,
+          });
+        } else {
+          // Ephemeral self-exit → gone (no persistence, no Inactive entry).
+          this.sessions.delete(id);
+        }
+      }
+      // The record's status/ptyPid changed (and may have moved buckets) → persist the
+      // new shape so a quit right after an exit restores the correct state (D-13).
       this.signalStore();
     });
 
