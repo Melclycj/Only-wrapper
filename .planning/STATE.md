@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 06-01-foundation-PLAN.md
-last_updated: "2026-06-07T02:26:47.745Z"
-last_activity: 2026-06-07 -- Phase 06 Plan 01 (foundation) complete
+stopped_at: Completed 06-03-agent-state-layer-PLAN.md
+last_updated: "2026-06-07T02:32:46.000Z"
+last_activity: 2026-06-07 -- Phase 06 Plan 03 (agent-state layer) complete
 progress:
   total_phases: 9
   completed_phases: 6
   total_plans: 25
-  completed_plans: 23
-  percent: 67
+  completed_plans: 24
+  percent: 70
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-06-03)
 ## Current Position
 
 Phase: 06 (robustness-flow-control-polish) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
-Last activity: 2026-06-07 -- Phase 06 Plan 01 (foundation) complete
+Last activity: 2026-06-07 -- Phase 06 Plan 03 (agent-state layer) complete
 
-Progress: [█████░░░░░░░░░░░░░░░░] 25% (Phase 06 plans: 1/4)
+Progress: [███████████████░░░░░] 75% (Phase 06 plans: 3/4)
 
 ## Performance Metrics
 
@@ -78,6 +78,7 @@ Progress: [█████░░░░░░░░░░░░░░░░] 25% 
 | Phase 05.1 P03 | ~20min | 3 tasks | 6 files |
 | Phase 06 P01 | ~12min | 3 tasks | 16 files |
 | Phase 06 P02 | ~18min | 2 tasks | 12 files |
+| Phase 06 P03 | ~20min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -136,6 +137,8 @@ Recent decisions affecting current work:
 - [Phase 05.1-03 HUMAN-VERIFY]: Canonical 🛋️ Parlour Claude RC scenario APPROVED 2026-06-06 — all 4 CONFIRMs passed (clean auto-run no garble/visible-nonce, ArrowUp history recall, restart re-runs after separator, empty command → bare shell). 3 session edit/lifecycle UX items surfaced but are OUT OF SCOPE for TERM-05 (Phase 03/04 concerns) — captured as todos in .planning/todos/pending/ (edit-modal cwd/startup prefill, folder picker, ▶ Start discoverability)
 - [Phase ?]: [Phase 06-02]: SC2 spawn-error vertical slice — create() pre-validates the RESOLVED cwd with isValidCwd verbatim (D-01); an explicit-but-missing cwd (opts OR stored record) errors 'Working directory not found: <path>' and NEVER silently spawns in ~ (D-02), node-pty untouched. try/catch covers the rare sync EACCES; the async fork-then-die abnormal exit (Pitfall 1, macOS) gets a generic 'shell exited immediately' notice (D-05). notice sanitized of control chars (WR-04); updateProfile trims startupCommand at persist (WR-05); dead stripProbeEcho/scrub removed (WR-01/IN-01). Renderer: IdleCard error branch (specific msg + Edit/Retry, error-card-edit/retry testids), per-row errorMessage from the notice (renderer-only SessionRow, no bridge change — Open Q2), error sessions render the IdleCard not a SessionView, failed spawn (pid -1) skips the optimistic running flip, handleStartNoCmd threads skipStartupCommand (D-14, no new key), Browse… → pickDirectory, edit-prefill via listSessions re-read after add/save (Open Q3). 181 unit tests GREEN, tsc clean, package builds
 
+- [Phase 06-03]: SC4/TERM-09 agent-state presentation OVERLAY — AGENT_STYLE ramp + presentation(status, agent?) resolver applies the overlay ONLY when status==='running' (D-06/D-07); amber oklch(0.66 0.15 60) reserved for 'waiting' in EXACTLY one place. Renderer-side idle-timer detector in SessionView off the EXISTING onPtyData stream (zero IPC): bounded ~4 KB rolling tail (slice(-4096), T-06-09 ReDoS bound), single-slot timer cleared-before-re-arm AND in effect cleanup (Pitfall 6/T-06-10), gated on running (agentRunning flipped by the status handler), change-only emission via onAgentStateRef (so the id-keyed mount effect never re-binds/tears down the xterm). SessionManager: renderer-only per-row agentState beside errorMessage (never persisted, never IPC — D-06), set only while running, cleared on transition away (D-10). Sidebar row badge/dot + collapsed-rail dot + tooltip and IdentityHeader badge all route through presentation() — no direct STATUS_STYLE[] badge lookups. 190 unit tests GREEN, tsc clean, package builds, eslint clean
+
 ### Pending Todos
 
 None yet.
@@ -159,6 +162,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-07T02:26:09.366Z
-Stopped at: Completed 06-01-foundation-PLAN.md
+Last session: 2026-06-07T02:32:46.000Z
+Stopped at: Completed 06-03-agent-state-layer-PLAN.md
 Resume file: None
