@@ -240,6 +240,17 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [ ] 06-04-header-controls-reset-PLAN.md — SC5+SC3 slice: header Clear/Restart/Start cluster + Cmd+K chord + alt-screen reset (restart \x1b[?1049l, abnormal-exit reset) + SC1/SC3/SC5 E2E + human-verify + Nyquist sign-off (TERM-12/TERM-09)
 
+### Phase 06.1: Terminal lifecycle state machine and agent-state detection redesign (INSERTED)
+
+**Goal:** [Urgent work - to be planned]
+**Requirements**: TBD
+**Depends on:** Phase 6
+**Plans:** 0 plans
+
+Plans:
+
+- [ ] TBD (run /gsd-plan-phase 06.1 to break down)
+
 ### Phase 7: Terminal Search + Scrollback Config
 
 **Goal:** Users can search session scrollback with Ctrl+F and configure the scrollback buffer size to suit their workflow — neither feature requires architecture changes, both are additive to the working terminal.
