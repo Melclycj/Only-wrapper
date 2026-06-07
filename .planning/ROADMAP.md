@@ -245,7 +245,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Goal:** The terminal lifecycle is a clean two-bucket model (a Working Area of live sessions + an Inactive List of dormant configured sessions, no "Stop" verb), agent-state detection reads "Waiting for you" from frame-stability (not output-silence) so `claude --rc` is correctly amber on a confirmation prompt and never stuck blue, and the Core-Value scroll/`[%30/]` fidelity regression after alt-screen apps is fixed.
 **Requirements:** TERM-09, TERM-12
 **Depends on:** Phase 6
-**Plans:** 1/4 plans complete
+**Plans:** 2/4 plans executed
 
 **Wave 0**
 
@@ -253,7 +253,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 1** *(blocked on Wave 0)*
 
-- [ ] 06.1-02-PLAN.md — SessionView SEAM A (frame-stability tick over term.buffer.active) + SEAM B (MOUSE_RESET / no-reset restart) + extended alt-screen smoke (TERM-09/TERM-12, D-13/D-07)
+- [x] 06.1-02-PLAN.md — SessionView SEAM A (frame-stability tick over term.buffer.active) + SEAM B (MOUSE_RESET / no-reset restart) + extended alt-screen smoke (TERM-09/TERM-12, D-13/D-07)
 - [ ] 06.1-03-PLAN.md — Main-side two-bucket lifecycle: updateProfile configured auto-promotion + configured-self-exit→Inactive / ephemeral→gone + configured-only persistence (TERM-12, D-02/D-05)
 
 **Wave 2** *(blocked on Wave 1 — has checkpoint)*

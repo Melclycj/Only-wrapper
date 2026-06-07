@@ -4,13 +4,13 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Phase 6.1 context gathered
-last_updated: "2026-06-07T14:51:45.490Z"
-last_activity: 2026-06-07 -- Phase 06.1 execution started
+last_updated: "2026-06-07T15:41:54.347Z"
+last_activity: 2026-06-08 -- Completed 06.1-01-PLAN.md (Wave 0 foundation)
 progress:
   total_phases: 10
   completed_phases: 6
   total_plans: 29
-  completed_plans: 24
+  completed_plans: 26
   percent: 60
 ---
 
@@ -26,8 +26,8 @@ See: .planning/PROJECT.md (updated 2026-06-03)
 ## Current Position
 
 Phase: 06.1 (terminal-lifecycle-state-machine-and-agent-state-detection-r) — EXECUTING
-Plan: 2 of 4
-Status: Executing Phase 06.1
+Plan: 3 of 4
+Status: Ready to execute
 Last activity: 2026-06-08 -- Completed 06.1-01-PLAN.md (Wave 0 foundation)
 
 Progress: [█████░░░░░░░░░░░░░░░░] 25% (Phase 06.1 plans: 1/4)
@@ -80,6 +80,7 @@ Progress: [█████░░░░░░░░░░░░░░░░] 25% 
 | Phase 06 P02 | ~18min | 2 tasks | 12 files |
 | Phase 06 P03 | ~20min | 3 tasks | 5 files |
 | Phase 06.1 P01 | ~30min | 3 tasks | 9 files |
+| Phase 06.1 P02 | 85 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -140,6 +141,8 @@ Recent decisions affecting current work:
 - [Phase ?]: [Phase 06-02]: SC2 spawn-error vertical slice — create() pre-validates the RESOLVED cwd with isValidCwd verbatim (D-01); an explicit-but-missing cwd (opts OR stored record) errors 'Working directory not found: <path>' and NEVER silently spawns in ~ (D-02), node-pty untouched. try/catch covers the rare sync EACCES; the async fork-then-die abnormal exit (Pitfall 1, macOS) gets a generic 'shell exited immediately' notice (D-05). notice sanitized of control chars (WR-04); updateProfile trims startupCommand at persist (WR-05); dead stripProbeEcho/scrub removed (WR-01/IN-01). Renderer: IdleCard error branch (specific msg + Edit/Retry, error-card-edit/retry testids), per-row errorMessage from the notice (renderer-only SessionRow, no bridge change — Open Q2), error sessions render the IdleCard not a SessionView, failed spawn (pid -1) skips the optimistic running flip, handleStartNoCmd threads skipStartupCommand (D-14, no new key), Browse… → pickDirectory, edit-prefill via listSessions re-read after add/save (Open Q3). 181 unit tests GREEN, tsc clean, package builds
 
 - [Phase 06-03]: SC4/TERM-09 agent-state presentation OVERLAY — AGENT_STYLE ramp + presentation(status, agent?) resolver applies the overlay ONLY when status==='running' (D-06/D-07); amber oklch(0.66 0.15 60) reserved for 'waiting' in EXACTLY one place. Renderer-side idle-timer detector in SessionView off the EXISTING onPtyData stream (zero IPC): bounded ~4 KB rolling tail (slice(-4096), T-06-09 ReDoS bound), single-slot timer cleared-before-re-arm AND in effect cleanup (Pitfall 6/T-06-10), gated on running (agentRunning flipped by the status handler), change-only emission via onAgentStateRef (so the id-keyed mount effect never re-binds/tears down the xterm). SessionManager: renderer-only per-row agentState beside errorMessage (never persisted, never IPC — D-06), set only while running, cleared on transition away (D-10). Sidebar row badge/dot + collapsed-rail dot + tooltip and IdentityHeader badge all route through presentation() — no direct STATUS_STYLE[] badge lookups. 190 unit tests GREEN, tsc clean, package builds, eslint clean
+- [Phase ?]: 06.1-02: MOUSE_RESET fires on onPtyExit (the reliable death signal) + unconditionally on the running transition (idempotent), NOT gated on hasRunBeforeRef — the initial/first-restart running broadcast races ahead of the status subscription, so gating would skip the user's first restart and leave the scroll-wheel hot (D-13).
+- [Phase ?]: 06.1-02: abnormal-exit is scrollback-preserving (MOUSE_RESET + ALT_SCREEN_EXIT, no term.reset()/RIS) per RESEARCH Open Q1 — flagged for human-verify (blank-vs-preserve crash frame).
 
 ### Pending Todos
 
@@ -164,6 +167,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-07T12:57:41.569Z
+Last session: 2026-06-07T15:41:35.796Z
 Stopped at: Phase 6.1 context gathered
 Resume file: .planning/phases/06.1-terminal-lifecycle-state-machine-and-agent-state-detection-r/06.1-CONTEXT.md
