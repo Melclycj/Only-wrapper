@@ -159,6 +159,20 @@ export function SessionManager(): React.JSX.Element {
     })();
   }, []);
 
+  // ── Clear control (SC5/TERM-12 — D-12): clear the active session's kept-alive
+  //    xterm via the handle SessionView registers at window.__sessionTerms[id], calling
+  //    term.clear() — drops scrollback, PRESERVES the current prompt line (iTerm/VSCode
+  //    Cmd+K semantics). This is a PURE client-side xterm op: it NEVER injects
+  //    `clear`/Ctrl+L/\x0c into the PTY (no shell-history pollution, consistent across
+  //    shells — D-12 anti-pattern avoided). No-op when the id has no live term (a
+  //    dormant/errored session whose SessionView is unmounted has no registered term). ──
+  const handleClear = useCallback((id: LogicalId) => {
+    const w = window as unknown as {
+      __sessionTerms?: Record<string, { clear: () => void }>;
+    };
+    w.__sessionTerms?.[id]?.clear();
+  }, []);
+
   // ── Start control (D-03/D-11, PERS-02): promote a DORMANT (not_started) restored
   //    session to live. We issue window.api.ptyCreate({ id }) for the dormant id —
   //    main promotes it from the dormantRecords map (Plan 05-02 create({id})), spawning
@@ -394,12 +408,25 @@ export function SessionManager(): React.JSX.Element {
   //    SessionView activate effect hands WebGL+focus to the new pane, the previously
   //    active session keeps running, and the identity header (which reads the active
   //    record by activeId) updates immediately. D-14: SWITCH intents only — no new/close. ──
+  // The Clear chord (Cmd+K mac / Ctrl+Shift+K win — D-13) rides this SAME channel as a
+  // { kind: 'clear' } SwitchIntent variant (Plan 01 — no new bridge key, EXPECTED_API_KEYS
+  // stays 19). Branch clear-vs-switch here: a 'clear' intent clears the LIVE active
+  // session (read via the setActiveId functional updater so the effect stays bound once
+  // and never reads a stale activeId) and does NOT change the active id; every other
+  // intent resolves the switch as before.
   useEffect(() => {
     const off = window.api.onSwitchSession((intent) => {
+      if (intent.kind === 'clear') {
+        setActiveId((cur) => {
+          if (cur !== null) handleClear(cur);
+          return cur; // Clear never switches the active session.
+        });
+        return;
+      }
       setActiveId((cur) => resolveSwitch(sessionsRef.current, cur, intent));
     });
     return off;
-  }, []);
+  }, [handleClear]);
 
   // NOTE (05-03): the old reconcile poll is GONE. Main's persisted snapshot is taken
   // once on boot (above); a restored session lands as a dormant row that the user
@@ -510,6 +537,9 @@ export function SessionManager(): React.JSX.Element {
             <IdentityHeader
               session={activeRecord}
               agentState={activeRecord?.agentState}
+              onClear={handleClear}
+              onRestart={handleRestart}
+              onStart={handleStart}
             />
             <div className="viewport-stack">
               {startedSessions.map((s) => (

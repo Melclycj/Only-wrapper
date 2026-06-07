@@ -651,6 +651,89 @@ body {
   font-weight: 600;
 }
 
+/* ── Header control cluster (SC5 / TERM-12 — D-11) ──────────────────────────────
+ * Right-aligned cluster after the badge: Clear (always) · Restart (running) /
+ * Start ▶ (not running). margin-left:auto pins it to the far edge; gap 4px matches
+ * the Sidebar .row-controls cluster. Unlike the sidebar cluster these controls are
+ * ALWAYS visible (the header is the always-present active-session control surface,
+ * not a hover-reveal row). */
+.identity-header .header-controls {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+/* Clear is a text-labelled button (discoverable in the header where space allows —
+ * UI-SPEC §Interaction 3): 8px 16px pad, radius 10px, 13px/700, neutral --ink-soft
+ * warming to --ink/--bg-sunk on hover. Matches the .modal-btn footprint. */
+.identity-header .header-control-clear {
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ink-soft);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.identity-header .header-control-clear:hover {
+  background: var(--bg-sunk);
+  color: var(--ink);
+}
+
+.identity-header .header-control-clear:focus-visible {
+  outline: 2px solid oklch(0.62 0.14 248);
+  outline-offset: 1px;
+}
+
+/* The Restart (↻) / Start (▶) glyph buttons reuse the Sidebar .row-control footprint
+ * (24×24, radius 7px, neutral --ink-soft). The Sidebar rules are scoped to
+ * .sidebar-row, so the header re-states the same shape here. */
+.identity-header .row-control {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ink-soft);
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.identity-header .row-control:hover {
+  background: var(--bg-sunk);
+  color: var(--ink);
+}
+
+.identity-header .row-control:focus-visible {
+  outline: 2px solid oklch(0.62 0.14 248);
+  outline-offset: 1px;
+}
+
+/* Start (▶) reads in the running-blue on hover/focus — the primary "go" affordance
+ * (UI-SPEC §Color), mirroring the Sidebar .row-control-start treatment. */
+.identity-header .row-control-start:hover {
+  border-color: oklch(0.62 0.14 248);
+  background: oklch(0.62 0.14 248 / 0.08);
+  color: oklch(0.62 0.14 248);
+}
+
+.identity-header .row-control-start:focus-visible {
+  outline: 2px solid oklch(0.62 0.14 248);
+  outline-offset: 1px;
+}
+
 /* ── Session edit form (D-04) — fields + the "Applies on restart" group ───────── */
 
 .modal-dialog-edit {
