@@ -496,19 +496,22 @@ ipcMain.handle('dialog:pick-directory', async () => {
 | A3 | The `pty-roundtrip.smoke.test.ts` drives the app generically (via `ensureSession`/`window.__term`) and does not import `TerminalPane`, so deleting `TerminalPane.tsx` won't break it | Runtime State Inventory | If it imports TerminalPane directly, deletion breaks the build; grep before delete (the grep this session showed only a comment reference, not an import). |
 | A4 | Reusing `SwitchIntent` with a `{ kind: 'clear' }` variant for the Clear chord keeps `EXPECTED_API_KEYS` at 19 (only `pickDirectory` new) | Pattern 4 / Bridge note | If the planner prefers a dedicated `onSessionClear` key, the guard test + EXPECTED_API_KEYS go to 20 — both are valid; this is a design choice, not a correctness risk. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **SC3 reset mechanism: full `term.reset()` vs surgical `\x1b[?1049l` on the RESTART path (the SC3↔D-03 scrollback tension).**
    - What we know: `reset()` exits alt-screen but wipes scrollback; `\x1b[?1049l` exits alt-screen and preserves the primary buffer. Phase 3 D-03 deliberately preserves scrollback across restart.
    - What's unclear: whether `\x1b[?1049l` alone reliably clears a killed-vim frame, or whether residual cursor/mode state needs more.
    - Recommendation: use `\x1b[?1049l` on the restart path (preserve scrollback, satisfy D-03) and full `term.reset()` on the abnormal-exit path (frame is dead, scrollback-of-a-dead-process is less precious). Verify both in E2E. Flag to the planner as a checkpoint:human-verify item.
+   - **RESOLVED:** Adopted in Plan 06-04/T2 (`\x1b[?1049l` on restart, `term.reset()` on abnormal exit); empirical confirmation gated to the Plan 06-04/T4 checkpoint:human-verify task.
 
 2. **Where does the SC2 error message live in renderer state so BOTH the sidebar tooltip (D-03) and the error card (D-03/D-04) show it?**
    - What we know: `onPtyStatus` carries `notice`; SessionManager currently drops it.
    - Recommendation: store a per-session `errorMessage?: string` in SessionManager's row state (renderer-only, no type/bridge change), set from the error-status `notice`, passed to both Sidebar (tooltip) and IdleCard (card body). Planner to confirm the row-state shape.
+   - **RESOLVED:** Adopted in Plan 06-02/T2 — per-session `errorMessage?` row state set from the error-status `notice`, fed to both the Sidebar tooltip and the IdleCard error card. No type/bridge change.
 
 3. **Edit-prefill hydration timing.** `session-add.ts` mints `cwd: ''`; main resolves the real cwd. After spawn (onAdd) and after `onSaveProfile`, the renderer row's `cwd`/`shell` are stale.
    - Recommendation: after `onAdd`'s spawn resolves AND after `onSaveProfile`, re-read `window.api.listSessions()` and merge the authoritative `cwd`/`shell`/`startupCommand` into the matching row (main is source of truth; no new bridge key — `listSessions` exists). Planner to confirm this doesn't disturb the optimistic status updates.
+   - **RESOLVED:** Adopted in Plan 06-02/T2 — re-read `window.api.listSessions()` after `onAdd` spawn resolves and after `onSaveProfile`, merging authoritative `cwd`/`shell`/`startupCommand`. No new bridge key.
 
 ## Environment Availability
 
