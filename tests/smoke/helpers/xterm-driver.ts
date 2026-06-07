@@ -340,3 +340,89 @@ export async function readIdentityHeader(): Promise<string> {
     return (el?.textContent ?? '').trim();
   });
 }
+
+/**
+ * Drive the global Clear chord (Cmd+K on macOS / Ctrl+Shift+K on Windows — D-13) so it
+ * reaches the MAIN-process `before-input-event` interceptor (matchClearKey → {kind:'clear'}
+ * on the EXISTING 'session:switch' channel). Same native path as pressSwitchChord: WDIO's
+ * `browser.keys` does NOT traverse Electron's native before-input-event pipeline (A1
+ * empirical finding), so we drive it via `webContents.sendInputEvent`. macOS uses meta+K;
+ * Windows uses control+shift+K (plain Ctrl+K is reserved for readline kill-line, D-13).
+ */
+export async function pressClearChord(): Promise<void> {
+  const modifiers =
+    process.platform === 'darwin' ? ['meta'] : ['control', 'shift'];
+  await browser.electron.execute(
+    (electron, mods: string[]) => {
+      const win = electron.BrowserWindow.getAllWindows()[0];
+      win?.webContents.sendInputEvent({
+        type: 'keyDown',
+        keyCode: 'k',
+        modifiers: mods as Electron.InputEvent['modifiers'],
+      } as Electron.InputEvent);
+    },
+    modifiers,
+  );
+}
+
+/** Click the element carrying `data-testid="<testid>"` (e.g. a header control button). */
+export async function clickByTestId(testid: string): Promise<void> {
+  await browser.execute((tid: string) => {
+    const el = document.querySelector<HTMLElement>(`[data-testid="${tid}"]`);
+    el?.click();
+  }, testid);
+}
+
+/** Whether an element carrying `data-testid="<testid>"` is present in the DOM. */
+export async function hasTestId(testid: string): Promise<boolean> {
+  return browser.execute(
+    (tid: string) =>
+      document.querySelector(`[data-testid="${tid}"]`) !== null,
+    testid,
+  );
+}
+
+/**
+ * The ptyPid of the session identified by `id`, read from main's source of truth via the
+ * renderer bridge `window.api.listSessions()`. Returns -1 when there is no match. Used by
+ * the Restart smoke to assert a NEW pid (the process re-spawned) under the same logicalId.
+ */
+export async function ptyPidOf(id: string): Promise<number> {
+  return browser.execute(async (sid: string) => {
+    const w = window as unknown as {
+      api?: {
+        listSessions: () => Promise<
+          { logicalId: string; ptyPid?: number }[]
+        >;
+      };
+    };
+    const list = (await w.api?.listSessions()) ?? [];
+    return list.find((r) => r.logicalId === sid)?.ptyPid ?? -1;
+  }, id);
+}
+
+/** data-session-id of the currently-active sidebar row (`.sidebar-row.active`). */
+export async function activeSessionId(): Promise<string> {
+  return browser.execute(() => {
+    const row = document.querySelector<HTMLElement>(
+      '.sidebar-row.active[data-session-id]',
+    );
+    return row?.getAttribute('data-session-id') ?? '';
+  });
+}
+
+/**
+ * Kill the OS process behind a given ptyPid abnormally (SIGKILL) from the MAIN process,
+ * simulating a crashed / externally-killed session (e.g. a killed vim). This is NOT a
+ * user Close (which would unmount the SessionView): the live SessionView stays mounted
+ * and receives onPtyExit + an 'exited'/'error' status — the SC3 abnormal-exit seam.
+ */
+export async function killProcess(pid: number): Promise<void> {
+  await browser.electron.execute((_electron, p: number) => {
+    try {
+      process.kill(p, 'SIGKILL');
+    } catch {
+      // Already gone — fine; the exit path will have fired.
+    }
+  }, pid);
+}

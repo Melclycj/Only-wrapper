@@ -268,17 +268,15 @@ export function SessionView({
       }, IDLE_MS);
     });
 
-    // 6. Passive exit notice (D-04) — no auto-restart. SC3/D-15 (abnormal-exit seam):
-    //    the only onPtyExit a LIVE SessionView sees is a self-exit or an abnormal exit
-    //    (a user Close unmounts the view; a user Restart goes through the restart seam in
-    //    the status handler below) — in every such case the process is gone and a CLEAN
-    //    frame is the correct end state. So full term.reset() (RIS \x1bc) FIRST — this
-    //    exits any alt-screen a killed vim/less left behind so a frozen frame never
-    //    survives — THEN write the exit notice on the clean primary screen. Unlike the
-    //    restart seam (which preserves scrollback via \x1b[?1049l), here the frame is
-    //    genuinely dead so dropping its scrollback is acceptable (RESEARCH Pitfall 4 / Q1).
+    // 6. Passive exit notice (D-04) — no auto-restart. The abnormal-exit frame RESET
+    //    (SC3/D-15) is NOT done here: a user Restart kills-then-respawns the PTY, so a
+    //    LIVE SessionView sees onPtyExit on EVERY restart too — resetting here would wipe
+    //    the scrollback the restart seam is meant to preserve (D-03). The reset is instead
+    //    gated in the status handler below on a genuinely-abnormal status ('exited'/'error',
+    //    NOT 'stopped' — a user stop/restart precursor). Main broadcasts the status BEFORE
+    //    this exit event, so on an abnormal exit the frame is already RIS-cleared when this
+    //    [process exited] notice paints on the clean primary screen.
     const offExit = window.api.onPtyExit(id, () => {
-      term.reset();
       term.write('\r\n\x1b[2m[process exited]\x1b[0m\r\n');
     });
 
@@ -322,6 +320,17 @@ export function SessionView({
         // Open the agent-state detector gate (D-07): classify only while running.
         agentRunning = true;
       } else {
+        // SC3/D-15 (abnormal-exit seam): a genuinely-dead frame ('exited'/'error', i.e.
+        // a killed vim/less or a crash — NOT 'stopped', which precedes a user restart and
+        // must keep its scrollback for the restart seam's \x1b[?1049l preservation) gets a
+        // full term.reset() (RIS \x1bc). This exits any alt-screen the dead process left
+        // active so a frozen frame never survives the reopen. Main broadcasts this status
+        // BEFORE the onPtyExit event, so the [process exited] notice paints on the clean
+        // primary screen. Resetting here (not in onPtyExit) is what lets a user Restart —
+        // whose stop emits 'stopped' — preserve scrollback (RESEARCH Pitfall 4 / Open Q1).
+        if (p.status === 'exited' || p.status === 'error') {
+          term.reset();
+        }
         // Leaving 'running' (stopped/exited/error): close the gate, cancel any pending
         // classification, and reset the change-tracker so the overlay does not linger
         // (D-07/D-10 — SessionManager also clears its per-row agentState on this

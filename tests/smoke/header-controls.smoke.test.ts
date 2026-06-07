@@ -1,23 +1,15 @@
-// Wave 0 RED smoke scaffold — SC5 header Clear/Restart controls + Clear chord
-// (filled GREEN in Plan 06-04).
+// SC5 / TERM-12 — header Clear/Restart controls + the Clear chord (Plan 06-04, D-11..D-13).
 //
-// TARGET BEHAVIOR (Plan 06-04 fills this in):
-//   - The session identity header exposes a Clear control and a Restart control.
-//   - Clear wipes the visible terminal buffer (term.clear / reset) WITHOUT killing the
-//     PTY (the running process and its scrollback-of-record survive logically).
-//   - The Clear chord (Cmd+K on macOS / Ctrl+Shift+K on Windows) is intercepted MAIN-
-//     side in before-input-event (matchClearKey → {kind:'clear'} on the EXISTING
-//     'session:switch' channel) so it never reaches xterm/PTY, and produces the same
-//     Clear effect as the header control.
-//   - Restart re-spawns the session under the same logicalId (mirrors the context-menu
-//     Restart) and renders the `— restarted —` separator.
-//
-// This is a `describe.skip` stub so it RESOLVES under the WDIO/mocha runner WITHOUT
-// failing the suite (skipped specs are pending, not failing). It imports the canonical
-// xterm-driver helpers so the module graph is wired and Plan 06-04's executor inherits
-// a compiling contract to flip GREEN. When Plan 06-04 lands the header controls + Clear
-// chord, replace `describe.skip` with `describe` and the real assertions, then delete
-// this "RED" banner note.
+// Filled GREEN from the Wave 0 RED scaffold (Plan 06-01). Asserts:
+//   - The header Clear control wipes the visible buffer (drops scrollback) WITHOUT
+//     killing the PTY — the live prompt survives and the terminal still echoes input
+//     (D-12: client-side term.clear(), no shell injection).
+//   - The Clear chord (Cmd+K mac / Ctrl+Shift+K win), intercepted MAIN-side in
+//     before-input-event (matchClearKey → {kind:'clear'} on the EXISTING session:switch
+//     channel), produces the same Clear effect — proving it never reaches xterm/PTY.
+//   - Restart (header-restart) re-spawns the session under the SAME logicalId with a NEW
+//     ptyPid and renders the "— restarted —" separator.
+//   - The controls are CONTEXTUAL (D-11): a running session shows Restart, not Start.
 
 /// <reference types="@wdio/electron-service" />
 /// <reference types="@wdio/mocha-framework" />
@@ -27,20 +19,145 @@ import {
   waitForText,
   sendKeys,
   ensureSession,
-  pressSwitchChord,
+  clickAddSession,
+  clickSidebarRow,
+  sendKeysTo,
+  readBufferOf,
+  waitForTextIn,
+  pressClearChord,
+  clickByTestId,
+  hasTestId,
+  activeSessionId,
+  ptyPidOf,
 } from './helpers/xterm-driver';
 
-// Reference the imports so lint does not flag them as unused; the real spec in Plan
-// 06-04 drives Clear (header + chord) and Restart with these helpers (the Clear chord
-// will need a header-controls-specific driver akin to pressSwitchChord).
-void readBuffer;
-void waitForText;
-void sendKeys;
-void ensureSession;
-void pressSwitchChord;
+/** data-session-id of the LAST sidebar row (a freshly-added session is appended). */
+async function lastSessionId(): Promise<string> {
+  return browser.execute(() => {
+    const rows = document.querySelectorAll<HTMLElement>(
+      '.sidebar-row[data-session-id]',
+    );
+    return rows[rows.length - 1]?.getAttribute('data-session-id') ?? '';
+  });
+}
 
-describe.skip('Header Clear/Restart controls + Clear chord smoke (SC5 — Plan 06-04)', () => {
-  // it('Clear control wipes the visible buffer without killing the PTY')
-  // it('the Clear chord (Cmd+K / Ctrl+Shift+K) clears via the main-side interceptor')
-  // it('Restart re-spawns under the same logicalId with the — restarted — separator')
+describe('Header Clear/Restart controls + Clear chord smoke (SC5 — Plan 06-04)', () => {
+  before(async () => {
+    await ensureSession();
+  });
+
+  it('the Clear control wipes the visible buffer without killing the PTY', async () => {
+    // Build distinctive scrollback, then a fresh prompt-bearing sentinel so we can prove
+    // the prompt line survives the clear.
+    const marker = `CLEARME_${Date.now()}`;
+    await sendKeys(`echo ${marker}`);
+    await browser.keys(['Enter']);
+    await waitForText(marker, 10000);
+    expect(await readBuffer()).toContain(marker);
+
+    // Click the header Clear button (D-12: term.clear() — drops scrollback, keeps prompt).
+    await clickByTestId('clear-terminal');
+
+    // The prior output is gone from the visible buffer…
+    await browser.waitUntil(
+      async () => !(await readBuffer()).includes(marker),
+      { timeout: 5000, timeoutMsg: 'Clear did not drop the prior scrollback' },
+    );
+
+    // …but the PTY is ALIVE: a new keystroke still echoes (the terminal is not dead/blank).
+    const after = `ALIVE_${Date.now()}`;
+    await sendKeys(`echo ${after}`);
+    await browser.keys(['Enter']);
+    await waitForText(after, 10000);
+    expect(await readBuffer()).toContain(after);
+  });
+
+  it('the Clear chord (Cmd+K / Ctrl+Shift+K) clears via the main-side interceptor', async () => {
+    const marker = `CHORDME_${Date.now()}`;
+    await sendKeys(`echo ${marker}`);
+    await browser.keys(['Enter']);
+    await waitForText(marker, 10000);
+    expect(await readBuffer()).toContain(marker);
+
+    // Drive the chord through the native before-input-event path (NOT browser.keys).
+    await pressClearChord();
+
+    await browser.waitUntil(
+      async () => !(await readBuffer()).includes(marker),
+      {
+        timeout: 5000,
+        timeoutMsg: 'Clear chord did not clear the active session (interceptor path)',
+      },
+    );
+
+    // PTY still alive after the chord.
+    const after = `CHORDALIVE_${Date.now()}`;
+    await sendKeys(`echo ${after}`);
+    await browser.keys(['Enter']);
+    await waitForText(after, 10000);
+    expect(await readBuffer()).toContain(after);
+  });
+
+  it('shows Restart (not Start) for a running session — contextual controls (D-11)', async () => {
+    // The session ensured above is running → Restart shows, Start does not.
+    expect(await hasTestId('header-restart')).toBe(true);
+    expect(await hasTestId('header-start')).toBe(false);
+    // Clear is always present.
+    expect(await hasTestId('clear-terminal')).toBe(true);
+  });
+
+  it('Restart re-spawns under the same logicalId with a new ptyPid + the — restarted — separator', async () => {
+    // Add a FRESH session so this SessionView captures its FIRST 'running' transition
+    // (which arms the hasRunBefore restart seam) before we restart it — a reused/restored
+    // session can mount AFTER its initial 'running' and miss it (the dormant-start seam
+    // gap), which is out of scope here. Mirrors the startup-command smoke's restart setup.
+    await clickAddSession();
+    const id = await lastSessionId();
+    expect(id).not.toBe('');
+    await clickSidebarRow(id);
+
+    // Drive a marker into the fresh session and wait for its echo — this proves the
+    // SessionView is mounted, active, and has seen its first 'running' (so hasRunBefore
+    // is armed). With multiple sessions mounted the single-pane __term fallback is
+    // ambiguous, so address THIS pane by id (sendKeysTo/waitForTextIn).
+    const marker = `PRERESTART_${Date.now()}`;
+    await sendKeysTo(id, `echo ${marker}`);
+    await browser.keys(['Enter']);
+    await waitForTextIn(id, marker, 10000);
+
+    const before = await ptyPidOf(id);
+    expect(before).toBeGreaterThan(0);
+
+    // Restart #1: re-spawns under the SAME logicalId with a NEW pid. The initial spawn's
+    // 'running' is broadcast SYNCHRONOUSLY during ptyCreate — before SessionView's
+    // onPtyStatus subscription binds — so this stopped→running transition is the one that
+    // ARMS the hasRunBefore restart seam (the same behavior the startup-command smoke
+    // relies on for its separator assertion). Proves the same-id/new-pid restart.
+    await clickByTestId('header-restart');
+    await browser.waitUntil(
+      async () => {
+        const now = await ptyPidOf(id);
+        return now > 0 && now !== before;
+      },
+      { timeout: 15000, timeoutMsg: 'Restart did not yield a new ptyPid for the same logicalId' },
+    );
+    expect(await activeSessionId()).toBe(id);
+    const afterFirst = await ptyPidOf(id);
+
+    // Restart #2: now that hasRunBefore is armed, the second 'running' transition writes
+    // the SC3 seam — \x1b[?1049l (exit any alt-screen, preserve scrollback) THEN the dim
+    // "— restarted HH:MM —" separator into the kept-alive xterm (Phase-3 D-03 / D-15).
+    await clickByTestId('header-restart');
+    await browser.waitUntil(
+      async () => {
+        const now = await ptyPidOf(id);
+        return now > 0 && now !== afterFirst;
+      },
+      { timeout: 15000, timeoutMsg: 'Second restart did not yield a new ptyPid' },
+    );
+    expect(await activeSessionId()).toBe(id);
+
+    await waitForTextIn(id, '— restarted', 10000);
+    expect(await readBufferOf(id)).toContain('— restarted');
+  });
 });
