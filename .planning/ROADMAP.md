@@ -221,8 +221,24 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. The sidebar shows a best-effort "waiting for input" indicator when a background session's output has gone idle after a pattern consistent with an agent confirmation prompt (e.g., trailing `?` or `[y/N]`)
   5. The session header provides single-click (or keyboard-accessible) "Clear terminal" and "Restart session" controls that work correctly
 
-**Plans:** TBD
+**Plans:** 4 plans
 **UI hint:** yes
+
+**Wave 1**
+
+- [ ] 06-01-foundation-PLAN.md — Foundation: Wave 0 RED scaffolds + pure agent-state classifier + 19-key bridge lockstep (pickDirectory) + Clear-chord matcher/handler + 05.1 probe fixes (WR-01..03/IN-01..03) + TerminalPane delete + SC1 100M smoke (TERM-09/TERM-12)
+
+**Wave 2** *(blocked on Wave 1)*
+
+- [ ] 06-02-spawn-error-recovery-PLAN.md — SC2 slice: main cwd pre-validate + try/catch spawn (no silent home) + error card with Edit/Retry + Start-without-command + folder picker + edit-prefill + WR-04/WR-05 (TERM-12)
+
+**Wave 3** *(blocked on Wave 2)*
+
+- [ ] 06-03-agent-state-layer-PLAN.md — SC4 slice: AGENT_STYLE ramp + presentation() resolver + renderer-side idle-timer detector + sidebar/rail/header overlay (TERM-09)
+
+**Wave 4** *(blocked on Wave 3 — has checkpoint)*
+
+- [ ] 06-04-header-controls-reset-PLAN.md — SC5+SC3 slice: header Clear/Restart/Start cluster + Cmd+K chord + alt-screen reset (restart \x1b[?1049l, abnormal-exit reset) + SC1/SC3/SC5 E2E + human-verify + Nyquist sign-off (TERM-12/TERM-09)
 
 ### Phase 7: Terminal Search + Scrollback Config
 
@@ -267,6 +283,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 5.1 → 6 → 7 �
 | 4. Session Identity + Sidebar UI | 4/4 | Complete    | 2026-06-05 |
 | 5. Persistence + Shell Discovery | 4/4 | Complete    | 2026-06-06 |
 | 5.1. TERM-05 startup-command auto-run (INSERTED) | 3/3 | Complete    | 2026-06-06 |
-| 6. Robustness + Flow-Control Polish | 0/TBD | Not started | - |
+| 6. Robustness + Flow-Control Polish | 0/4 | Not started | - |
 | 7. Terminal Search + Scrollback Config | 0/TBD | Not started | - |
 | 8. Cross-Platform Packaging | 0/TBD | Not started | - |
