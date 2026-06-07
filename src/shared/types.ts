@@ -92,4 +92,13 @@ export interface SessionRecord {
 
   /** Unix timestamp (ms) of last user interaction — used for MRU ordering */
   lastActive: number;
+
+  /**
+   * True once the user has set ANY metadata (name/folder/cmd/icon) via the edit
+   * form (D-02). Ephemeral (configured=false/undefined) sessions are NEVER
+   * persisted and vanish on Remove/exit; a configured session persists to the
+   * Inactive List. Set true in updateProfile(); never reset to false
+   * (auto-promotion is one-way). Default-undefined = ephemeral.
+   */
+  configured?: boolean;
 }

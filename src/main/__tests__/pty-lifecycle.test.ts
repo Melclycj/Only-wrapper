@@ -125,6 +125,7 @@ vi.mock('../shell-resolver', () => ({
 }));
 
 import { PtyManager, type PtyCreateOptions } from '../pty-manager';
+import type { SessionRecord } from '../../shared/types';
 
 // A real BrowserWindow always exposes isDestroyed() on both the window and its
 // webContents; the PtyManager.send() shutdown guard reads them, so the stub must too.
@@ -255,5 +256,89 @@ describe('PtyManager lifecycle (SC3, TERM-07)', () => {
     const rec = sessions.find((s) => s.logicalId === id);
     expect(rec).toBeDefined();
     expect(rec?.status).toBe('stopped');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RED scaffolds — the D-05 / D-02 two-bucket lifecycle (Plan 06.1-03 turns GREEN).
+//
+// These pin the TARGET behavior of the new lifecycle so Plan 03 has an executable
+// contract. They are honest RED (they fail with an assertion against the CURRENT
+// onExit, which keeps a self-exited record live-but-dead in this.sessions instead
+// of dropping it to dormant / deleting it). DO NOT mark green or delete until Plan
+// 06.1-03 implements the self-exit → Inactive (configured) / gone (ephemeral) split
+// and listConfiguredSessions().
+// ─────────────────────────────────────────────────────────────────────────────
+describe('two-bucket self-exit lifecycle (D-05 / D-02) — RED until Plan 06.1-03', () => {
+  beforeEach(() => {
+    spawnCalls.length = 0;
+    spawnedChildren.length = 0;
+    nextPid = 1000;
+    spawnMock.mockClear();
+    setPlatform('darwin');
+  });
+
+  afterEach(() => {
+    setPlatform(ORIGINAL_PLATFORM);
+    vi.useRealTimers();
+  });
+
+  const liveOpts: PtyCreateOptions = { cols: 80, rows: 24, cwd: '/tmp/project' };
+
+  it('configured self-exit → Inactive List (not_started), removed from the Working Area — RED until Plan 06.1-03', () => {
+    const mgr = new PtyManager();
+    mgr.registerIpc(fakeWindow());
+    const { id } = mgr.create(liveOpts);
+    const child = spawnedChildren[0];
+
+    // D-02: setting metadata promotes the session to "configured" (Plan 03 wires
+    // updateProfile to set configured=true).
+    mgr.updateProfile(id, { name: 'Parlour Claude RC' });
+
+    // A self-exit (NOT user-initiated) after the session reached running.
+    child._fireExit({ exitCode: 0 });
+
+    const sessions = mgr.listSessions();
+    const rec = sessions.find((s) => s.logicalId === id);
+    // Plan-03 target: a configured self-exit drops to the Inactive List as a
+    // dormant, restartable not_started entry (NOT the current live-but-dead 'exited').
+    expect(rec).toBeDefined();
+    expect(rec?.status).toBe('not_started');
+  });
+
+  it('ephemeral self-exit → gone (absent from listSessions) — RED until Plan 06.1-03', () => {
+    const mgr = new PtyManager();
+    mgr.registerIpc(fakeWindow());
+    // No updateProfile call → the session stays ephemeral (configured undefined).
+    const { id } = mgr.create(liveOpts);
+    const child = spawnedChildren[0];
+
+    child._fireExit({ exitCode: 0 }); // self-exit
+
+    // Plan-03 target: an ephemeral self-exit vanishes entirely (not persisted, no
+    // Inactive entry). The CURRENT onExit retains it as 'exited' → this is RED now.
+    const sessions = mgr.listSessions();
+    expect(sessions.some((s) => s.logicalId === id)).toBe(false);
+  });
+
+  it('listConfiguredSessions() returns only configured===true records (D-02) — RED until Plan 06.1-03', () => {
+    const mgr = new PtyManager();
+    mgr.registerIpc(fakeWindow());
+
+    const ephemeral = mgr.create(liveOpts);
+    const configured = mgr.create(liveOpts);
+    mgr.updateProfile(configured.id, { name: 'Kept Session' });
+
+    // Plan 03 adds listConfiguredSessions(); until then the method is absent →
+    // this is honest RED (the guard assertion fails because it is not a function).
+    const maybe = (mgr as unknown as {
+      listConfiguredSessions?: () => SessionRecord[];
+    }).listConfiguredSessions;
+    expect(typeof maybe).toBe('function');
+
+    const configuredOnly = maybe ? maybe.call(mgr) : [];
+    expect(configuredOnly.every((r) => r.configured === true)).toBe(true);
+    expect(configuredOnly.some((r) => r.logicalId === configured.id)).toBe(true);
+    expect(configuredOnly.some((r) => r.logicalId === ephemeral.id)).toBe(false);
   });
 });

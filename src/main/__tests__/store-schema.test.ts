@@ -54,7 +54,34 @@ describe('coerceOnLoad (D-01 / SC2 / T-05-02)', () => {
     expect(rec.ptyPid).toBe(1234);
   });
 
-  it('SCHEMA_VERSION is the stable migration anchor', () => {
-    expect(SCHEMA_VERSION).toBe(1);
+  it('SCHEMA_VERSION is 2 (v1 → v2 adds the configured field — D-02)', () => {
+    expect(SCHEMA_VERSION).toBe(2);
+  });
+});
+
+describe('coerceOnLoad — v1 → v2 configured migration (D-02 / Plan 06.1-01)', () => {
+  it('migrates an absent `configured` (a v1 record) to true', () => {
+    // makeRecord() never sets `configured`, so this models a v1-persisted record.
+    const out = coerceOnLoad(makeRecord());
+    expect(out.configured).toBe(true);
+  });
+
+  it('preserves an explicit configured:true', () => {
+    const out = coerceOnLoad(makeRecord({ configured: true }));
+    expect(out.configured).toBe(true);
+  });
+
+  it('preserves an explicit configured:false (does NOT force it true)', () => {
+    const out = coerceOnLoad(makeRecord({ configured: false }));
+    expect(out.configured).toBe(false);
+  });
+
+  it('still forces status not_started and clears ptyPid alongside the migration', () => {
+    const out = coerceOnLoad(
+      makeRecord({ status: 'running', ptyPid: 4242, configured: undefined }),
+    );
+    expect(out.status).toBe('not_started');
+    expect(out.ptyPid).toBeUndefined();
+    expect(out.configured).toBe(true);
   });
 });
