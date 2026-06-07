@@ -84,10 +84,12 @@ function classify(lines) {
   };
   // a shell prompt on the ACTIVE line is authoritative FREE (a scrolled-up menu
   // above it does not mean the session is waiting).
+  // NOTE: arrow_marker (❯) is recorded but NOT decisive — real Claude Code shows ❯
+  // persistently in its input caret, so it false-positives on idle/thinking (002 finding).
   let verdict;
   if (shell_prompt && !sig.trailing_question) verdict = 'FREE(shell)';
-  else if (sig.numbered_menu || sig.arrow_marker || sig.yn_bracket ||
-           sig.trailing_question || sig.password_prompt) verdict = 'WAITING';
+  else if (sig.numbered_menu || sig.yn_bracket || sig.trailing_question ||
+           sig.password_prompt || sig.claude_footer) verdict = 'WAITING';
   else verdict = 'FREE';
   return { last, sig, verdict };
 }
