@@ -42,8 +42,31 @@ describe('readiness-probe pure helpers (Plan 05.1-01 Task 1)', () => {
     expect(buildPosixProbe('NONCE').matches('NONCE\r')).toBe(false);
   });
 
-  it('matches() is TRUE once the nonce is followed by a newline + re-prompt (processed)', () => {
-    expect(buildPosixProbe('NONCE').matches('NONCE\nuser@host% ')).toBe(true);
+  it('WR-02: matches() is FALSE on an echo-only chunk where the nonce is the FIRST line', () => {
+    // The marker echo is the first line of the round-trip (no preceding newline). The
+    // matcher must NOT trip on it — readiness is a PRODUCED line, not the echo (WR-02).
+    expect(buildPosixProbe('NONCE').matches(': NONCE\r')).toBe(false);
+    expect(buildPosixProbe('NONCE').matches('NONCE more text on the same first line')).toBe(
+      false,
+    );
+  });
+
+  it('WR-02: matches() is TRUE once the nonce appears on a PRODUCED line (after a newline)', () => {
+    // The shell processed the marker and re-emitted the nonce on a fresh produced line
+    // (preceded by a newline boundary) — the WR-02-correct ready signal.
+    expect(buildPosixProbe('NONCE').matches('echo-line\nNONCE\nuser@host% ')).toBe(true);
+    expect(buildPosixProbe('NONCE').matches(': NONCE\r\nNONCE produced\n')).toBe(true);
+  });
+
+  it('WR-03: matches() scans only the last 8 KB tail (a stale nonce beyond the cap is ignored)', () => {
+    const probe = buildPosixProbe('NONCE');
+    // A nonce-on-a-produced-line that sits BEFORE an 8 KB+ run of nonce-free noise is
+    // pushed out of the bounded scan window → not matched (the cap keeps only the tail).
+    const stale = 'old-line\nNONCE\n' + 'x'.repeat(9 * 1024);
+    expect(probe.matches(stale)).toBe(false);
+    // A fresh produced-line nonce WITHIN the last 8 KB is still matched.
+    const fresh = 'x'.repeat(9 * 1024) + '\nNONCE\nuser@host% ';
+    expect(probe.matches(fresh)).toBe(true);
   });
 
   it("selectReadinessProbe('win32').forShell() THROWS (Phase-8 stub, D-03)", () => {
@@ -262,8 +285,10 @@ describe('create() readiness-probe hook (SC1/SC2/SC4/D-02 — GREEN as of Plan 0
     const child = spawnedChildren[0];
 
     const nonce = probeNonce(child);
-    // Fire a produced output line that carries the nonce + a fresh prompt → matches.
-    child._fireData(`${nonce}\nuser@host% `);
+    // WR-02: the nonce must arrive on a PRODUCED line (AFTER a newline boundary), not
+    // the bare echo line. Fire the marker echo (first line) + the re-emitted nonce on a
+    // fresh produced line + a prompt → matches and the command is injected.
+    child._fireData(`: ${nonce}\r\n${nonce}\nuser@host% `);
 
     expect(child.write).toHaveBeenCalledWith('echo HI\r');
   });

@@ -14,7 +14,12 @@
 export type SwitchIntent =
   | { kind: 'position'; index: number } // 0-based; Cmd/Ctrl+1..9
   | { kind: 'next' }
-  | { kind: 'prev' };
+  | { kind: 'prev' }
+  // 06-01 (D-13): the Clear chord rides the EXISTING 'session:switch' channel — NO
+  // new bridge key is added (EXPECTED_API_KEYS stays driven by pickDirectory only).
+  // Cmd+K (macOS) / Ctrl+Shift+K (Windows) clears the active session's visible buffer
+  // without killing the PTY; the renderer's onSwitchSession handler routes it.
+  | { kind: 'clear' };
 
 /**
  * The subset of Electron's `Input` the matcher reads. Kept structural (not the
@@ -63,5 +68,35 @@ export function matchSwitchKey(i: KeyInput): SwitchIntent | null {
   }
   const n = digit1to9(i);
   if (n !== null) return { kind: 'position', index: n - 1 };
+  return null;
+}
+
+// A1-defensive: accept the logical `key` ('k') OR the physical `code` ('KeyK'), so
+// the Clear chord matches regardless of layout (mirrors digit1to9 / isNextBracket).
+function isKeyK(i: KeyInput): boolean {
+  return i.key === 'k' || i.code === 'KeyK';
+}
+
+/**
+ * Resolve a key event into a Clear intent ({kind:'clear'}), or null when it is not the
+ * Clear chord. Pure + electron-free (Node-testable). Never throws.
+ *
+ * D-13 (the Clear chord, "app always wins"):
+ *   - macOS:   Cmd+K            → { kind: 'clear' }
+ *   - Windows: Ctrl+Shift+K     → { kind: 'clear' }
+ *   - plain Ctrl+K              → null (DELIBERATELY avoided on Windows — Ctrl+K is
+ *                                 readline's kill-line; we must not steal it)
+ *   - non-keyDown / any non-K   → null
+ *
+ * The intent rides the EXISTING 'session:switch' channel (no new bridge key); main
+ * preventDefault()s on a match so the chord never reaches xterm/the PTY.
+ */
+export function matchClearKey(i: KeyInput): SwitchIntent | null {
+  if (i.type !== 'keyDown') return null;
+  if (!isKeyK(i)) return null;
+  // macOS: Cmd+K (Cmd is the platform primary; Ctrl is NOT used on macOS for this).
+  if (i.meta) return { kind: 'clear' };
+  // Windows: Ctrl+Shift+K only — plain Ctrl+K is reserved for readline kill-line (D-13).
+  if (i.control && i.shift) return { kind: 'clear' };
   return null;
 }

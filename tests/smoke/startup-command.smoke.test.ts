@@ -108,11 +108,16 @@ describe('Startup-command auto-run smoke (TERM-05: SC1/SC2/SC3/D-02/D-04)', () =
     const id = await sessionIdAt(0);
     await menuAction(id, 'Restart');
 
-    // SC3: after the restart separator, the command runs AGAIN (output reappears).
+    // SC3 / IN-03: anchor on the FULL '— restarted ' separator literal (not a bare
+    // indexOf('restarted')), so the assertion is robust to incidental occurrences of
+    // the word "restarted" in shell output. The command must run AGAIN after the
+    // separator (output reappears below it).
+    const SEPARATOR = '— restarted ';
     await browser.waitUntil(
       async () => {
         const b = await readBuffer();
-        return b.includes('restarted') && b.lastIndexOf('JW_STARTUP_OK') > b.indexOf('restarted');
+        const sep = b.indexOf(SEPARATOR);
+        return sep !== -1 && b.lastIndexOf('JW_STARTUP_OK') > sep;
       },
       { timeout: 8000, timeoutMsg: 'Startup command did not re-run after restart (SC3)' },
     );

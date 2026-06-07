@@ -47,6 +47,15 @@ export interface ReadinessProbeProvider {
 }
 
 /**
+ * Cap the scanned buffer to the last 8 KB before matching (WR-03). The marker + a
+ * re-prompt line is at most a few hundred bytes, so 8 KB is generous headroom while
+ * preventing an unbounded scan (and the regex from re-scanning megabytes) on a noisy
+ * cold-spawn. Keeping only the bounded TAIL is correct because readiness is signalled
+ * by the MOST RECENT produced line, never an old one.
+ */
+const PROBE_SCAN_LIMIT = 8 * 1024;
+
+/**
  * PURE — build a POSIX no-op readiness probe for a unique `nonce` (unit-tested
  * with a fixed nonce, no PTY).
  *
@@ -55,24 +64,38 @@ export interface ReadinessProbeProvider {
  *     terminator is `\r` (carriage return, NOT `\n`): a real Enter sends CR and
  *     the TTY line discipline (ICRNL) maps CR→NL so the shell sees a completed
  *     line (Pitfall 4 / termios ICRNL).
- *   - matches() implements the SEND-vs-MATCH split (Pitfall 1): it returns true
- *     only when the nonce appears on a line FOLLOWED by a newline (the shell
- *     processed the line and re-prompted), NOT merely on the echoed-input line.
+ *   - matches() implements the SEND-vs-MATCH split (Pitfall 1, WR-02 fix): it returns
+ *     true ONLY when the nonce appears on a PRODUCED line — i.e. AFTER a newline
+ *     boundary (`\n` precedes the nonce). The shell's bare echo of the typed marker
+ *     is the FIRST line of the chunk (no preceding `\n`), so an echo-only chunk now
+ *     returns false; the matcher fires only once the shell processed the line and
+ *     re-prompted onto a fresh produced line. The buffer is bounded to the last 8 KB
+ *     before matching (WR-03).
  *
- * The exact regex is E2E-tunable (RESEARCH Open Q3) and will be tuned against
- * real cold zsh/bash byte captures during Plan 03's E2E bring-up.
+ * The exact regex is E2E-tunable (RESEARCH Open Q3) and was validated against real
+ * cold zsh/bash byte captures during Plan 05.1's E2E bring-up.
  */
 export function buildPosixProbe(nonce: string): ShellReadinessProbe {
   // Escape regex metacharacters in the nonce so a hex/sentinel nonce is matched
   // literally (the sentinel contains `_` which is safe, but keep this robust).
   const safe = nonce.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  // Ready when the nonce appears AFTER a newline boundary — i.e. on a produced
-  // output/prompt line, not the bare echoed-input line. RESEARCH 265 shape.
-  const re = new RegExp(`${safe}[^\\n]*\\n[\\s\\S]*`);
+  // WR-02: ready ONLY when the nonce appears AFTER a newline boundary — i.e. on a
+  // PRODUCED output/prompt line, not the bare echoed-input line (which is the first
+  // line of the round-trip, with no preceding `\n`). Linear, non-backtracking (V7).
+  const re = new RegExp(`\\n[^\\n]*${safe}`);
   return {
     marker: `: ${nonce}\r`,
     nonce,
-    matches: (buffer: string): boolean => re.test(buffer),
+    matches: (buffer: string): boolean => {
+      // WR-03: bound the scan to the last 8 KB tail (readiness is the most-recent
+      // produced line). Keep one extra leading byte so a tail that begins exactly at
+      // a newline boundary still satisfies the `\n`-precedes-nonce requirement.
+      const tail =
+        buffer.length > PROBE_SCAN_LIMIT
+          ? buffer.slice(buffer.length - PROBE_SCAN_LIMIT)
+          : buffer;
+      return re.test(tail);
+    },
   };
 }
 
@@ -85,7 +108,10 @@ export function buildPosixProbe(nonce: string): ShellReadinessProbe {
  */
 export class MacReadinessProbe implements ReadinessProbeProvider {
   forShell(shellPath: string): ShellReadinessProbe {
-    void shellPath; // zsh + bash share the probe on macOS — shell path is unused here.
+    // IN-02: zsh + bash share the probe on macOS, so the shell path is intentionally
+    // unused here (the seam shape is kept). Per-shell readiness behavior (PowerShell /
+    // CMD / Git Bash / WSL distinctions) arrives in Phase 8 behind this same seam.
+    void shellPath;
     const nonce = `__JW_READY_${crypto.randomBytes(8).toString('hex')}__`;
     return buildPosixProbe(nonce);
   }

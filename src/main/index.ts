@@ -1,11 +1,11 @@
-import { app, BrowserWindow, ipcMain, screen } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, screen } from 'electron';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
 import { buildWebPreferences } from './window-config';
 import { PtyManager } from './pty-manager';
 import { SessionStore } from './session-store';
 import { validateBounds } from './window-bounds';
-import { matchSwitchKey, type KeyInput } from './switch-keys';
+import { matchSwitchKey, matchClearKey, type KeyInput } from './switch-keys';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -89,10 +89,20 @@ function createWindow(): void {
   // would suppress it — Electron #19279) and NOT a system-wide global shortcut
   // (silent-fail, macOS-layout bug — RESEARCH Anti-Patterns).
   win.webContents.on('before-input-event', (event, input) => {
-    const intent = matchSwitchKey(input as unknown as KeyInput);
+    const key = input as unknown as KeyInput;
+    const intent = matchSwitchKey(key);
     if (intent) {
       event.preventDefault();
       win.webContents.send('session:switch', intent);
+      return;
+    }
+    // Clear chord (Cmd+K / Ctrl+Shift+K — D-13). It rides the SAME 'session:switch'
+    // channel as a { kind: 'clear' } intent (NO new bridge key), and is intercepted
+    // here so the chord NEVER reaches xterm/the PTY (app-wins, works inside vim/tmux).
+    const clear = matchClearKey(key);
+    if (clear) {
+      event.preventDefault();
+      win.webContents.send('session:switch', clear);
     }
   });
 
@@ -116,6 +126,14 @@ function createWindow(): void {
 
 // Minimal IPC handler for Phase 1 walking skeleton
 ipcMain.handle('api:get-version', () => app.getVersion());
+
+// Folder-picker (06-01, the new `pickDirectory` bridge key). Main OWNS the native
+// open-directory dialog and returns ONLY a string path (never an fs handle — V12,
+// T-06-01); the renderer never touches the filesystem. Returns null on cancel/empty.
+ipcMain.handle('dialog:pick-directory', async (): Promise<string | null> => {
+  const r = await dialog.showOpenDialog({ properties: ['openDirectory'] });
+  return r.canceled || r.filePaths.length === 0 ? null : r.filePaths[0];
+});
 
 // Persistence lifecycle (05-02): on whenReady, load the store, hydrate the dormant
 // records into the PtyManager, wire the store change-signal, THEN create the window
