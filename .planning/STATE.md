@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 06.1-03-PLAN.md (Wave 1 main-side two-bucket lifecycle)
-last_updated: "2026-06-08T01:47:00.000Z"
-last_activity: 2026-06-08 -- Completed 06.1-03-PLAN.md (TERM-12 two-bucket lifecycle)
+stopped_at: Paused at 06.1-04 Task 3 — end-of-phase human-verify checkpoint (Wave 2 impl + all smokes GREEN)
+last_updated: "2026-06-08T02:20:00.000Z"
+last_activity: 2026-06-08 -- 06.1-04 Tasks 1-2 done (two-bucket renderer UI + D-08 smoke); awaiting human-verify (Task 3)
 progress:
   total_phases: 10
   completed_phases: 6
@@ -27,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-06-03)
 
 Phase: 06.1 (terminal-lifecycle-state-machine-and-agent-state-detection-r) — EXECUTING
 Plan: 4 of 4
-Status: Ready to execute
-Last activity: 2026-06-08 -- Completed 06.1-03-PLAN.md (Wave 1 main-side two-bucket lifecycle)
+Status: Paused at the end-of-phase human-verify (06.1-04 Task 3) — implementation + all automated suites GREEN; awaiting user "approved" to flip nyquist_compliant in 06-VALIDATION.md + 06.1-VALIDATION.md
+Last activity: 2026-06-08 -- 06.1-04 Tasks 1-2 done (two-bucket renderer UI + D-08 smoke)
 
-Progress: [███████████████░░░░░] 75% (Phase 06.1 plans: 3/4)
+Progress: [███████████████████░] 95% (Phase 06.1 plans: 3.5/4 — 04 impl done, human-verify pending)
 
 ## Performance Metrics
 
@@ -82,6 +82,7 @@ Progress: [███████████████░░░░░] 75% (Ph
 | Phase 06.1 P01 | ~30min | 3 tasks | 9 files |
 | Phase 06.1 P02 | 85 | 2 tasks | 3 files |
 | Phase 06.1 P03 | ~12min | 2 tasks | 3 files |
+| Phase 06.1 P04 | ~38min | 2 of 3 tasks (human-verify pending) | 9 files |
 
 ## Accumulated Context
 
@@ -144,7 +145,7 @@ Recent decisions affecting current work:
 - [Phase 06-03]: SC4/TERM-09 agent-state presentation OVERLAY — AGENT_STYLE ramp + presentation(status, agent?) resolver applies the overlay ONLY when status==='running' (D-06/D-07); amber oklch(0.66 0.15 60) reserved for 'waiting' in EXACTLY one place. Renderer-side idle-timer detector in SessionView off the EXISTING onPtyData stream (zero IPC): bounded ~4 KB rolling tail (slice(-4096), T-06-09 ReDoS bound), single-slot timer cleared-before-re-arm AND in effect cleanup (Pitfall 6/T-06-10), gated on running (agentRunning flipped by the status handler), change-only emission via onAgentStateRef (so the id-keyed mount effect never re-binds/tears down the xterm). SessionManager: renderer-only per-row agentState beside errorMessage (never persisted, never IPC — D-06), set only while running, cleared on transition away (D-10). Sidebar row badge/dot + collapsed-rail dot + tooltip and IdentityHeader badge all route through presentation() — no direct STATUS_STYLE[] badge lookups. 190 unit tests GREEN, tsc clean, package builds, eslint clean
 - [Phase ?]: 06.1-02: MOUSE_RESET fires on onPtyExit (the reliable death signal) + unconditionally on the running transition (idempotent), NOT gated on hasRunBeforeRef — the initial/first-restart running broadcast races ahead of the status subscription, so gating would skip the user's first restart and leave the scroll-wheel hot (D-13).
 - [Phase ?]: 06.1-02: abnormal-exit is scrollback-preserving (MOUSE_RESET + ALT_SCREEN_EXIT, no term.reset()/RIS) per RESEARCH Open Q1 — flagged for human-verify (blank-vs-preserve crash frame).
-- [Phase 06.1-03]: Main-side two-bucket lifecycle (TERM-12). updateProfile() one-way auto-promotes a session to configured (configured=true set unconditionally after any metadata field write — touching the profile = the user keeps it; never reset to false; create() stays ephemeral). New PtyManager.listConfiguredSessions() filters listSessions() to configured===true; index.ts syncStore() persists from it (session-store.ts setSessions stays a dumb setter, untouched) so an unedited +New session never touches disk (D-02, T-06.1-11). onExit selfExit routing (selfExit = !userStopped && (status==='exited'||status==='error')): a configured self-exit MOVES the record sessions→dormantRecords coerced to not_started with pid dropped + order preserved (Inactive List, RESEARCH A2); an ephemeral self-exit is delete()d (gone, no persistence); a user-stopped Stop/Restart precursor ('stopped') STAYS in the live map so restart() respawns under the same logicalId. Spawn-failure (pid -1) returns before onExit is wired → stays an error broadcast (pty-spawn-error green). Routing runs AFTER the error-notice broadcast so the fork-then-die error card still gets its status+notice. No new bridge key (configured rides the existing updateProfile channel — security.guard 19-key invariant green). 206 unit tests GREEN, tsc + eslint clean. The three Wave-0 RED lifecycle scaffolds are now GREEN.
+- [Phase 06.1-04]: Renderer two-bucket UI (TERM-12/TERM-09 surface). Sidebar partitions the order-sorted rows into a labeled Working Area (status !== 'not_started'; the error card stays here per D-05) + Inactive List (not_started) — one SortableContext spans all ids so cross-section drag-reorder is intact; each Inactive entry carries Start ▶ + Start-without-command (start-no-cmd-session) + permanent Delete (delete-session). IdentityHeader is LIVE-ONLY = Clear + Restart + Remove (header-remove); the contextual header Start (header-start) branch is DELETED (D-06 supersedes Phase-6 D-11). Remove vs Delete split behind the one ConfirmModal (removeMode): Remove of a CONFIGURED live session = window.api.ptyStop + an optimistic renderer flip to not_started (→ Inactive List in-session; main keeps the configured record so it restores dormant next boot) — NOT a new main primitive (Plan 03's stop() keeps a user-stopped session 'stopped' in the live map by design, so the dormant flip lives in the renderer); Remove of an ephemeral + any Delete = window.api.ptyClose (permanent). configured is mirrored onto the renderer row at the edit save sites. Keyboard-focus fix in SessionView.attachCustomKeyEventHandler: when the keydown target is NOT xterm's .xterm-helper-textarea, return false so the browser handles Tab/Space/Enter natively (focus traversal + button activation) and no key is fed to the PTY. No new bridge key (window-config.ts untouched, 19 keys; status-colors.ts untouched — D-14). NEW app-restart-restore.smoke proves D-08 (configured persists on disk + a dormant first Start has no '— restarted —'); the literal OS relaunch is not driveable under @wdio/electron-service (ephemeral per-launch userData + reloadSession drops the CDP bridge) so the smoke drives the Remove→dormant restore-equivalent path. Rule-1 test-correctness fix: persistence.smoke + reorder.smoke now configure sessions before asserting on-disk persistence (a Plan-03 D-02 regression those smokes — run unit-only by Plan 03 — had left RED). 206 unit GREEN, tsc + eslint clean, 14/14 smoke GREEN. Task 3 (end-of-phase human-verify) is BLOCKING and NOT yet run — nyquist_compliant stays false in both VALIDATION files until explicit user approval. one-way auto-promotes a session to configured (configured=true set unconditionally after any metadata field write — touching the profile = the user keeps it; never reset to false; create() stays ephemeral). New PtyManager.listConfiguredSessions() filters listSessions() to configured===true; index.ts syncStore() persists from it (session-store.ts setSessions stays a dumb setter, untouched) so an unedited +New session never touches disk (D-02, T-06.1-11). onExit selfExit routing (selfExit = !userStopped && (status==='exited'||status==='error')): a configured self-exit MOVES the record sessions→dormantRecords coerced to not_started with pid dropped + order preserved (Inactive List, RESEARCH A2); an ephemeral self-exit is delete()d (gone, no persistence); a user-stopped Stop/Restart precursor ('stopped') STAYS in the live map so restart() respawns under the same logicalId. Spawn-failure (pid -1) returns before onExit is wired → stays an error broadcast (pty-spawn-error green). Routing runs AFTER the error-notice broadcast so the fork-then-die error card still gets its status+notice. No new bridge key (configured rides the existing updateProfile channel — security.guard 19-key invariant green). 206 unit tests GREEN, tsc + eslint clean. The three Wave-0 RED lifecycle scaffolds are now GREEN.
 
 ### Pending Todos
 
@@ -152,6 +153,8 @@ None yet.
 
 ### Blockers/Concerns
 
+- **[06.1-04 Task 3 — ACTIVE] End-of-phase human-verify is the only remaining step.** All automated suites are GREEN (206 unit + 14/14 smoke incl. alt-screen-reset + app-restart-restore). The user must run the four hands-on checks (amber feel, scroll/garble fix, scrollback survival ≥3 restarts, two-bucket lifecycle) against the running app and type "approved" (plus confirm the abnormal-exit frame choice — scrollback-preserving default vs blank crash frame, RESEARCH Open Q1). On approval the executor flips nyquist_compliant: true in BOTH 06-VALIDATION.md and 06.1-VALIDATION.md. **The flags are NOT flipped yet.** To run the app: `npm start` (or `npm run package` then launch out/Just-Wrapper-darwin-arm64/Just-Wrapper.app).
+- [resolved-by-Plan-03, fixed in 04] persistence.smoke + reorder.smoke had stale ephemeral-persists expectations after Plan 03's D-02 configured-only persistence — corrected in 06.1-04 (Rule-1 test correctness).
 - node-pty version for Electron 42.x needs verification before Phase 2 starts (see research/SUMMARY.md); consider starting on Electron 36.x if compatibility is unclear
 - macOS notarization (Phase 8) requires Apple Developer Program membership (~$99/year); plan ahead
 
@@ -169,6 +172,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-08T01:47:00.000Z
-Stopped at: Completed 06.1-03-PLAN.md (Wave 1 main-side two-bucket lifecycle)
-Resume file: .planning/phases/06.1-terminal-lifecycle-state-machine-and-agent-state-detection-r/06.1-04-PLAN.md
+Last session: 2026-06-08T02:20:00.000Z
+Stopped at: 06.1-04 Tasks 1-2 done (two-bucket renderer UI + D-08 smoke); PAUSED at Task 3 end-of-phase human-verify (BLOCKING — not self-approved)
+Resume file: .planning/phases/06.1-terminal-lifecycle-state-machine-and-agent-state-detection-r/06.1-04-PLAN.md (resume at Task 3 human-verify)
