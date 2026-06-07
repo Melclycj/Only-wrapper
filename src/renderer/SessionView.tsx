@@ -29,19 +29,12 @@
 import { useEffect, useRef } from 'react';
 import type { LogicalId } from '../shared/types';
 import { createWatermark } from '../shared/flow-control';
-import { type AgentState, classify } from '../shared/agent-state';
-
-// TEMPORARY BRIDGE (Plan 06.1-01 → 06.1-02): Plan 01 removed the output-silence
-// `IDLE_MS`/`classifyIdle` exports and replaced them with the frame-stability
-// `classify(lines: string[])`. The full SEAM A rewrite (a setInterval tick over
-// `term.buffer.active`) lands in Plan 06.1-02. Until then this thin local shim keeps
-// SessionView compiling and functional against the NEW classifier: it keeps the
-// existing output-silence debounce but classifies the bounded tail by splitting it
-// into lines and delegating to the new pure `classify()`.
-// REMOVE in Plan 06.1-02 when SEAM A is rewritten.
-const IDLE_MS = 800;
-const classifyIdle = (tail: string): AgentState =>
-  classify(tail.split(/\r?\n/));
+import {
+  type AgentState,
+  classify,
+  TICK_MS,
+  SETTLE_MS,
+} from '../shared/agent-state';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
@@ -231,24 +224,75 @@ export function SessionView({
     const watermark = createWatermark(FLOW_HIGH, FLOW_LOW);
     let paused = false;
 
-    // ── Agent-state detector (TERM-09 / SC4 — D-06..D-10, zero IPC). Computed here
-    //    off the SAME onPtyData stream xterm consumes. While bytes are flowing we
-    //    report 'in-progress'; after IDLE_MS of silence we classify the bounded tail
-    //    (classifyIdle → 'waiting' | 'free'). The detector is GATED on the session
-    //    being 'running' (agentRunning, flipped by the status handler below) so a
-    //    dormant/exited session is never classified (D-07). A SINGLE-SLOT idle-timer
-    //    ref is cleared-before-re-arm AND in the effect cleanup, mirroring the resize-
-    //    debounce discipline — no leak across rapid output or unmount (Pitfall 6,
-    //    T-06-10). We emit only on CHANGE (lastAgent) to avoid parent render churn. ──
-    let agentTail = '';
+    // ── Agent-state detector (TERM-09 / SC4 — D-09/D-10, zero IPC). SEAM A:
+    //    FRAME-STABILITY, not output-silence. A setInterval tick (every TICK_MS)
+    //    reads the live `term.buffer.active` viewport, FNV-1a-hashes the visible
+    //    text, and decides:
+    //      - hash CHANGED since last tick → the frame is churning (an animated
+    //        "Thinking…" repaints continuously) → 'in-progress' (the property the
+    //        old byte-silence model lacked, which left `claude --rc` permanently
+    //        blue), and re-arm the settle window.
+    //      - hash UNCHANGED for >= SETTLE_MS → the frame SETTLED → classify() the
+    //        settled viewport cursor region ('waiting' | 'free').
+    //    The detector is GATED on the session being 'running' (agentRunning, flipped
+    //    by the status handler below) so a dormant/exited session is never classified
+    //    (D-12). We emit only on CHANGE (lastAgent) to avoid parent render churn. The
+    //    tick reads buffer.active even on a HIDDEN pane (term.write runs
+    //    unconditionally below, and reading the buffer needs no WebGL context) — a
+    //    backgrounded `claude --rc` can therefore still settle to amber (D-12). ──
     let agentRunning = false;
     let lastAgent: AgentState | null = null;
-    let idleTimer: ReturnType<typeof setTimeout> | null = null;
+    let lastHash: string | null = null;
+    let changeAt = performance.now();
     const emitAgent = (state: AgentState): void => {
       if (state === lastAgent) return;
       lastAgent = state;
       onAgentStateRef.current(id, state);
     };
+
+    // Read the live VIEWPORT (not scrollback) as clean, ANSI-interpreted text —
+    // ported verbatim from the spike reference `record.cjs` (viewportLines). Reading
+    // only viewportY..+rows avoids the 001 stale-menu false positive; reading the
+    // viewport requires no WebGL context so it works on hidden panes too.
+    const viewportLines = (): string[] => {
+      const b = term.buffer.active;
+      const top = b.viewportY;
+      const out: string[] = [];
+      for (let i = 0; i < term.rows; i++) {
+        const ln = b.getLine(top + i);
+        out.push(ln ? ln.translateToString(true) : '');
+      }
+      return out;
+    };
+
+    // FNV-1a — a fast, non-crypto frame-equality hash (record.cjs). NOT a security
+    // control (T-06.1: this is a frame-change check, not a digest).
+    const fnv1a = (s: string): string => {
+      let h = 0x811c9dc5;
+      for (let i = 0; i < s.length; i++) {
+        h ^= s.charCodeAt(i);
+        h = Math.imul(h, 0x01000193);
+      }
+      return (h >>> 0).toString(16);
+    };
+
+    // The frame-stability tick (D-09). Armed once per mount (the effect is keyed on
+    // `id` only — Pitfall 7), gated on agentRunning, cleared in the effect cleanup.
+    // On an in-place restart the SAME term persists, so the interval keeps running;
+    // the status handler resets lastHash/changeAt so the restart's fresh frame is
+    // re-evaluated from scratch.
+    const agentTick = setInterval(() => {
+      if (!agentRunning) return;
+      const lines = viewportLines();
+      const h = fnv1a(lines.join('\n'));
+      if (h !== lastHash) {
+        lastHash = h;
+        changeAt = performance.now();
+        emitAgent('in-progress');
+      } else if (performance.now() - changeAt >= SETTLE_MS) {
+        emitAgent(classify(lines));
+      }
+    }, TICK_MS);
 
     const offData = window.api.onPtyData(id, (data) => {
       // Backpressure watermark (SC5) — unchanged.
@@ -265,19 +309,9 @@ export function SessionView({
         }
       });
 
-      // Agent-state detector — only while running (D-07). Output is flowing →
-      // 'in-progress'; maintain the bounded ~4 KB rolling tail; clear the single-slot
-      // idle timer before re-arming so it never stacks; re-arm to classify after
-      // IDLE_MS of silence.
-      if (!agentRunning) return;
-      // Maintain a bounded ~4 KB rolling tail (WR-03 lesson, T-06-09 ReDoS bound): the
-      // anchored PROMPT_RE (Plan 01) only ever scans this slice, never full scrollback.
-      agentTail = (agentTail + data).slice(-4096);
-      emitAgent('in-progress');
-      if (idleTimer) clearTimeout(idleTimer);
-      idleTimer = setTimeout(() => {
-        emitAgent(classifyIdle(agentTail));
-      }, IDLE_MS);
+      // Agent-state detection is no longer driven off the onPtyData byte stream
+      // (the old output-silence model — SEAM A replaced it with the frame-stability
+      // `agentTick` above, which reads the rendered viewport, not raw bytes).
     });
 
     // 6. Passive exit notice (D-04) — no auto-restart. The abnormal-exit frame RESET
@@ -343,16 +377,17 @@ export function SessionView({
         if (p.status === 'exited' || p.status === 'error') {
           term.reset();
         }
-        // Leaving 'running' (stopped/exited/error): close the gate, cancel any pending
-        // classification, and reset the change-tracker so the overlay does not linger
-        // (D-07/D-10 — SessionManager also clears its per-row agentState on this
-        // transition). The bounded tail is cleared so a later restart starts fresh.
+        // Leaving 'running' (stopped/exited/error): close the gate so the
+        // frame-stability tick stops classifying, and reset the change-tracker so the
+        // overlay does not linger (D-12 — SessionManager also clears its per-row
+        // agentState on this transition). We do NOT clear `agentTick` here: the SAME
+        // term persists across an in-place restart (keep-alive xterm), so the interval
+        // keeps running and is simply gated by `agentRunning`. Resetting
+        // lastHash/changeAt means a later restart's fresh frame is re-evaluated from
+        // scratch (Pitfall 7).
         agentRunning = false;
-        if (idleTimer) {
-          clearTimeout(idleTimer);
-          idleTimer = null;
-        }
-        agentTail = '';
+        lastHash = null;
+        changeAt = performance.now();
         lastAgent = null;
       }
     });
@@ -378,7 +413,7 @@ export function SessionView({
     // the WebGL context, then dispose the term.
     return () => {
       if (resizeTimer) clearTimeout(resizeTimer);
-      if (idleTimer) clearTimeout(idleTimer);
+      clearInterval(agentTick);
       offData();
       offExit();
       offStatus();
