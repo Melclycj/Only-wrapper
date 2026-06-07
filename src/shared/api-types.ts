@@ -173,6 +173,17 @@ export type ElectronAPI = {
     collapsed?: boolean;
     bounds?: { x: number; y: number; width: number; height: number };
   }) => void;
+
+  // ─── Folder picker (06-01) — the ONE new key this phase in EXPECTED_API_KEYS ───
+
+  /**
+   * Open the native open-directory dialog and resolve the chosen absolute path, or
+   * null if the user cancels (the 19th key, mirrors discoverShells's request-response
+   * invoke). main OWNS the dialog; it returns ONLY a string path, never an fs handle
+   * (V12, T-06-01) — the renderer never touches the filesystem. Used by the session
+   * edit form's cwd field (the "folder picker" UX surfaced in the 05.1 human-verify).
+   */
+  pickDirectory: () => Promise<string | null>;
 };
 
 // Window augmentation — import this in renderer entry point

@@ -72,6 +72,17 @@ export function buildWebPreferences(preloadPath: string): WebPreferencesConfig {
  *     each of x/y/width/height is finite and collapsed is boolean before writing.
  * The lockstep is done in ONE atomic task; the guard asserts the EXACT 18-key set so
  * no unreviewed key (e.g. raw ipcRenderer) can leak.
+ *
+ * Phase 6 (06-01) REVIEWED EXPANSION (threat_model T-06-01): ONE new key joins the
+ * surface — a 19-key set:
+ *   - `pickDirectory` (invoke, mirrors discoverShells): main owns the native
+ *     open-directory dialog and returns ONLY a string path (or null on cancel), never
+ *     an fs handle (V12) — the renderer never touches the filesystem. It widens the
+ *     renderer→main surface, so the lockstep (api-types + this array + preload +
+ *     security.guard.test.ts) is done in ONE atomic task and the guard asserts the
+ *     EXACT 19-key set so no unreviewed key (e.g. raw ipcRenderer) can leak. NOTE: the
+ *     Clear chord (matchClearKey) rides the EXISTING 'session:switch' channel and adds
+ *     NO bridge key — pickDirectory is the ONLY new key this phase.
  */
 export const EXPECTED_API_KEYS = [
   'getVersion',
@@ -92,4 +103,5 @@ export const EXPECTED_API_KEYS = [
   'discoverShells',
   'persistOrder',
   'persistUiState',
+  'pickDirectory',
 ] as const;

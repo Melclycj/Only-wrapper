@@ -173,6 +173,15 @@ const api: ElectronAPI = {
   }): void => {
     ipcRenderer.send('store:persist-ui', ui);
   },
+
+  // ─── Folder picker (06-01) ────────────────────────────────────────────────────
+
+  // pickDirectory mirrors discoverShells: request-response invoke (the 19th key). main
+  // owns the native open-directory dialog and returns ONLY a string path (or null on
+  // cancel) — the renderer never touches the filesystem (V12/T-06-01). The renderer
+  // must NEVER reach raw ipcRenderer (the header no-raw-ipcRenderer contract holds).
+  pickDirectory: (): Promise<string | null> =>
+    ipcRenderer.invoke('dialog:pick-directory'),
 };
 
 contextBridge.exposeInMainWorld('api', api);
