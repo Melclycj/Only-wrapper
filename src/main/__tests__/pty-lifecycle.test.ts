@@ -23,6 +23,23 @@ vi.mock('node:os', () => ({
   homedir: () => FAKE_HOME,
 }));
 
+// Plan 06-02: create() now PRE-VALIDATES the resolved cwd (D-01) — an explicit cwd
+// that is not an existing directory errors before spawning. These lifecycle fixtures
+// spawn into the mocked FAKE_HOME (the no-cwd default's resolved value, reused on
+// restart) and the explicit '/tmp/project', neither of which exists on the test host.
+// Mock node:fs so exactly those fixture directories validate; everything else throws
+// ENOENT. (The no-cwd path is unaffected — undefined cwd skips pre-validation entirely.)
+vi.mock('node:fs', () => {
+  // Inline literals (no module-scope const) — vi.mock factories are hoisted above
+  // top-level declarations, so referencing FAKE_HOME here would be a TDZ error.
+  const OK = new Set(['/Users/fake-home', '/tmp/project']);
+  const statSync = (p: string): { isDirectory: () => boolean } => {
+    if (OK.has(p)) return { isDirectory: () => true };
+    throw new Error('ENOENT');
+  };
+  return { default: { statSync }, statSync };
+});
+
 // ── Mock electron.ipcMain (registerIpc touches it but these tests call create/
 //    stop/restart directly; the handlers just need to exist without throwing) ──
 vi.mock('electron', () => ({

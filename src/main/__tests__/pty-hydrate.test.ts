@@ -18,6 +18,18 @@ vi.mock('node:os', () => ({
   homedir: () => '/Users/fake-home',
 }));
 
+// Plan 06-02: create() now PRE-VALIDATES the resolved cwd (D-01). The promotion fixture
+// spawns into the stored '/stored/cwd' (and the home default), neither of which exists
+// on the test host — mock node:fs so exactly those validate; everything else throws.
+vi.mock('node:fs', () => {
+  const OK = new Set(['/Users/fake-home', '/stored/cwd']);
+  const statSync = (p: string): { isDirectory: () => boolean } => {
+    if (OK.has(p)) return { isDirectory: () => true };
+    throw new Error('ENOENT');
+  };
+  return { default: { statSync }, statSync };
+});
+
 vi.mock('electron', () => ({
   ipcMain: {
     handle: vi.fn(),

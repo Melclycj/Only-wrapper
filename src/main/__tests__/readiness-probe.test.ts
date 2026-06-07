@@ -102,6 +102,18 @@ vi.mock('node:os', () => ({
   homedir: () => '/Users/fake-home',
 }));
 
+// Plan 06-02: create() now PRE-VALIDATES the resolved cwd (D-01). The probe-hook
+// fixtures spawn into the mocked '/Users/fake-home', which does not exist on the test
+// host — so mock node:fs to treat it (and the mocked home) as a real directory, else
+// pre-validation would error before the probe ever runs.
+vi.mock('node:fs', () => {
+  const statSync = (p: string): { isDirectory: () => boolean } => {
+    if (p === '/Users/fake-home') return { isDirectory: () => true };
+    throw new Error('ENOENT');
+  };
+  return { default: { statSync }, statSync };
+});
+
 vi.mock('electron', () => ({
   ipcMain: {
     handle: vi.fn(),
@@ -174,30 +186,14 @@ import {
   PtyManager,
   PTY_CHANNELS,
   READINESS_TIMEOUT_MS,
-  stripProbeEcho,
   type PtyCreateOptions,
 } from '../pty-manager';
 
-// ───────────────────────────────────────────────────────────────────────────
-// D-02 scrub helper — pure, no harness (RESEARCH Open Q3 hardening).
-// ───────────────────────────────────────────────────────────────────────────
-describe('stripProbeEcho (D-02 invisibility hardening)', () => {
-  it('removes the `: <nonce>` marker echo wherever it races past the settle', () => {
-    const out = stripProbeEcho('user@host % : __JW_READY_ab12__ ', '__JW_READY_ab12__');
-    expect(out).not.toContain('__JW_READY_ab12__');
-    expect(out).not.toContain(': __JW_READY_');
-  });
-
-  it('removes a bare nonce occurrence (no `: ` prefix) too', () => {
-    expect(stripProbeEcho('xx __JW_READY_ab12__ yy', '__JW_READY_ab12__')).toBe('xx  yy');
-  });
-
-  it('leaves nonce-free real shell output untouched', () => {
-    expect(stripProbeEcho('totally normal output\n', '__JW_READY_ab12__')).toBe(
-      'totally normal output\n',
-    );
-  });
-});
+// NOTE (Plan 06-02, WR-01/IN-01): the `stripProbeEcho` helper + its post-settle scrub
+// tests were REMOVED here. The readiness-probe success path disposes the transient
+// listener AND discards the buffered probe bytes on match (invisibility by
+// discard-on-match), so the scrub branch was unreachable dead code. Probe-byte
+// invisibility is still asserted by the `withholds probe bytes …` case below.
 
 function fakeWindow(): never {
   return {

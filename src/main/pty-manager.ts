@@ -111,22 +111,19 @@ export function isStringData(data: unknown): data is string {
 }
 
 /**
- * D-02 invisibility hardening (RESEARCH Open Q3). Remove any leftover readiness-probe
- * echo from a post-settle PTY chunk so the `__JW_READY_<hex>__` nonce sentinel can
- * NEVER reach the renderer, even under adversarial chunk timing where the shell's
- * echo of the `: <nonce>` marker races past the match-settle.
- *
- * Pure helper (unit-tested directly): strips the optional `: ` POSIX no-op prefix +
- * the exact `nonce` token wherever it appears. The nonce is a unique self-generated
- * sentinel, so this only ever removes our own probe bytes — real shell output never
- * carries it. Returns the cleaned chunk (possibly empty → nothing to forward).
+ * WR-04 control-char sanitizer for the SC2 spawn-error notice. The error `notice`
+ * now interpolates non-literal text — a user-supplied cwd path and (for the generic
+ * fallback) an OS error string — that rides the onPtyStatus channel and is rendered
+ * in the terminal pane. Strip C0/C1 control characters (incl. ESC) BEFORE the notice
+ * leaves main so an attacker-influenced path/message cannot smuggle ANSI escapes into
+ * the rendered text (defense-in-depth; the renderer also strips before write). TAB is
+ * preserved as benign whitespace; everything else in the control ranges is dropped.
  */
-export function stripProbeEcho(data: string, nonce: string): string {
-  if (!nonce || !data.includes(nonce)) return data;
-  // Escape regex metacharacters in the nonce (defensive — the sentinel is `_`-only).
-  const safe = nonce.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  // Drop a leading `: ` no-op prefix immediately before the nonce, then the nonce.
-  return data.replace(new RegExp(`(?:: )?${safe}`, 'g'), '');
+export function sanitizeNotice(text: string): string {
+  // C0 (0x00-0x08, 0x0A-0x1F) + DEL (0x7F) + C1 (0x80-0x9F). 0x09 (TAB) is kept as
+  // benign whitespace. ESC (0x1B) lives in the 0x0A-0x1F range so ANSI introducers
+  // are stripped — no escape sequence can ride this notice.
+  return text.replace(/[\x00-\x08\x0A-\x1F\x7F-\x9F]/g, '');
 }
 
 /** Options for spawning a new PTY (renderer-supplied; validated before use). */
@@ -144,6 +141,13 @@ export interface PtyCreateOptions {
   name?: string;
   /** Display order carried on the kept SessionRecord. */
   order?: number;
+  /**
+   * D-14 "Start without command": when true, this ONE launch spawns a bare shell and
+   * SKIPS the TERM-05 readiness probe + startup-command injection, even when a
+   * startupCommand is stored. The stored command is NOT cleared — it still auto-runs
+   * on the next normal Start. Absent/false → the normal probe-then-inject path.
+   */
+  skipStartupCommand?: boolean;
 }
 
 /** The result of a successful spawn: stable logical id + the live OS PID. */
@@ -248,27 +252,68 @@ export class PtyManager {
         ? { shell: prior.shell, args: [] as string[] }
         : resolveShell();
 
-    // cwd default is resolved HERE, in main. The renderer never computes home —
-    // it passes `cwd: undefined` and main owns the os.homedir() fallback (D-02).
-    // A promoted dormant record (Start ▶) respects its stored cwd when opts omits one.
-    const cwd =
+    // cwd resolution (D-01/D-02/D-05). The renderer never computes home — it passes
+    // `cwd: undefined` for the default and main owns the os.homedir() fallback. We
+    // DISTINGUISH two cases the old `opts.cwd || prior.cwd || home` chain conflated:
+    //   - an EXPLICIT cwd (from opts OR a stored record) that is now MISSING → an
+    //     error: it must NOT silently fall back to ~ (D-02 no-silent-home, SC2).
+    //   - NO cwd specified anywhere → os.homedir() is the legitimate default (D-02).
+    // A promoted dormant record (Start ▶) carries the stored cwd as the explicit intent.
+    const requestedCwd =
       opts.cwd && opts.cwd.length
         ? opts.cwd
         : prior?.cwd && prior.cwd.length
           ? prior.cwd
-          : os.homedir();
+          : undefined;
 
-    const child = pty.spawn(shell, args, {
-      name: 'xterm-256color', // sets $TERM inside the child (SC4)
-      cols: clampDimension(opts.cols),
-      rows: clampDimension(opts.rows),
-      cwd, // resolved in main — D-02 / TERM-04
-      env: {
-        ...process.env,
-        TERM: 'xterm-256color',
-        COLORTERM: 'truecolor',
-      },
-    });
+    // D-01 pre-validate (detection mechanism): an explicit-but-invalid cwd errors
+    // BEFORE any spawn. Reuse the existing CR-01 isValidCwd guard verbatim (absolute
+    // + statSync().isDirectory()) — do not hand-roll a second validator. On failure:
+    // flip to 'error' (red badge), ride the D-05 SPECIFIC message on the existing
+    // notice channel, and return a no-live-pty result (pid -1) — node-pty is NEVER
+    // spawned with a bad cwd (Pitfall 1: a bad cwd does NOT throw synchronously on
+    // macOS — it forks-then-dies, so pre-validation is mandatory, not optional).
+    if (requestedCwd !== undefined && !this.isValidCwd(requestedCwd)) {
+      this.setStatus(id, 'error', {});
+      this.send(PTY_CHANNELS.status, {
+        id,
+        status: 'error',
+        notice: sanitizeNotice(`Working directory not found: ${requestedCwd}`),
+      });
+      return { id, pid: -1 };
+    }
+    const cwd = requestedCwd ?? os.homedir(); // only home when truly unspecified
+
+    // D-01 second half: wrap the spawn in try/catch for the RARE synchronous failure
+    // (e.g. an EACCES on the helper binary). The COMMON bad-cwd/bad-shell case does
+    // NOT throw here (it forks-then-dies → the async abnormal-exit path below); this
+    // catch handles only the synchronous EACCES-class throw with the D-05 GENERIC
+    // message, sanitized of control chars (WR-04 — the notice now interpolates a
+    // non-literal OS error string).
+    let child: IPty;
+    try {
+      child = pty.spawn(shell, args, {
+        name: 'xterm-256color', // sets $TERM inside the child (SC4)
+        cols: clampDimension(opts.cols),
+        rows: clampDimension(opts.rows),
+        cwd, // resolved in main — D-02 / TERM-04
+        env: {
+          ...process.env,
+          TERM: 'xterm-256color',
+          COLORTERM: 'truecolor',
+        },
+      });
+    } catch (err) {
+      this.send(PTY_CHANNELS.status, {
+        id,
+        status: 'error',
+        notice: sanitizeNotice(
+          `Couldn't start session: ${(err as Error).message}`,
+        ),
+      });
+      this.setStatus(id, 'error', {});
+      return { id, pid: -1 };
+    }
 
     // ptyPid is the OS PID — kept as a plain number, NEVER assigned into a
     // LogicalId (IDENT-02). The map key is the LogicalId; the PID is returned
@@ -336,8 +381,12 @@ export class PtyManager {
     // Security V7 (T-05.1-03): lifecycle logging only — the command, the probe
     // nonce, and the buffered (nonce-bearing) bytes are NEVER logged.
     const cmd = record.startupCommand?.trim();
-    if (!cmd) {
-      // No startup command → normal bare shell (SC2/TERM-03). No probe, no inject.
+    // D-14 "Start without command": when the launch explicitly opts out, wire normal
+    // forwarding and SKIP the readiness probe + injection entirely — a bare shell even
+    // when a startupCommand is stored. The stored command is NOT cleared (it still runs
+    // on the next normal Start). This guard also subsumes the empty-command case.
+    if (!cmd || opts.skipStartupCommand) {
+      // No startup command (or skip requested) → normal bare shell (SC2/TERM-03/D-14).
       this.wireNormalOnData(id, child);
     } else {
       // zsh + bash share the POSIX ':' no-op probe on macOS (D-03). Windows throws
@@ -351,19 +400,12 @@ export class PtyManager {
       // (D-04). A const object sidesteps the use-before-assign / prefer-const bind.
       const timerRef: { current?: NodeJS.Timeout } = {};
       const offProbe = child.onData((data) => {
-        // After the marker round-trips, forwarding is restored via wireNormalOnData;
-        // this guard covers any byte that races in before the listener swap settles.
-        if (settled) {
-          // D-02 hardening (RESEARCH Open Q3): under adversarial chunk timing the
-          // shell's echo of the `: <nonce>` marker can arrive AFTER the match
-          // settles. Scrub the nonce sentinel from any such racing chunk so it can
-          // never appear in the rendered scrollback. The nonce is our own unique
-          // token, so removing it (and a leading `: ` no-op prefix) only ever drops
-          // probe bytes — real shell output never contains it.
-          const scrubbed = stripProbeEcho(data, probe.nonce);
-          if (scrubbed) this.send(PTY_CHANNELS.data, { id, data: scrubbed });
-          return;
-        }
+        // WR-01/IN-01: there is NO post-settle scrub branch. On a successful match the
+        // listener is disposed (offProbe.dispose()) AND the buffered probe bytes are
+        // discarded, BEFORE wireNormalOnData re-wires forwarding — so this transient
+        // listener never sees a byte after `settled` flips. Invisibility is guaranteed
+        // by discard-on-match, not by scrubbing a racing echo (the former post-settle
+        // scrub branch + its probe-echo strip helper were unreachable dead code, removed).
         // Pre-match bytes are BUFFERED and NEVER sent — invisibility (D-02).
         buffer += data;
         if (probe.matches(buffer)) {
@@ -441,6 +483,21 @@ export class PtyManager {
         s.record.ptyPid = undefined; // the OS process is gone
       }
       this.setStatus(id, status, { exitCode });
+      // D-05 generic notice for the ASYNC fork-then-die case (Pitfall 1): a bad cwd
+      // or shell that passed pre-validation but failed inside the forked child arrives
+      // here as an abnormal exit (code≠0 && !userStopped → 'error' via deriveStatus).
+      // The synchronous pre-validate/catch paths return BEFORE this listener is wired,
+      // so reaching here in 'error' means no spawn-error notice has been sent yet — give
+      // the SC2 error card a message so it is not blank in the fork-then-die case.
+      if (status === 'error') {
+        this.send(PTY_CHANNELS.status, {
+          id,
+          status: 'error',
+          notice: sanitizeNotice(
+            "Couldn't start session: the shell exited immediately",
+          ),
+        });
+      }
       this.send(PTY_CHANNELS.exit, { id, exitCode });
       // The record's status/ptyPid changed → persist the new (dormant-on-restart)
       // shape so a quit right after an exit restores the correct status (D-13).
@@ -764,7 +821,13 @@ export class PtyManager {
     }
 
     if (typeof fields.startupCommand === 'string') {
-      target.startupCommand = fields.startupCommand; // stored-only (T-04-04)
+      // WR-05: trim at persist time so the STORED value equals what create() later
+      // injects (`cmd + '\r'`, where cmd = startupCommand.trim()). Without this the
+      // persisted value could carry leading/trailing whitespace that the injection
+      // path silently strips, leaving the stored profile and the executed command
+      // out of sync. Chosen semantics: full leading+trailing trim (an all-whitespace
+      // command stores as '' → a bare shell, matching create()'s empty-command path).
+      target.startupCommand = fields.startupCommand.trim(); // stored-only (T-04-04)
     }
     if (fields.icon) target.icon = fields.icon;
     this.signalStore(); // edited profile fields changed → debounce-write (D-13)

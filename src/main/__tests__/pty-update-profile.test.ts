@@ -19,6 +19,24 @@ vi.mock('node:os', () => ({
   homedir: () => FAKE_HOME,
 }));
 
+// Plan 06-02: create() now PRE-VALIDATES the resolved cwd (D-01), so a spawn into a
+// non-existent directory errors before reaching node-pty. These fixtures spawn into
+// the mocked FAKE_HOME and `/Users/dev/proj` (a dormant record cwd) which do not exist
+// on the test host — and the CR-01 update-profile cases still need a REAL-valid cwd
+// (process.cwd()) accepted and a bogus path rejected. Mock node:fs to treat exactly the
+// fixture directories + the real process.cwd() as directories; everything else throws
+// ENOENT (so the CR-01 'non-existent cwd is ignored' case keeps its meaning).
+vi.mock('node:fs', () => {
+  // Inline literals (no module-scope const) — vi.mock factories are hoisted above
+  // top-level declarations, so referencing FAKE_HOME here would be a TDZ error.
+  const OK = new Set(['/Users/fake-home', '/Users/dev/proj', process.cwd()]);
+  const statSync = (p: string): { isDirectory: () => boolean } => {
+    if (OK.has(p)) return { isDirectory: () => true };
+    throw new Error('ENOENT');
+  };
+  return { default: { statSync }, statSync };
+});
+
 vi.mock('electron', () => ({
   ipcMain: {
     handle: vi.fn(),
