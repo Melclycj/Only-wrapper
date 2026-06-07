@@ -8,19 +8,27 @@
 // the .viewport-stack (RESEARCH Open Q2) — that restructure happens in SessionManager.
 
 import type { SessionRecord } from '../shared/types';
-import { STATUS_STYLE } from './status-colors';
+import type { AgentState } from '../shared/agent-state';
+import { presentation } from './status-colors';
 import { renderIcon } from './Sidebar';
 
 export interface IdentityHeaderProps {
   /** The active session record (null when there is no active session). */
   session: SessionRecord | null;
+  /**
+   * The active session's renderer-only agent-state overlay (TERM-09 / SC4 — D-06/D-07),
+   * threaded from SessionManager. The header badge reflects it for a running session;
+   * for every other status it is inert (presentation returns the process style).
+   */
+  agentState?: AgentState;
 }
 
 export function IdentityHeader({
   session,
+  agentState,
 }: IdentityHeaderProps): React.JSX.Element | null {
   if (session === null) return null;
-  const style = STATUS_STYLE[session.status];
+  const style = presentation(session.status, agentState);
   return (
     <div className="identity-header" data-testid="identity-header">
       {renderIcon(session.icon, session.name)}

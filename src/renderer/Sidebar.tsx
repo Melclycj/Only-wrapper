@@ -24,7 +24,8 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { LogicalId, SessionIconSpec, SessionRecord } from '../shared/types';
-import { STATUS_STYLE } from './status-colors';
+import type { AgentState } from '../shared/agent-state';
+import { presentation } from './status-colors';
 import { COLOR_INITIAL } from './icon-spec';
 
 /**
@@ -159,7 +160,13 @@ function SortableSidebarRow({
     transition,
   };
 
-  const stat = STATUS_STYLE[s.status];
+  // The badge/dot accent + label route through presentation() (TERM-09 / SC4 —
+  // D-06/D-07): a running session carries its agent-state overlay (in-progress→blue,
+  // waiting→amber, free→slate); every other status keeps its process-status accent
+  // unchanged. agentState is a renderer-only field on the row (like errorMessage),
+  // read defensively since the SessionRecord prop type does not declare it.
+  const agentState = (s as { agentState?: AgentState }).agentState;
+  const stat = presentation(s.status, agentState);
   const running = isRunning(s.status);
   // SC2 (D-03): a renderer-only spawn-error message rides the SessionRow (not the
   // shared SessionRecord). When the row is in 'error' with a captured message, surface

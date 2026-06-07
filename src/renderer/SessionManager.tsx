@@ -507,7 +507,10 @@ export function SessionManager(): React.JSX.Element {
           <WelcomeEmptyState onCreate={onAdd} />
         ) : (
           <>
-            <IdentityHeader session={activeRecord} />
+            <IdentityHeader
+              session={activeRecord}
+              agentState={activeRecord?.agentState}
+            />
             <div className="viewport-stack">
               {startedSessions.map((s) => (
                 <SessionView
