@@ -24,25 +24,33 @@ describe('PTY throughput smoke (SC5)', () => {
     await ensureSession();
   });
 
-  it('stays responsive and drops no output while emitting ~50MB', async () => {
+  it('stays responsive and drops no output while emitting ~100MB (SC1)', async () => {
     const nonce = `READY_${Date.now()}`;
 
-    // Emit ~50MB of bytes from the child. yes | head is portable and fast;
-    // ~50MB ≈ 25,000,000 lines of "y\n". The UI must NOT freeze (flow control).
-    await sendKeys('yes | head -n 25000000 | wc -l');
+    // SC1 high-throughput burst: emit ~100MB of bytes from the child. `yes | head`
+    // is portable + fast and deterministic for the no-drop wc -l check. `yes` emits
+    // "y\n" = 2 bytes/line, so 50,000,000 lines ≈ 100MB (the SC1 target — double the
+    // prior 50MB). If 100M proves too slow in CI, scale the line count down via the
+    // same `yes | head -n N` harness (documented fallback per Plan 06-01 Task 1); the
+    // watermark backpressure (createWatermark, flow-control.ts) is what keeps the UI
+    // responsive regardless of N. The UI must NOT freeze (flow control) and must drop
+    // no bytes (lossless render).
+    const LINES = 50000000; // 50M lines × 2 bytes ≈ 100MB throughput
+    await sendKeys(`yes | head -n ${LINES} | wc -l`);
     await browser.keys(['Enter']);
 
-    // Immediately type a sentinel — under correct flow control the keystroke
-    // echo must still appear within the responsiveness budget (UI not frozen).
+    // Post-burst responsiveness: immediately type a sentinel — under correct flow
+    // control the keystroke echo must still appear within the responsiveness budget
+    // (the UI is NOT frozen by the in-flight 100MB burst).
     await sendKeys(`echo ${nonce}`);
     await browser.keys(['Enter']);
-    await waitForText(nonce, 15000);
+    await waitForText(nonce, 30000);
     expect(await readBuffer()).toContain(nonce);
 
-    // No-drop check: wc -l must report the full line count (no bytes lost).
+    // No-drop check: wc -l must report the FULL line count (no bytes lost / lossless).
     await sendKeys('echo COUNTDONE');
     await browser.keys(['Enter']);
-    await waitForText('COUNTDONE', 15000);
-    expect(await readBuffer()).toContain('25000000');
+    await waitForText('COUNTDONE', 30000);
+    expect(await readBuffer()).toContain(String(LINES));
   });
 });
