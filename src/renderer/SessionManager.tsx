@@ -20,6 +20,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { LogicalId, SessionIconSpec, SessionRecord } from '../shared/types';
+import type { AgentState } from '../shared/agent-state';
 import { SessionView } from './SessionView';
 import { Sidebar } from './Sidebar';
 import { ConfirmModal } from './ConfirmModal';
@@ -50,7 +51,16 @@ import { reorder } from './session-reorder';
  * to drive the error card + the sidebar tooltip, so no shared-type / bridge change is
  * needed (Research Open Q2).
  */
-type SessionRow = SessionRecord & { errorMessage?: string };
+// The renderer-only row also carries the agent-state presentation OVERLAY (TERM-09 /
+// SC4 — D-06): a transient `agentState` computed in SessionView off the onPtyData
+// stream and lifted via onAgentState. Like `errorMessage` it is NEVER persisted and
+// NEVER crosses the bridge (D-06 — not a 6th SessionStatus, not an IPC field); it
+// drives presentation() on the badges/dots and is cleared when the session leaves
+// 'running' (D-07/D-10).
+type SessionRow = SessionRecord & {
+  errorMessage?: string;
+  agentState?: AgentState;
+};
 
 export function SessionManager(): React.JSX.Element {
   const [sessions, setSessions] = useState<SessionRow[]>([]);
@@ -351,11 +361,19 @@ export function SessionManager(): React.JSX.Element {
               p.status === 'error'
                 ? (p.notice ?? row.errorMessage)
                 : undefined;
+            // A notice event carries the CURRENT live status (typically 'running')
+            // without being a lifecycle transition — leave agentState alone for it.
+            // Otherwise: clear the agent-state overlay on any transition AWAY from
+            // 'running' (D-07/D-10) so amber/blue/slate never lingers on a stopped/
+            // exited/errored session (SessionView also closes its detector gate).
+            const agentState =
+              p.notice || p.status === 'running' ? row.agentState : undefined;
             return {
               ...row,
               status: p.status,
               ptyPid: p.ptyPid ?? row.ptyPid,
               errorMessage,
+              agentState,
             };
           }),
         );
@@ -391,6 +409,23 @@ export function SessionManager(): React.JSX.Element {
     // Switching is renderer-only visibility — the PTY is untouched (TERM-06). The
     // SessionView activate effect hands WebGL + focus to the newly-active view.
     setActiveId(id);
+  }, []);
+
+  // ── Agent-state lift (TERM-09 / SC4 — D-06/D-10): SessionView computes the overlay
+  //    state (in-progress / waiting / free) off its onPtyData stream and calls this
+  //    on every CHANGE. We store it on the matching row (functional update, mirroring
+  //    the onPtyStatus pattern). We accept the value only while the row is 'running'
+  //    (D-07) so a late-arriving classification can never resurrect an overlay on a
+  //    session that has since stopped/exited. Computed for ALL running sessions (D-10),
+  //    so a backgrounded session's amber dot shows in the rail while you work elsewhere. ──
+  const handleAgentState = useCallback((id: LogicalId, state: AgentState) => {
+    setSessions((prev) =>
+      prev.map((row) =>
+        row.logicalId === id && row.status === 'running'
+          ? { ...row, agentState: state }
+          : row,
+      ),
+    );
   }, []);
 
   // The session targeted by the open confirm modal (if any) — drives the modal copy.
@@ -479,6 +514,7 @@ export function SessionManager(): React.JSX.Element {
                   key={s.logicalId}
                   id={s.logicalId}
                   active={s.logicalId === activeId && !activeIsCard}
+                  onAgentState={handleAgentState}
                 />
               ))}
               {activeIsCard && activeRecord !== null && (

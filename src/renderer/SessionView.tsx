@@ -29,6 +29,7 @@
 import { useEffect, useRef } from 'react';
 import type { LogicalId } from '../shared/types';
 import { createWatermark } from '../shared/flow-control';
+import { type AgentState, IDLE_MS, classifyIdle } from '../shared/agent-state';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
@@ -86,9 +87,20 @@ export interface SessionViewProps {
   id: LogicalId;
   /** Whether this is the currently-visible session (drives WebGL + visibility + focus). */
   active: boolean;
+  /**
+   * Lift the computed agent-state up to SessionManager's per-row state (TERM-09 / SC4 —
+   * D-06/D-10). Called ONLY when the value CHANGES (debounced, change-only) so the
+   * parent does not churn. Zero IPC: the state is computed renderer-side off the
+   * onPtyData stream this view already consumes — no bridge change.
+   */
+  onAgentState: (id: LogicalId, state: AgentState) => void;
 }
 
-export function SessionView({ id, active }: SessionViewProps): React.JSX.Element {
+export function SessionView({
+  id,
+  active,
+  onAgentState,
+}: SessionViewProps): React.JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Live xterm + fit handles, shared between the mount effect and the activate
@@ -100,6 +112,13 @@ export function SessionView({ id, active }: SessionViewProps): React.JSX.Element
   // 'running' status is a RESTART (not the first spawn) → write the dim separator
   // into the SAME instance, preserving scrollback (D-03).
   const hasRunBeforeRef = useRef(false);
+
+  // Stable indirection for the agent-state callback so the mount effect (keyed on
+  // `id` only) never re-binds — and thus never tears down the term — when the parent
+  // re-renders with a fresh onAgentState closure. The detector inside the effect calls
+  // through this ref. (Pattern 1, Pitfall 6.)
+  const onAgentStateRef = useRef(onAgentState);
+  onAgentStateRef.current = onAgentState;
 
   // ── Mount effect: create the xterm once, bind to the prop `id`, keep alive. ──
   // Keyed on `id` only (NOT `active`) so switching tabs never disposes the term.
@@ -188,7 +207,28 @@ export function SessionView({ id, active }: SessionViewProps): React.JSX.Element
     //    keeps buffering so its scrollback stays current (SC1/SC2 keep-alive).
     const watermark = createWatermark(FLOW_HIGH, FLOW_LOW);
     let paused = false;
+
+    // ── Agent-state detector (TERM-09 / SC4 — D-06..D-10, zero IPC). Computed here
+    //    off the SAME onPtyData stream xterm consumes. While bytes are flowing we
+    //    report 'in-progress'; after IDLE_MS of silence we classify the bounded tail
+    //    (classifyIdle → 'waiting' | 'free'). The detector is GATED on the session
+    //    being 'running' (agentRunning, flipped by the status handler below) so a
+    //    dormant/exited session is never classified (D-07). A SINGLE-SLOT idle-timer
+    //    ref is cleared-before-re-arm AND in the effect cleanup, mirroring the resize-
+    //    debounce discipline — no leak across rapid output or unmount (Pitfall 6,
+    //    T-06-10). We emit only on CHANGE (lastAgent) to avoid parent render churn. ──
+    let agentTail = '';
+    let agentRunning = false;
+    let lastAgent: AgentState | null = null;
+    let idleTimer: ReturnType<typeof setTimeout> | null = null;
+    const emitAgent = (state: AgentState): void => {
+      if (state === lastAgent) return;
+      lastAgent = state;
+      onAgentStateRef.current(id, state);
+    };
+
     const offData = window.api.onPtyData(id, (data) => {
+      // Backpressure watermark (SC5) — unchanged.
       watermark.add(data.length);
       if (!paused && watermark.shouldPause()) {
         paused = true;
@@ -201,6 +241,20 @@ export function SessionView({ id, active }: SessionViewProps): React.JSX.Element
           window.api.ptyResume(id);
         }
       });
+
+      // Agent-state detector — only while running (D-07). Output is flowing →
+      // 'in-progress'; maintain the bounded ~4 KB rolling tail; clear the single-slot
+      // idle timer before re-arming so it never stacks; re-arm to classify after
+      // IDLE_MS of silence.
+      if (!agentRunning) return;
+      // Maintain a bounded ~4 KB rolling tail (WR-03 lesson, T-06-09 ReDoS bound): the
+      // anchored PROMPT_RE (Plan 01) only ever scans this slice, never full scrollback.
+      agentTail = (agentTail + data).slice(-4096);
+      emitAgent('in-progress');
+      if (idleTimer) clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => {
+        emitAgent(classifyIdle(agentTail));
+      }, IDLE_MS);
     });
 
     // 6. Passive exit notice (D-04) — no auto-restart.
@@ -232,6 +286,20 @@ export function SessionView({ id, active }: SessionViewProps): React.JSX.Element
           term.write(`\r\n\x1b[2m— restarted ${hhmm} —\x1b[0m\r\n`);
         }
         hasRunBeforeRef.current = true;
+        // Open the agent-state detector gate (D-07): classify only while running.
+        agentRunning = true;
+      } else {
+        // Leaving 'running' (stopped/exited/error): close the gate, cancel any pending
+        // classification, and reset the change-tracker so the overlay does not linger
+        // (D-07/D-10 — SessionManager also clears its per-row agentState on this
+        // transition). The bounded tail is cleared so a later restart starts fresh.
+        agentRunning = false;
+        if (idleTimer) {
+          clearTimeout(idleTimer);
+          idleTimer = null;
+        }
+        agentTail = '';
+        lastAgent = null;
       }
     });
 
@@ -256,6 +324,7 @@ export function SessionView({ id, active }: SessionViewProps): React.JSX.Element
     // the WebGL context, then dispose the term.
     return () => {
       if (resizeTimer) clearTimeout(resizeTimer);
+      if (idleTimer) clearTimeout(idleTimer);
       offData();
       offExit();
       offStatus();
