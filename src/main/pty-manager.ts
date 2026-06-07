@@ -830,7 +830,28 @@ export class PtyManager {
       target.startupCommand = fields.startupCommand.trim(); // stored-only (T-04-04)
     }
     if (fields.icon) target.icon = fields.icon;
+    // D-02 one-way auto-promotion: ANY metadata write (name/icon/cwd/shell/
+    // startupCommand) promotes the session to `configured`. This is set
+    // unconditionally after the field writes above — even a no-op edit that passed
+    // the unknown-id guard means the user touched this session's profile, so it is
+    // intentionally kept (not an ephemeral throwaway). It is ONE-WAY: nothing ever
+    // sets it back to false. A bare `+ New` session (built by create(), which never
+    // sets configured) stays ephemeral until it is first edited here.
+    target.configured = true;
     this.signalStore(); // edited profile fields changed → debounce-write (D-13)
+  }
+
+  /**
+   * Configured-only snapshot for the PERSISTED store (D-02). The store keeps ONLY
+   * records the user has deliberately configured (any updateProfile edit) so an
+   * unedited `+ New` ephemeral session never touches disk (T-06.1-11 info-disclosure
+   * mitigation). Filters listSessions() (which already merges live ∪ dormant by
+   * order) to `configured === true`. index.ts's syncStore() feeds the store from
+   * THIS method, not listSessions() — the live `sessions` map still surfaces every
+   * session (incl. ephemeral) to the renderer via listSessions().
+   */
+  listConfiguredSessions(): SessionRecord[] {
+    return this.listSessions().filter((r) => r.configured === true);
   }
 
   /**

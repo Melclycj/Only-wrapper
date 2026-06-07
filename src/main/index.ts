@@ -36,7 +36,12 @@ let quitting = false;
  * change-signal so EVERY record/ui mutation persists.
  */
 function syncStore(): void {
-  store.setSessions(ptyManager.listSessions());
+  // D-02: persist ONLY configured records — an unedited `+ New` ephemeral session
+  // never reaches disk (the filter lives at the snapshot source; setSessions stays
+  // a dumb setter). listConfiguredSessions() filters listSessions() to
+  // configured===true. The renderer still sees every session via the pty:list
+  // (listSessions) path — this filter only governs what the store snapshot holds.
+  store.setSessions(ptyManager.listConfiguredSessions());
   store.setUi(ptyManager.getUiState());
 }
 
