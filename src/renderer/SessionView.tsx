@@ -54,6 +54,25 @@ const TERMINAL_THEME = {
 
 const RESIZE_DEBOUNCE_MS = 100;
 
+// SEAM B (D-13): the mouse-mode-safe frame reset. A killed/restarted TUI never gets
+// to send its own mouse-disable, so a TUI that turned ON mouse reporting
+// (\x1b[?1000h/?1002h/?1003h + an SGR/UTF-8 encoding) would leave xterm routing the
+// scroll-wheel to the dead shell as mouse-event escape bytes — the `[%30/]` garble —
+// instead of scrolling its own buffer. xterm treats the alternate-screen mode (1049)
+// as INDEPENDENT of the mouse-tracking modes, so `\x1b[?1049l` alone does NOT clear
+// them. We therefore defensively disable EVERY mouse-tracking + encoding mode on every
+// death/restart. These are FIXED literals (no interpolation — ASVS V5, no ANSI-
+// injection surface). Order: disable mouse FIRST so no stray wheel report races the
+// buffer restore. After this write `term.modes.mouseTrackingMode` reads 'none'.
+const MOUSE_RESET =
+  '\x1b[?1000l\x1b[?1001l\x1b[?1002l\x1b[?1003l' + // X10 / highlight / button-event / any-event tracking
+  '\x1b[?1004l' + // focus reporting
+  '\x1b[?1005l\x1b[?1006l\x1b[?1015l'; // UTF-8 / SGR / urxvt mouse encodings
+
+// Exit the alternate-screen buffer, restoring the PRIMARY screen + its scrollback
+// (D-07: never RIS / a full terminal reset, which wipes scrollback).
+const ALT_SCREEN_EXIT = '\x1b[?1049l';
+
 // Per-instance flow-control watermark (SC5) — see TerminalPane for the rationale.
 const FLOW_HIGH = 100000;
 const FLOW_LOW = 10000;
@@ -314,15 +333,23 @@ export function SessionView({
       // `agentTick` above, which reads the rendered viewport, not raw bytes).
     });
 
-    // 6. Passive exit notice (D-04) — no auto-restart. The abnormal-exit frame RESET
-    //    (SC3/D-15) is NOT done here: a user Restart kills-then-respawns the PTY, so a
-    //    LIVE SessionView sees onPtyExit on EVERY restart too — resetting here would wipe
-    //    the scrollback the restart seam is meant to preserve (D-03). The reset is instead
-    //    gated in the status handler below on a genuinely-abnormal status ('exited'/'error',
-    //    NOT 'stopped' — a user stop/restart precursor). Main broadcasts the status BEFORE
-    //    this exit event, so on an abnormal exit the frame is already RIS-cleared when this
-    //    [process exited] notice paints on the clean primary screen.
+    // 6. Passive exit notice (D-04) — no auto-restart. onPtyExit fires whenever the
+    //    process behind this session DIES — on a crash/kill (abnormal exit) AND on
+    //    EVERY in-place Restart (which kills-then-respawns the same logical id). This is
+    //    the ONE reliably-delivered death signal for a live SessionView: unlike the
+    //    'running' status (whose initial + first-restart broadcasts race ahead of this
+    //    subscription binding — the documented timing the restart smokes rely on), the
+    //    exit event always reaches the bound handler.
+    //
+    //    SEAM B (D-13): emit MOUSE_RESET here so a dying process that left mouse
+    //    tracking hot (a killed/restarted alt-screen TUI that never sent its own mouse-
+    //    disable) immediately releases the scroll-wheel — otherwise the wheel keeps
+    //    garbling as `[%30/]` mouse-report bytes. This is scrollback-PRESERVING (just
+    //    DECRST sequences, never a full terminal reset / RIS — D-07) and idempotent (a
+    //    no-op when mouse mode is already off). It is the reliable counterpart to the
+    //    alt-screen exit done on the next 'running' transition.
     const offExit = window.api.onPtyExit(id, () => {
+      term.write(MOUSE_RESET);
       term.write('\r\n\x1b[2m[process exited]\x1b[0m\r\n');
     });
 
@@ -350,32 +377,48 @@ export function SessionView({
         return;
       }
       if (p.status === 'running') {
+        // SEAM B restart seam (D-07/D-13). MOUSE_RESET fires on EVERY 'running'
+        // transition this view observes — NOT gated on hasRunBeforeRef. Rationale:
+        // main broadcasts the INITIAL spawn's 'running' BEFORE this subscription binds
+        // (the documented race the restart smokes rely on), so the FIRST 'running' the
+        // view actually sees is already a RESTART whose prior process may have left mouse
+        // tracking hot. Gating MOUSE_RESET on hasRunBeforeRef would therefore skip the
+        // user's first restart and leave the wheel garbling as `[%30/]` bytes (D-13).
+        // Writing MOUSE_RESET when the mode is already 'none' is a harmless no-op (the
+        // DECRST sequences are idempotent), so emitting it unconditionally is safe and
+        // correct. We exit the alternate-screen buffer ONLY when actually in it
+        // (`buffer.active.type === 'alternate'`) so a plain-shell restart does NOT
+        // needlessly toggle the alt-buffer and trim primary scrollback (D-07). NEVER
+        // RIS / a full terminal reset here — it wipes the scrollback the restart must
+        // preserve. These writes are FIXED literals (ASVS V5 — no interpolation).
+        term.write(
+          MOUSE_RESET +
+            (term.buffer.active.type === 'alternate' ? ALT_SCREEN_EXIT : ''),
+        );
+        // The "— restarted —" separator, by contrast, IS gated on hasRunBeforeRef so a
+        // genuinely-fresh dormant Start shows no separator (D-08). It must paint AFTER
+        // the alt-screen exit, on the clean primary screen.
         if (hasRunBeforeRef.current) {
-          // SC3/D-15 (restart seam): exit any alternate-screen buffer the prior process
-          // left active (e.g. a killed vim/less) with \x1b[?1049l. This is SURGICAL —
-          // it restores the PRIMARY screen and PRESERVES its scrollback (honors Phase-3
-          // D-03 scrollback-across-restart), unlike a full term.reset() which would wipe
-          // it (RESEARCH Pitfall 4 / Open Q1). It MUST run BEFORE the separator so the
-          // "— restarted —" line paints on the clean primary screen, not inside the
-          // stale alt-screen frame.
-          term.write('\x1b[?1049l');
           const hhmm = new Date().toTimeString().slice(0, 5);
           term.write(`\r\n\x1b[2m— restarted ${hhmm} —\x1b[0m\r\n`);
         }
         hasRunBeforeRef.current = true;
-        // Open the agent-state detector gate (D-07): classify only while running.
+        // Open the agent-state detector gate (D-12): classify only while running.
         agentRunning = true;
       } else {
-        // SC3/D-15 (abnormal-exit seam): a genuinely-dead frame ('exited'/'error', i.e.
-        // a killed vim/less or a crash — NOT 'stopped', which precedes a user restart and
-        // must keep its scrollback for the restart seam's \x1b[?1049l preservation) gets a
-        // full term.reset() (RIS \x1bc). This exits any alt-screen the dead process left
-        // active so a frozen frame never survives the reopen. Main broadcasts this status
-        // BEFORE the onPtyExit event, so the [process exited] notice paints on the clean
-        // primary screen. Resetting here (not in onPtyExit) is what lets a user Restart —
-        // whose stop emits 'stopped' — preserve scrollback (RESEARCH Pitfall 4 / Open Q1).
+        // SEAM B abnormal-exit seam (D-13 / RESEARCH Open Q1): a genuinely-dead frame
+        // ('exited'/'error', i.e. a killed vim/less or a crash — NOT 'stopped', which
+        // precedes a user restart). The dead TUI never sent its own mouse-disable, so
+        // we emit MOUSE_RESET so the scroll-wheel scrolls the buffer instead of garbling
+        // as `[%30/]` mouse-report bytes, and ALT_SCREEN_EXIT so a frozen alt-screen
+        // frame never survives the reopen. This is scrollback-PRESERVING (no RIS / full
+        // terminal reset anywhere — D-07): the prior scrollback stays visible above the
+        // [process exited] notice. Main broadcasts this status BEFORE the onPtyExit
+        // event, so the notice paints on the clean primary screen.
+        // NOTE (human-verify flag): this prefers scrollback-preserving over a
+        // guaranteed-blank crash frame (RESEARCH Open Q1 recommendation).
         if (p.status === 'exited' || p.status === 'error') {
-          term.reset();
+          term.write(MOUSE_RESET + ALT_SCREEN_EXIT);
         }
         // Leaving 'running' (stopped/exited/error): close the gate so the
         // frame-stability tick stops classifying, and reset the change-tracker so the

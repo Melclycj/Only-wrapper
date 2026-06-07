@@ -412,6 +412,103 @@ export async function activeSessionId(): Promise<string> {
 }
 
 /**
+ * Read the xterm mouse-tracking mode of the session identified by `id`, from the
+ * renderer-local term handle `window.__sessionTerms[id].modes.mouseTrackingMode`
+ * (a read-only xterm getter, NOT a bridge key). Returns one of xterm's
+ * 'none' | 'x10' | 'vt200' | 'drag' | 'any', or '' when the term is unavailable.
+ *
+ * This is the D-13 verification handle: after a restart / abnormal exit the
+ * SessionView SEAM B writes MOUSE_RESET, so a TUI that had turned mouse tracking ON
+ * must read back 'none' — proving the scroll-wheel is no longer captured as mouse-
+ * report escape bytes (the `[%30/]` garble).
+ */
+export async function mouseTrackingModeOf(id: string): Promise<string> {
+  return browser.execute((sid: string) => {
+    const w = window as unknown as {
+      __sessionTerms?: Record<
+        string,
+        { modes?: { mouseTrackingMode?: string } }
+      >;
+    };
+    return w.__sessionTerms?.[sid]?.modes?.mouseTrackingMode ?? '';
+  }, id);
+}
+
+/**
+ * The active buffer TYPE ('normal' | 'alternate') of the session identified by `id`,
+ * read from `window.__sessionTerms[id].buffer.active.type`. Used to prove SEAM B
+ * exited the alternate-screen buffer after a killed alt-screen TUI (D-13/D-07): a
+ * frozen alt-screen frame must not survive — the terminal must be back on the normal
+ * (primary) buffer. Returns '' when the term is unavailable.
+ */
+export async function bufferTypeOf(id: string): Promise<string> {
+  return browser.execute((sid: string) => {
+    const w = window as unknown as {
+      __sessionTerms?: Record<
+        string,
+        { buffer?: { active?: { type?: string } } }
+      >;
+    };
+    return w.__sessionTerms?.[sid]?.buffer?.active?.type ?? '';
+  }, id);
+}
+
+/**
+ * The current viewportY (top visible buffer row) of the session identified by `id`,
+ * read from `window.__sessionTerms[id].buffer.active.viewportY`. Used to prove a
+ * scroll-wheel event SCROLLED the xterm buffer (viewportY changed) rather than being
+ * encoded as mouse-report bytes sent to the dead PTY (D-13).
+ */
+export async function viewportYOf(id: string): Promise<number> {
+  return browser.execute((sid: string) => {
+    const w = window as unknown as {
+      __sessionTerms?: Record<
+        string,
+        { buffer?: { active?: { viewportY?: number } } }
+      >;
+    };
+    return w.__sessionTerms?.[sid]?.buffer?.active?.viewportY ?? -1;
+  }, id);
+}
+
+/**
+ * Scroll the terminal viewport of the session `id` UP into scrollback by `lines`,
+ * exercising xterm's native viewport-scroll path — the SAME path a physical scroll-
+ * wheel drives: the wheel adjusts `.xterm-viewport.scrollTop`, which fires the
+ * viewport's `scroll` listener, which scrolls xterm's buffer. (A synthetic
+ * `WheelEvent` does NOT drive xterm's scroll under the WebGL renderer in this
+ * Electron/Chromium harness — the deterministic, non-flaky equivalent is to move
+ * scrollTop + dispatch the `scroll` event, which is exactly what the wheel ends up
+ * doing.)
+ *
+ * The point under test (D-13): after a killed alt-screen + mouse-tracking TUI, the
+ * wheel must scroll xterm's OWN buffer. The product fix that makes this true is
+ * MOUSE_RESET (mouseTrackingMode → 'none'); if the mode were still hot the wheel
+ * would be captured as PTY mouse-report bytes and the buffer would NOT scroll.
+ * Assert `mouseTrackingModeOf(id) === 'none'` alongside this to prove the cause.
+ */
+export async function scrollViewportUp(
+  id: string,
+  lines = 10,
+): Promise<void> {
+  await browser.execute(
+    (sid: string, n: number) => {
+      const pane = document.querySelector<HTMLElement>(
+        `.session-view[data-session-id="${sid}"]`,
+      );
+      const vp = pane?.querySelector<HTMLElement>('.xterm-viewport');
+      if (!vp) return;
+      // Each row is ~ (clientHeight / rows) px; scroll up by `n` rows' worth.
+      const rowPx = Math.max(1, Math.round(vp.clientHeight / 24));
+      vp.scrollTop = Math.max(0, vp.scrollTop - n * rowPx);
+      vp.dispatchEvent(new Event('scroll', { bubbles: true }));
+    },
+    id,
+    lines,
+  );
+}
+
+/**
  * Kill the OS process behind a given ptyPid abnormally (SIGKILL) from the MAIN process,
  * simulating a crashed / externally-killed session (e.g. a killed vim). This is NOT a
  * user Close (which would unmount the SessionView): the live SessionView stays mounted
