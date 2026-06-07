@@ -221,7 +221,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. The sidebar shows a best-effort "waiting for input" indicator when a background session's output has gone idle after a pattern consistent with an agent confirmation prompt (e.g., trailing `?` or `[y/N]`)
   5. The session header provides single-click (or keyboard-accessible) "Clear terminal" and "Restart session" controls that work correctly
 
-**Plans:** 4 plans
+**Plans:** 2/4 plans executed
 **UI hint:** yes
 
 **Wave 1**
@@ -230,7 +230,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 2** *(blocked on Wave 1)*
 
-- [ ] 06-02-spawn-error-recovery-PLAN.md — SC2 slice: main cwd pre-validate + try/catch spawn (no silent home) + error card with Edit/Retry + Start-without-command + folder picker + edit-prefill + WR-04/WR-05 (TERM-12)
+- [x] 06-02-spawn-error-recovery-PLAN.md — SC2 slice: main cwd pre-validate + try/catch spawn (no silent home) + error card with Edit/Retry + Start-without-command + folder picker + edit-prefill + WR-04/WR-05 (TERM-12)
 
 **Wave 3** *(blocked on Wave 2)*
 
@@ -283,6 +283,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 5.1 → 6 → 7 �
 | 4. Session Identity + Sidebar UI | 4/4 | Complete    | 2026-06-05 |
 | 5. Persistence + Shell Discovery | 4/4 | Complete    | 2026-06-06 |
 | 5.1. TERM-05 startup-command auto-run (INSERTED) | 3/3 | Complete    | 2026-06-06 |
-| 6. Robustness + Flow-Control Polish | 0/4 | Not started | - |
+| 6. Robustness + Flow-Control Polish | 2/4 | In Progress|  |
 | 7. Terminal Search + Scrollback Config | 0/TBD | Not started | - |
 | 8. Cross-Platform Packaging | 0/TBD | Not started | - |

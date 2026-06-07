@@ -41,7 +41,7 @@ Requirements for the initial release. Derived from the user's FR-01–FR-21 spec
 - [ ] **TERM-09**: Sidebar surfaces a best-effort "waiting for input" / needs-attention indicator when a backgrounded session appears blocked awaiting user input (research addition; heuristic, best-effort)
 - [ ] **TERM-10**: User can search a session's scrollback (e.g. Ctrl+F) (research addition)
 - [ ] **TERM-11**: Scrollback buffer size is configurable via a global setting with a sensible default (research addition)
-- [ ] **TERM-12**: Session header provides quick clear-terminal and restart-session controls (research addition)
+- [x] **TERM-12**: Session header provides quick clear-terminal and restart-session controls (research addition)
 
 ### Local Persistence
 
@@ -124,7 +124,7 @@ Populated during roadmap creation. Each v1 requirement maps to exactly one phase
 | TERM-09 | Phase 6: Robustness + Flow-Control Polish | Pending |
 | TERM-10 | Phase 7: Terminal Search + Scrollback Config | Pending |
 | TERM-11 | Phase 7: Terminal Search + Scrollback Config | Pending |
-| TERM-12 | Phase 6: Robustness + Flow-Control Polish | Pending |
+| TERM-12 | Phase 6: Robustness + Flow-Control Polish | Complete |
 | PERS-01 | Phase 5: Persistence + Shell Discovery | Complete |
 | PERS-02 | Phase 5: Persistence + Shell Discovery | Complete |
 | PKG-01 | Phase 8: Cross-Platform Packaging | Pending |
