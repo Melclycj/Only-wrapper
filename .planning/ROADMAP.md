@@ -226,7 +226,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 1**
 
-- [ ] 06-01-foundation-PLAN.md — Foundation: Wave 0 RED scaffolds + pure agent-state classifier + 19-key bridge lockstep (pickDirectory) + Clear-chord matcher/handler + 05.1 probe fixes (WR-01..03/IN-01..03) + TerminalPane delete + SC1 100M smoke (TERM-09/TERM-12)
+- [x] 06-01-foundation-PLAN.md — Foundation: Wave 0 RED scaffolds + pure agent-state classifier + 19-key bridge lockstep (pickDirectory) + Clear-chord matcher/handler + 05.1 probe fixes (WR-01..03/IN-01..03) + TerminalPane delete + SC1 100M smoke (TERM-09/TERM-12)
 
 **Wave 2** *(blocked on Wave 1)*
 

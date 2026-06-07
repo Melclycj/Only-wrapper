@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
+status: executing
 stopped_at: Phase 6 UI-SPEC approved
-last_updated: "2026-06-07T01:27:15.196Z"
-last_activity: 2026-06-07 -- Phase 06 planning complete
+last_updated: "2026-06-07T01:51:00.000Z"
+last_activity: 2026-06-07 -- Phase 06 Plan 01 (foundation) complete
 progress:
   total_phases: 9
   completed_phases: 6
-  total_plans: 21
-  completed_plans: 21
-  percent: 67
+  total_plans: 25
+  completed_plans: 22
+  percent: 71
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-03)
 
 **Core value:** Real terminal fidelity — `claude --rc`, `codex`, `vim`, `ssh`, REPLs all behave exactly like a native terminal inside the wrapper.
-**Current focus:** Phase 6 — robustness-+-flow-control-polish (Phase 05.1 complete)
+**Current focus:** Phase 06 — robustness-flow-control-polish
 
 ## Current Position
 
-Phase: 6
-Plan: Not started
-Status: Phase 05.1 (TERM-05) complete and verified — ready to start Phase 6
-Last activity: 2026-06-07 -- Phase 06 planning complete
+Phase: 06 (robustness-flow-control-polish) — EXECUTING
+Plan: 2 of 4
+Status: Executing Phase 06
+Last activity: 2026-06-07 -- Phase 06 Plan 01 (foundation) complete
 
-Progress: [████████████████████] 100% (Phase 5.1 plans: 3/3)
+Progress: [█████░░░░░░░░░░░░░░░░] 25% (Phase 06 plans: 1/4)
 
 ## Performance Metrics
 
@@ -76,6 +76,7 @@ Progress: [████████████████████] 100% (P
 | Phase 05.1 P01 | ~6min | 2 tasks | 4 files |
 | Phase 05.1 P02 | 8 | 1 tasks | 1 files |
 | Phase 05.1 P03 | ~20min | 3 tasks | 6 files |
+| Phase 06 P01 | ~12min | 3 tasks | 16 files |
 
 ## Accumulated Context
 
@@ -129,6 +130,8 @@ Recent decisions affecting current work:
 - [Phase 05.1-01]: Wave 0 probe-hook state-machine tests are RED-by-BEHAVIOR (the file imports cleanly; `READINESS_TIMEOUT_MS` is `undefined` until Plan 02/03) so pure-helper + SC5-hydrate stay GREEN — only the 2 tests that require the create() probe gate (withhold-probe-bytes D-02, inject-on-match-with-CR SC1) fail RED; D-04 notice reuses onPtyStatus (no new bridge key — security.guard.test.ts unchanged)
 - [Phase ?]: 05.1-02: TERM-05 auto-run happy path — create() runs invisible readiness probe then injects cmd + CR on match; READINESS_TIMEOUT_MS deferred to Plan 03 (timeout test stays RED by design)
 - [Phase 05.1-03]: Completed the probe state machine — READINESS_TIMEOUT_MS=4000ms timeout-flush-and-notice branch: on ready-timeout the buffer flushes to a usable bare prompt and the command is NEVER injected (safe-by-default, D-04/SC4). The D-04 ready-fail notice REUSES the existing onPtyStatus channel via optional PtyStatusPayload.notice — ZERO new bridge keys (EXPECTED_API_KEYS stays 18, security.guard GREEN unchanged; Open Q1 lighter path). Notice is a fixed literal (no startupCommand/nonce/buffer leak — V7). buildPosixProbe regex unchanged vs real cold zsh (Open Q3); defensive stripProbeEcho scrub guards D-02 nonce-absence. Real cold-spawn E2E GREEN (auto-run+history+nonce-absent+restart-rerun+bare-shell). VALIDATION nyquist_compliant:true
+- [Phase 06-01]: Interface-first foundation wave — pure shared/agent-state.ts classifier (AgentState overlay, NOT a 6th SessionStatus — D-06; IDLE_MS=800 D-08; conservative anchored PROMPT_RE: trailing ?, [y/n] variants, (y/n)/(yes/no), ❯ — naked $/% and trailing ':' are FREE not WAITING; ReDoS-safe linear+anchored V7/T-06-03), the {kind:'clear'} matchClearKey riding the EXISTING session:switch channel (Cmd+K mac / Ctrl+Shift+K win; plain Ctrl+K → null to keep readline kill-line — D-13), and the 19-key pickDirectory bridge lockstep define the Phase-6 contracts Plans 02/03/04 build against. pickDirectory is the ONLY new bridge key (the Clear chord adds none)
+- [Phase 06-01]: Folded the 05.1 review fixes — WR-02: readiness matcher (buildPosixProbe re) now fires ONLY when the nonce appears AFTER a newline boundary (a produced line, never the bare echo line: `\n[^\n]*<nonce>`); WR-03: matches() bounds the scan to the last 8 KB tail before testing; IN-02: Phase-8 per-shell comment on void shellPath; IN-03: startup-command smoke restart assertion anchored on the full '— restarted ' separator literal (not a bare indexOf). 3 Wave 0 RED scaffolds (pty-spawn-error describe.todo → Plan 02; alt-screen-reset + header-controls describe.skip → Plan 04) resolve cleanly. TerminalPane.tsx deleted (D-16, no live import; tsc + electron-forge package GREEN). npm test 171 GREEN
 - [Phase 05.1-03 HUMAN-VERIFY]: Canonical 🛋️ Parlour Claude RC scenario APPROVED 2026-06-06 — all 4 CONFIRMs passed (clean auto-run no garble/visible-nonce, ArrowUp history recall, restart re-runs after separator, empty command → bare shell). 3 session edit/lifecycle UX items surfaced but are OUT OF SCOPE for TERM-05 (Phase 03/04 concerns) — captured as todos in .planning/todos/pending/ (edit-modal cwd/startup prefill, folder picker, ▶ Start discoverability)
 
 ### Pending Todos
@@ -154,6 +157,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-06T16:48:55.439Z
-Stopped at: Phase 6 UI-SPEC approved
-Resume file: .planning/phases/06-robustness-flow-control-polish/06-UI-SPEC.md
+Last session: 2026-06-07T01:51:00.000Z
+Stopped at: Completed 06-01-foundation-PLAN.md
+Resume file: None
