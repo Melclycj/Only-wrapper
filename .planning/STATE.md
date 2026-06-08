@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Paused at 06.1-04 Task 3 — end-of-phase human-verify checkpoint (Wave 2 impl + all smokes GREEN)
-last_updated: "2026-06-08T02:20:00.000Z"
-last_activity: 2026-06-08 -- 06.1-04 Tasks 1-2 done (two-bucket renderer UI + D-08 smoke); awaiting human-verify (Task 3)
+stopped_at: Paused at 06.1-04 Task 3 — SECOND end-of-phase human-verify (gap-closure round 1 complete; 4 defects fixed + locked, all suites GREEN)
+last_updated: "2026-06-08T02:30:00.000Z"
+last_activity: 2026-06-08 -- 06.1-04 gap-closure round 1: fixed amber-never-fires (FIX1), removed header Restart (FIX3), persist-by-identity (FIX4b), self-exit→Inactive flip (FIX4a) + stale-exit race guard; awaiting 2nd human-verify
 progress:
   total_phases: 10
   completed_phases: 6
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-06-03)
 ## Current Position
 
 Phase: 06.1 (terminal-lifecycle-state-machine-and-agent-state-detection-r) — EXECUTING
-Plan: 4 of 4
-Status: Paused at the end-of-phase human-verify (06.1-04 Task 3) — implementation + all automated suites GREEN; awaiting user "approved" to flip nyquist_compliant in 06-VALIDATION.md + 06.1-VALIDATION.md
-Last activity: 2026-06-08 -- 06.1-04 Tasks 1-2 done (two-bucket renderer UI + D-08 smoke)
+Plan: 4 of 4 (in-progress)
+Status: Paused at the SECOND end-of-phase human-verify (06.1-04 Task 3). The first human-verify FAILED; gap-closure round 1 fixed all 4 diagnosed defects (FIX 1 amber, FIX 3 header-restart removal, FIX 4a self-exit→Inactive, FIX 4b persist-by-identity) + a stale-exit race guard, each locked with a regression test. All automated suites GREEN. nyquist_compliant stays false in 06-VALIDATION.md + 06.1-VALIDATION.md until the user re-verifies.
+Last activity: 2026-06-08 -- 06.1-04 gap-closure round 1 (5 fix commits)
 
-Progress: [███████████████████░] 95% (Phase 06.1 plans: 3.5/4 — 04 impl done, human-verify pending)
+Progress: [███████████████████░] 95% (Phase 06.1 plans: 3.5/4 — 04 impl + gap-closure done, 2nd human-verify pending)
 
 ## Performance Metrics
 
@@ -83,6 +83,7 @@ Progress: [███████████████████░] 95% (Ph
 | Phase 06.1 P02 | 85 | 2 tasks | 3 files |
 | Phase 06.1 P03 | ~12min | 2 tasks | 3 files |
 | Phase 06.1 P04 | ~38min | 2 of 3 tasks (human-verify pending) | 9 files |
+| Phase 06.1 P04 gap-closure r1 | ~75min | 5 fixes (FIX1/3/4a/4b + stale-exit guard) | 3 new modules + 3 new tests + 8 modified |
 
 ## Accumulated Context
 
@@ -146,6 +147,7 @@ Recent decisions affecting current work:
 - [Phase ?]: 06.1-02: MOUSE_RESET fires on onPtyExit (the reliable death signal) + unconditionally on the running transition (idempotent), NOT gated on hasRunBeforeRef — the initial/first-restart running broadcast races ahead of the status subscription, so gating would skip the user's first restart and leave the scroll-wheel hot (D-13).
 - [Phase ?]: 06.1-02: abnormal-exit is scrollback-preserving (MOUSE_RESET + ALT_SCREEN_EXIT, no term.reset()/RIS) per RESEARCH Open Q1 — flagged for human-verify (blank-vs-preserve crash frame).
 - [Phase 06.1-04]: Renderer two-bucket UI (TERM-12/TERM-09 surface). Sidebar partitions the order-sorted rows into a labeled Working Area (status !== 'not_started'; the error card stays here per D-05) + Inactive List (not_started) — one SortableContext spans all ids so cross-section drag-reorder is intact; each Inactive entry carries Start ▶ + Start-without-command (start-no-cmd-session) + permanent Delete (delete-session). IdentityHeader is LIVE-ONLY = Clear + Restart + Remove (header-remove); the contextual header Start (header-start) branch is DELETED (D-06 supersedes Phase-6 D-11). Remove vs Delete split behind the one ConfirmModal (removeMode): Remove of a CONFIGURED live session = window.api.ptyStop + an optimistic renderer flip to not_started (→ Inactive List in-session; main keeps the configured record so it restores dormant next boot) — NOT a new main primitive (Plan 03's stop() keeps a user-stopped session 'stopped' in the live map by design, so the dormant flip lives in the renderer); Remove of an ephemeral + any Delete = window.api.ptyClose (permanent). configured is mirrored onto the renderer row at the edit save sites. Keyboard-focus fix in SessionView.attachCustomKeyEventHandler: when the keydown target is NOT xterm's .xterm-helper-textarea, return false so the browser handles Tab/Space/Enter natively (focus traversal + button activation) and no key is fed to the PTY. No new bridge key (window-config.ts untouched, 19 keys; status-colors.ts untouched — D-14). NEW app-restart-restore.smoke proves D-08 (configured persists on disk + a dormant first Start has no '— restarted —'); the literal OS relaunch is not driveable under @wdio/electron-service (ephemeral per-launch userData + reloadSession drops the CDP bridge) so the smoke drives the Remove→dormant restore-equivalent path. Rule-1 test-correctness fix: persistence.smoke + reorder.smoke now configure sessions before asserting on-disk persistence (a Plan-03 D-02 regression those smokes — run unit-only by Plan 03 — had left RED). 206 unit GREEN, tsc + eslint clean, 14/14 smoke GREEN. Task 3 (end-of-phase human-verify) is BLOCKING and NOT yet run — nyquist_compliant stays false in both VALIDATION files until explicit user approval. one-way auto-promotes a session to configured (configured=true set unconditionally after any metadata field write — touching the profile = the user keeps it; never reset to false; create() stays ephemeral). New PtyManager.listConfiguredSessions() filters listSessions() to configured===true; index.ts syncStore() persists from it (session-store.ts setSessions stays a dumb setter, untouched) so an unedited +New session never touches disk (D-02, T-06.1-11). onExit selfExit routing (selfExit = !userStopped && (status==='exited'||status==='error')): a configured self-exit MOVES the record sessions→dormantRecords coerced to not_started with pid dropped + order preserved (Inactive List, RESEARCH A2); an ephemeral self-exit is delete()d (gone, no persistence); a user-stopped Stop/Restart precursor ('stopped') STAYS in the live map so restart() respawns under the same logicalId. Spawn-failure (pid -1) returns before onExit is wired → stays an error broadcast (pty-spawn-error green). Routing runs AFTER the error-notice broadcast so the fork-then-die error card still gets its status+notice. No new bridge key (configured rides the existing updateProfile channel — security.guard 19-key invariant green). 206 unit tests GREEN, tsc + eslint clean. The three Wave-0 RED lifecycle scaffolds are now GREEN.
+- [Phase 06.1-04 gap-closure r1]: First human-verify FAILED → 4 fixes + 1 follow-on, each locked. (1) Amber settle-independence: extracted SEAM A per-tick decision into pure src/renderer/agent-tick.ts (decideAgentTick); now runs classify() EVERY tick and emits 'waiting' after WAITING_TICKS(3)≈300ms even while the full-frame hash churns (the real claude footer repaints forever → it never settled → amber never fired). classify() untouched (oracle green); ❯ caret NOT reintroduced. (2) Header Restart ↻ REMOVED (user decision) — live header = Clear + Remove; onRestart prop + SessionManager pass-through gone; restart-in-place + the '— restarted —' divider STAY (still reachable via row/context-menu Restart — assessed not-dead). (3) FIX4b persist policy = IDENTITY/RECIPE (supersedes edit-only D-02): persist if 'configured OR hasIdentity' where identity = startupCommand | custom name (not auto 'Session N') | custom icon | non-default cwd | non-default shell; pure src/main/session-identity.ts gates listConfiguredSessions() + onExit self-exit routing; DEFAULT_SESSION_ICON is the single-source default; 06.1-CONTEXT.md D-02 refined. A bare blank +New stays ephemeral. (4) FIX4a self-exit→Inactive flip: pure src/renderer/session-status.ts (resolveRowStatus/hasRendererIdentity) presents an IDENTITY row's 'exited'/'error' as 'not_started' so it enters the Inactive List mid-session (was only on next boot). (5) Follow-on Rule-1 race guard: child.onExit no-ops when s.pty!==child — the dormant Start (create({id})) re-spawns under the same id while the old child drains SIGTERM, and the stale exit was relabeling the live session (exposed by FIX4a; app-restart-restore smoke was timing out). 234 unit GREEN (30 files), tsc + eslint(src/tests) clean, 14/14 smoke GREEN (packaged). nyquist_compliant NOT flipped — awaiting 2nd human-verify. Pre-existing .planning/spikes/*.cjs lint errors (8) are out of scope → deferred-items.md.
 
 ### Pending Todos
 
@@ -153,7 +155,10 @@ None yet.
 
 ### Blockers/Concerns
 
-- **[06.1-04 Task 3 — ACTIVE] End-of-phase human-verify is the only remaining step.** All automated suites are GREEN (206 unit + 14/14 smoke incl. alt-screen-reset + app-restart-restore). The user must run the four hands-on checks (amber feel, scroll/garble fix, scrollback survival ≥3 restarts, two-bucket lifecycle) against the running app and type "approved" (plus confirm the abnormal-exit frame choice — scrollback-preserving default vs blank crash frame, RESEARCH Open Q1). On approval the executor flips nyquist_compliant: true in BOTH 06-VALIDATION.md and 06.1-VALIDATION.md. **The flags are NOT flipped yet.** To run the app: `npm start` (or `npm run package` then launch out/Just-Wrapper-darwin-arm64/Just-Wrapper.app).
+- **[06.1-04 Task 3 — ACTIVE, 2nd pass] SECOND end-of-phase human-verify is the only remaining step.** The FIRST human-verify FAILED; gap-closure round 1 fixed all 4 diagnosed defects + a stale-exit race guard, each locked with a regression test. All automated suites are GREEN (234 unit + 14/14 smoke incl. alt-screen-reset + app-restart-restore). The user must RE-run the hands-on checks against the running app and type "approved" (plus confirm the abnormal-exit frame choice — scrollback-preserving default vs blank crash frame, RESEARCH Open Q1). On approval the executor flips nyquist_compliant: true in BOTH 06-VALIDATION.md and 06.1-VALIDATION.md. **The flags are NOT flipped yet.** To run the app: `npm start` (or `npm run package` then launch out/Just-Wrapper-darwin-arm64/Just-Wrapper.app). Refreshed re-verify checklist is in the executor's return report.
+  - FIX 1: amber "waiting" now fires LIVE on the real `claude` permission screen (settle-independent — the churning footer no longer keeps it blue).
+  - FIX 3: the header ↻ Restart button is GONE — the live header is Clear + Remove only; Restart lives on the row/context-menu and via Remove → Start-from-Inactive.
+  - FIX 4a/4b: a running session carrying a recipe (e.g. a startupCommand) now persists across restart and a self-exiting configured/recipe session drops into the Inactive List immediately.
 - [resolved-by-Plan-03, fixed in 04] persistence.smoke + reorder.smoke had stale ephemeral-persists expectations after Plan 03's D-02 configured-only persistence — corrected in 06.1-04 (Rule-1 test correctness).
 - node-pty version for Electron 42.x needs verification before Phase 2 starts (see research/SUMMARY.md); consider starting on Electron 36.x if compatibility is unclear
 - macOS notarization (Phase 8) requires Apple Developer Program membership (~$99/year); plan ahead
@@ -172,6 +177,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-08T02:20:00.000Z
-Stopped at: 06.1-04 Tasks 1-2 done (two-bucket renderer UI + D-08 smoke); PAUSED at Task 3 end-of-phase human-verify (BLOCKING — not self-approved)
-Resume file: .planning/phases/06.1-terminal-lifecycle-state-machine-and-agent-state-detection-r/06.1-04-PLAN.md (resume at Task 3 human-verify)
+Last session: 2026-06-08T02:30:00.000Z
+Stopped at: 06.1-04 gap-closure round 1 complete (5 fix commits, all suites GREEN); PAUSED at the SECOND Task 3 end-of-phase human-verify (BLOCKING — not self-approved)
+Resume file: .planning/phases/06.1-terminal-lifecycle-state-machine-and-agent-state-detection-r/06.1-04-PLAN.md (resume at Task 3 human-verify, 2nd pass)

@@ -245,7 +245,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Goal:** The terminal lifecycle is a clean two-bucket model (a Working Area of live sessions + an Inactive List of dormant configured sessions, no "Stop" verb), agent-state detection reads "Waiting for you" from frame-stability (not output-silence) so `claude --rc` is correctly amber on a confirmation prompt and never stuck blue, and the Core-Value scroll/`[%30/]` fidelity regression after alt-screen apps is fixed.
 **Requirements:** TERM-09, TERM-12
 **Depends on:** Phase 6
-**Plans:** 3/4 executed; 06.1-04 implementation + all smokes GREEN, paused at the end-of-phase human-verify
+**Plans:** 3/4 executed; 06.1-04 implementation + gap-closure round 1 done, all smokes GREEN, paused at the SECOND end-of-phase human-verify
 
 **Wave 0**
 
@@ -258,7 +258,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 2** *(blocked on Wave 1 — has checkpoint)*
 
-- [~] 06.1-04-PLAN.md — Renderer two-bucket UI: Working Area / Inactive List sections + no-Stop header (Clear+Restart+Remove) + keyboard-focus fix + Remove/Delete + D-08 restore-no-separator smoke (TERM-12/TERM-09, D-01/D-06/D-08) — impl + smokes GREEN (`2d3b8b3`, `1261d52`); PAUSED at the blocking end-of-phase human-verify sign-off (Task 3) — nyquist_compliant not yet flipped
+- [~] 06.1-04-PLAN.md — Renderer two-bucket UI: Working Area / Inactive List sections + live header (Clear+Remove; header Restart REMOVED in gap-closure FIX 3) + keyboard-focus fix + Remove/Delete + D-08 restore-no-separator smoke (TERM-12/TERM-09, D-01/D-06/D-08) — impl + smokes GREEN (`2d3b8b3`, `1261d52`). FIRST human-verify FAILED → gap-closure round 1 fixed 4 defects + a stale-exit race guard, each locked (`080807a` amber settle-independence, `90e87e5` remove header Restart, `3e64e84` persist-by-identity, `4455169` self-exit→Inactive flip, `0cdb149` stale-exit guard); 234 unit + 14/14 smoke GREEN. PAUSED at the SECOND blocking end-of-phase human-verify (Task 3) — nyquist_compliant still not flipped
 
 ### Phase 7: Terminal Search + Scrollback Config
 
