@@ -50,18 +50,34 @@ export interface StatusEvent {
  *     away from 'error'; the agent overlay is cleared on any transition away from 'running'.
  */
 export function applyStatusEvent(row: StatusRow, event: StatusEvent): StatusRow {
-  // CURRENT (BUGGY — round-2 RED) behavior, transcribed verbatim from the inline
-  // SessionManager.tsx closure so the extracted reducer reproduces the live defect
-  // before the fix lands. A notice event adopts the notice's `status` field
-  // (`resolved = p.notice ? p.status : ...`) — which lets a stale 'running' ready-fail
-  // notice resurrect a dormant row (ITEM 4). The fix replaces this branch below.
+  // ── NOTICE event: informational only — NEVER a lifecycle transition (ITEM 4). ──
+  // A notice (the TERM-05 ready-fail, or an SC2 spawn-error message) rides the same
+  // onPtyStatus channel but its `status` field is the CURRENT live status, not a
+  // transition. The OLD code adopted that status (`resolved = notice ? status : …`),
+  // so a stale 'running' ready-fail notice — which main could send AFTER a recipe had
+  // self-exited — resurrected a dormant row back into the Working Area. Keep the row's
+  // OWN status; only an error notice updates the captured errorMessage. agentState is
+  // preserved (a notice is not a lifecycle change, so the overlay must not be touched).
+  if (event.notice) {
+    if (event.status === 'error') {
+      return { ...row, errorMessage: event.notice };
+    }
+    return row;
+  }
+
+  // ── LIFECYCLE transition ──
+  // FIX 4a (round 1): an IDENTITY row's self-exit ('exited'/'error') is presented as
+  // 'not_started' so it moves to the Inactive List immediately (matching the dormant
+  // record main moved it to). On that move we drop the dead pid + stale error/overlay so
+  // the Inactive-List entry is a clean restartable recipe. Otherwise the status passes
+  // through: capture the error message on 'error', clear it on any transition away from
+  // 'error', and clear the agent overlay on any transition away from 'running'.
   const errorMessage =
     event.status === 'error' ? event.notice ?? row.errorMessage : undefined;
-  const agentState =
-    event.notice || event.status === 'running' ? row.agentState : undefined;
-  const resolved = event.notice ? event.status : resolveRowStatus(row, event.status);
+  const agentState = event.status === 'running' ? row.agentState : undefined;
+  const resolved = resolveRowStatus(row, event.status);
   const movedToInactive =
-    !event.notice && resolved === 'not_started' && event.status !== 'not_started';
+    resolved === 'not_started' && event.status !== 'not_started';
   if (movedToInactive) {
     return {
       ...row,

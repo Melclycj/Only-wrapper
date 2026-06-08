@@ -43,10 +43,11 @@ import { resolveSwitch } from './session-switch';
 // reindexes order densely 0..n-1. Kept React/dnd-kit-free so the invariant is unit-
 // testable in the Node env (session-reorder.test.ts).
 import { reorder } from './session-reorder';
-// resolveRowStatus is the PURE status-transition reducer (06.1-04 FIX 4a) — kept
-// React/xterm-free so the "configured/recipe self-exit → Inactive List" invariant is
-// unit-testable in the Node env (session-status.test.ts).
-import { resolveRowStatus } from './session-status';
+// applyStatusEvent is the PURE per-row onPtyStatus reducer (06.1-04 FIX 4a + the ITEM-4
+// stale-notice guard) — kept React/xterm-free so the full status-event handling is
+// unit-testable in the Node env (apply-status-event.test.ts). It internally applies
+// resolveRowStatus (session-status.ts) for the self-exit → Inactive List flip.
+import { applyStatusEvent } from './apply-status-event';
 
 /**
  * Renderer-only row shape: the authoritative SessionRecord (main's source of truth)
@@ -433,52 +434,20 @@ export function SessionManager(): React.JSX.Element {
     const offs = sessions.map((s) =>
       window.api.onPtyStatus(s.logicalId, (p) => {
         setSessions((prev) =>
-          prev.map((row) => {
-            if (row.logicalId !== p.id) return row;
-            // SC2 (D-03/D-05): capture the spawn-error message from the notice when
-            // the transition is to 'error'; clear it on any transition AWAY from
-            // 'error' (a successful Retry → 'running' must not leave a stale message).
-            const errorMessage =
-              p.status === 'error'
-                ? (p.notice ?? row.errorMessage)
-                : undefined;
-            // A notice event carries the CURRENT live status (typically 'running')
-            // without being a lifecycle transition — leave agentState alone for it.
-            // Otherwise: clear the agent-state overlay on any transition AWAY from
-            // 'running' (D-07/D-10) so amber/blue/slate never lingers on a stopped/
-            // exited/errored session (SessionView also closes its detector gate).
-            const agentState =
-              p.notice || p.status === 'running' ? row.agentState : undefined;
-            // FIX 4a: present a configured/recipe SELF-EXIT ('exited'/'error') as
-            // 'not_started' so the row moves to the Inactive List IMMEDIATELY (mirroring
-            // the dormant record main moved it to, and the optimistic configured-live-
-            // Remove flip above). A notice event is informational (not a lifecycle
-            // transition) so it never triggers the flip; an ephemeral self-exit / any
-            // other transition passes its status through unchanged. When the row does
-            // land dormant we drop the dead pid + stale error/overlay so the Inactive-
-            // List entry is a clean restartable recipe.
-            const resolved = p.notice
-              ? p.status
-              : resolveRowStatus(row, p.status);
-            const movedToInactive =
-              !p.notice && resolved === 'not_started' && p.status !== 'not_started';
-            if (movedToInactive) {
-              return {
-                ...row,
-                status: 'not_started',
-                ptyPid: undefined,
-                errorMessage: undefined,
-                agentState: undefined,
-              };
-            }
-            return {
-              ...row,
-              status: resolved,
-              ptyPid: p.ptyPid ?? row.ptyPid,
-              errorMessage,
-              agentState,
-            };
-          }),
+          prev.map((row) =>
+            // The full per-row status-event handling lives in the PURE applyStatusEvent
+            // reducer (FIX 4a self-exit → Inactive List + the ITEM-4 stale-notice guard:
+            // a notice is informational and NEVER changes the row's lifecycle status, so
+            // a stale 'running' ready-fail notice can no longer resurrect a dormant row
+            // back into the Working Area). Unit-tested in apply-status-event.test.ts.
+            row.logicalId === p.id
+              ? applyStatusEvent(row, {
+                  status: p.status,
+                  ptyPid: p.ptyPid,
+                  notice: p.notice,
+                })
+              : row,
+          ),
         );
       }),
     );

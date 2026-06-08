@@ -451,6 +451,20 @@ export class PtyManager {
         if (settled) return;
         settled = true;
         offProbe.dispose();
+        // STALE-TIMEOUT GUARD (06.1-04 round 2, ITEM 4 — the "revert to Working Area
+        // after ~1s" defect). The child can self-EXIT before the probe ever settles (a
+        // recipe/agent that finished, a `claude --rc` that returned). onExit then routes
+        // the record to dormantRecords (not_started) and DELETES it from this.sessions —
+        // BUT this timer is still armed (the old code only cleared it on a successful
+        // match). If it now fired the ready-fail notice it would broadcast a stale
+        // pty:status whose `liveStatus` fell back to 'running' (the session is gone from
+        // this.sessions), RESURRECTING the dormant row back into the Working Area. So:
+        // if the exiting child is no longer the session's current live pty (it exited,
+        // was Removed, or was replaced by a re-Start under the same id), this timeout is
+        // a NO-OP — no stale flush, no stale status. A dead child needs no ready-fail
+        // notice (it is already routed by onExit). Mirrors the onExit stale-exit guard.
+        const live = this.sessions.get(id);
+        if (!live || live.pty !== child || !live.alive) return;
         // Flush the buffered (real) shell output — the bare prompt becomes usable.
         // Security V7 (T-05.1-04): the buffer is forwarded to the renderer as normal
         // PTY data but is NEVER logged.
@@ -459,11 +473,12 @@ export class PtyManager {
         this.wireNormalOnData(id, child);
         // Ready-fail notice: a FIXED literal (no command/nonce/buffer interpolation —
         // T-05.1-04), riding the existing onPtyStatus channel with the live status so
-        // the badge is unaffected and no new bridge key is added (T-05.1-05).
-        const liveStatus = this.sessions.get(id)?.status ?? 'running';
+        // the badge is unaffected and no new bridge key is added (T-05.1-05). `live` is
+        // guaranteed present + alive by the stale-timeout guard above, so its status is
+        // the genuine live status (no 'running' fallback for an already-gone session).
         this.send(PTY_CHANNELS.status, {
           id,
-          status: liveStatus,
+          status: live.status,
           notice: READINESS_FAIL_NOTICE,
         });
         // Lifecycle logging only — never log the command/nonce/buffer (V7).

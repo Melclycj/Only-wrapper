@@ -86,7 +86,6 @@ vi.mock('../shell-resolver', () => ({
 
 import { PtyManager } from '../pty-manager';
 import { SessionStore } from '../session-store';
-import type { LogicalId } from '../../shared/types';
 
 function fakeWindow(): never {
   return {
