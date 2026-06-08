@@ -185,6 +185,12 @@ describe('SessionStore (PERS-01 / PERS-02 / D-13)', () => {
     // (the 4 bursts coalesced into a single write — D-13).
     await vi.advanceTimersByTimeAsync(200);
     expect(flushSpy).toHaveBeenCalledTimes(1);
+
+    // CR-03: `dirty` now clears only AFTER db.write() durably resolves (not
+    // synchronously at the top of flush()), so await the in-flight write the trailing
+    // timer kicked off before asserting the store is clean. The spy returns the same
+    // promise flush() returns (the coalesced in-flight write).
+    await flushSpy.mock.results[0].value;
     expect(store.isDirty()).toBe(false);
   });
 

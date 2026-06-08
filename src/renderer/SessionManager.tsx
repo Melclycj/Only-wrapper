@@ -48,6 +48,11 @@ import { reorder } from './session-reorder';
 // unit-testable in the Node env (apply-status-event.test.ts). It internally applies
 // resolveRowStatus (session-status.ts) for the self-exit → Inactive List flip.
 import { applyStatusEvent } from './apply-status-event';
+// optimisticRunningFlip is the PURE post-spawn/restart "running" flip with the WR-02
+// pid>0 guard — kept React/xterm-free so the guard (a failed spawn returns pid -1 and
+// main has already broadcast 'error'; the optimistic flip must NOT clobber the error
+// card) is unit-testable in the Node env and shared by the Start AND Restart paths.
+import { optimisticRunningFlip } from './optimistic-spawn';
 
 /**
  * Renderer-only row shape: the authoritative SessionRecord (main's source of truth)
@@ -204,13 +209,12 @@ export function SessionManager(): React.JSX.Element {
   const handleRestart = useCallback((id: LogicalId) => {
     void (async () => {
       const { pid } = await window.api.ptyRestart(id);
-      setSessions((prev) =>
-        prev.map((row) =>
-          row.logicalId === id
-            ? { ...row, ptyPid: pid, status: 'running' }
-            : row,
-        ),
-      );
+      // WR-02: restart() → create() returns pid -1 on a FAILED respawn (bad cwd /
+      // synchronous spawn throw) and has ALREADY broadcast status 'error' + the notice
+      // over onPtyStatus. The optimistic 'running' flip must be guarded by pid>0 (the
+      // same inverse-guard handleStart has) so a failed respawn's error card is not
+      // clobbered. optimisticRunningFlip is a no-op when pid <= 0.
+      setSessions((prev) => optimisticRunningFlip(prev, id, pid));
     })();
   }, []);
 
@@ -243,16 +247,9 @@ export function SessionManager(): React.JSX.Element {
       // + the notice over onPtyStatus (captured by the subscription), so do NOT
       // optimistically flip to 'running' — that would clobber the error card. Only a
       // real pty (pid > 0) gets the optimistic running flip; the subscription then
-      // keeps it live. On the error path we also clear any stale ptyPid.
-      if (pid > 0) {
-        setSessions((prev) =>
-          prev.map((row) =>
-            row.logicalId === id
-              ? { ...row, ptyPid: pid, status: 'running', errorMessage: undefined }
-              : row,
-          ),
-        );
-      }
+      // keeps it live (the pid>0 guard + stale-error clear live in optimisticRunningFlip,
+      // shared with handleRestart — WR-02).
+      setSessions((prev) => optimisticRunningFlip(prev, id, pid));
     })();
   }, []);
 
@@ -269,15 +266,9 @@ export function SessionManager(): React.JSX.Element {
         rows: 24,
         skipStartupCommand: true,
       });
-      if (pid > 0) {
-        setSessions((prev) =>
-          prev.map((row) =>
-            row.logicalId === id
-              ? { ...row, ptyPid: pid, status: 'running', errorMessage: undefined }
-              : row,
-          ),
-        );
-      }
+      // Same pid>0 guard as handleStart/handleRestart — shared via optimisticRunningFlip
+      // (WR-02). A failed spawn (pid -1) is a no-op so the broadcast error card stands.
+      setSessions((prev) => optimisticRunningFlip(prev, id, pid));
     })();
   }, []);
 

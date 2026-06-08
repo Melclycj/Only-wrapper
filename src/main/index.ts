@@ -167,6 +167,15 @@ app.on('window-all-closed', () => {
 
 app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) {
+    // CR-01: reset the before-quit re-entrancy guard for the NEW window cycle. On
+    // macOS the app stays resident after window-all-closed; a dock-relaunch (or a
+    // quit that another before-quit listener / onbeforeunload cancelled) can leave
+    // `quitting` stuck `true` from a prior quit attempt. If it stays true, the very
+    // next before-quit on the new window skips the flush guard
+    // (`if (!quitting && store.isDirty())` is false) and tears down WITHOUT flushing
+    // — so sessions created in the new window cycle never persist on quit. Resetting
+    // it here re-arms the flush-then-quit round-trip for the fresh window.
+    quitting = false;
     createWindow();
   }
 });

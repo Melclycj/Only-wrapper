@@ -96,6 +96,14 @@ export const MIN_DIMENSION = 1;
 export const MAX_DIMENSION = 1000;
 
 /**
+ * Display-order clamp bound (CR-04 — defense-in-depth, mirrors MIN/MAX_DIMENSION).
+ * Comfortably above any realistic session count (~50 per CLAUDE.md), but far below
+ * Number.MAX_SAFE_INTEGER so a renderer-supplied order can never poison nextOrder()
+ * into a MAX_SAFE_INTEGER+1 precision-loss collision.
+ */
+export const MAX_ORDER = 10_000;
+
+/**
  * The default emoji icon a brand-new session is born with (mirrors the literal in
  * create()). Exported as the single source of truth so the FIX-4b identity predicate
  * (session-identity.ts) compares against the SAME default create() assigns.
@@ -114,6 +122,16 @@ export function clampDimension(n: number): number {
   const floored = Math.floor(n);
   // Math.floor(NaN) === NaN; `|| MIN_DIMENSION` maps NaN/0 → 1.
   return Math.min(MAX_DIMENSION, Math.max(MIN_DIMENSION, floored || MIN_DIMENSION));
+}
+
+/**
+ * Clamp a renderer-supplied display order to 0..MAX_ORDER (CR-04 — defense-in-depth,
+ * mirrors clampDimension). The caller has already type-guarded `n` as a finite number;
+ * this floors fractional values and bounds the range so a huge finite order (e.g.
+ * Number.MAX_SAFE_INTEGER) cannot poison nextOrder(). Negative → 0.
+ */
+export function clampOrder(n: number): number {
+  return Math.min(MAX_ORDER, Math.max(0, Math.floor(n)));
 }
 
 /** Type guard for PTY write payloads — only real strings may reach pty.write (T-02-02). */
@@ -208,6 +226,21 @@ interface PtySession {
    * restart()'s internal stop() → respawn.
    */
   removing: boolean;
+  /**
+   * CR-02: true between a restart() call and its respawn completing. A second
+   * concurrent restart() on the same id (the renderer dispatching two rapid
+   * ptyRestart calls) finds this true and coalesces onto the in-flight restart
+   * instead of arming a SECOND onExit→respawn listener on the same pty — which would
+   * fire two create() calls (double startup-command injection + an orphaned live
+   * pty). The per-closure `respawned` guard only protects ONE listener; this flag
+   * guards against TWO callers.
+   */
+  restarting: boolean;
+  /**
+   * CR-02: the in-flight restart promise so a concurrent restart() returns the SAME
+   * pending result rather than rejecting. Cleared when the respawn resolves.
+   */
+  restartPromise?: Promise<PtyCreateResult>;
   record: SessionRecord;
 }
 
@@ -371,6 +404,7 @@ export class PtyManager {
       status: 'running',
       userStopped: false,
       removing: false,
+      restarting: false, // CR-02: a freshly-created session has no restart in flight
       record,
     });
 
@@ -776,11 +810,24 @@ export class PtyManager {
     if (!s) {
       return Promise.reject(new Error(`restart: unknown session ${id}`)); // T-03-01
     }
+    // CR-02 in-flight lock: a second concurrent restart() on the same id coalesces
+    // onto the first restart's in-flight promise instead of arming a SECOND
+    // onExit→respawn listener on the same pty (which would double-spawn — two
+    // create() calls, double startup-command injection, an orphaned live pty). The
+    // per-closure `respawned` guard only protects a SINGLE listener; this guards two
+    // callers. The lock lives on the OLD session `s` captured here — create()
+    // (inside respawn) replaces this.sessions.get(id) with a fresh restarting:false
+    // session, so the lock is naturally released by the respawn.
+    if (s.restarting && s.restartPromise) return s.restartPromise;
+
     const record = s.record;
-    return new Promise<PtyCreateResult>((resolve) => {
+    s.restarting = true;
+    const promise = new Promise<PtyCreateResult>((resolve) => {
       const respawn = (): void => {
         // SessionRecord carries no cols/rows — the renderer re-fits + ptyResize()s
         // on attach (Pattern 8), so a sane default here is corrected immediately.
+        // create() writes a NEW PtySession (restarting:false) over this id, so the
+        // captured `s` lock is dropped with the dead session it guarded.
         const result = this.create({
           cols: 80,
           rows: 24,
@@ -811,6 +858,8 @@ export class PtyManager {
         respawn();
       }
     });
+    s.restartPromise = promise;
+    return promise;
   }
 
   /**
@@ -1051,15 +1100,19 @@ export class PtyManager {
       if (typeof id !== 'string' || typeof order !== 'number' || !Number.isFinite(order)) {
         continue; // type-guard each field (T-05-01)
       }
+      // CR-04: clamp the renderer-supplied order to 0..MAX_ORDER (defense-in-depth,
+      // mirroring the cols/rows 1..1000 clamp) so a huge finite value cannot poison
+      // nextOrder() into a MAX_SAFE_INTEGER+1 precision-loss collision.
+      const clamped = clampOrder(order);
       // Apply to a live record OR a dormant (restored-not-started) record — a
       // restored session can be reordered before it is ever started (NAV-04).
       const live = this.sessions.get(id as LogicalId);
       if (live) {
-        live.record.order = order;
+        live.record.order = clamped;
         continue;
       }
       const dormant = this.dormantRecords.get(id as LogicalId);
-      if (dormant) dormant.order = order; // unknown id otherwise → skip (T-05-01)
+      if (dormant) dormant.order = clamped; // unknown id otherwise → skip (T-05-01)
     }
     this.signalStore(); // reordered set → debounce-write (NAV-04/D-13)
   }

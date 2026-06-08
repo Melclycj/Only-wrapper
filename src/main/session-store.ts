@@ -55,6 +55,13 @@ export class SessionStore {
   private saveTimer: NodeJS.Timeout | null = null;
   private dirty = false;
   private readonly debounceMs: number;
+  /**
+   * CR-03: the in-flight db.write() promise, or null when no write is running. A
+   * concurrent flush() (the scheduleSave timer racing the before-quit flush) awaits
+   * THIS promise instead of returning a no-op — so two callers coalesce onto one
+   * durable write and neither drops the pending change if that write fails.
+   */
+  private writing: Promise<void> | null = null;
 
   /**
    * @param pathOverride  TEST SEAM — when provided, the store reads/writes this
@@ -206,18 +213,42 @@ export class SessionStore {
   }
 
   /**
-   * Write the pending change immediately, clear the timer, and mark clean.
-   * A no-op when not dirty (so the before-quit guard never double-writes). This
-   * is the quit-flush path: index.ts before-quit awaits flush() so the trailing
+   * Write the pending change immediately, clear the timer, and mark clean. This is
+   * the quit-flush path: index.ts before-quit awaits flush() so the trailing
    * debounced write is never lost (D-13).
+   *
+   * CR-03 ordering + coalescing (the durability contract):
+   *   - A write already in flight → await THAT promise rather than returning a
+   *     no-op. The OLD code let a concurrent flush see `dirty === false` and return
+   *     immediately while the first write was still running — if that write then
+   *     failed, both callers had already "succeeded" and the change was lost.
+   *   - `dirty` is cleared ONLY AFTER db.write() resolves. The OLD code cleared it
+   *     BEFORE awaiting, so a write rejection (disk full / EACCES) left the store
+   *     CLEAN with the mutation unwritten — silent data loss, and isDirty() never
+   *     re-armed the before-quit flush guard. On failure we re-arm `dirty` and
+   *     rethrow so the next flush retries.
    */
   async flush(): Promise<void> {
     if (this.saveTimer) {
       clearTimeout(this.saveTimer);
       this.saveTimer = null;
     }
+    // Coalesce: a concurrent caller joins the in-flight write instead of no-op'ing.
+    if (this.writing) return this.writing;
     if (!this.dirty || !this.db) return; // nothing pending → no-op
-    this.dirty = false;
-    await this.db.write(); // steno atomic write
+
+    const db = this.db;
+    this.writing = (async () => {
+      try {
+        await db.write(); // steno atomic write
+        this.dirty = false; // clear ONLY after the write durably resolves (CR-03)
+      } catch (err) {
+        this.dirty = true; // re-arm so the next flush retries the lost write (CR-03)
+        throw err;
+      } finally {
+        this.writing = null;
+      }
+    })();
+    return this.writing;
   }
 }
