@@ -43,6 +43,10 @@ import { resolveSwitch } from './session-switch';
 // reindexes order densely 0..n-1. Kept React/dnd-kit-free so the invariant is unit-
 // testable in the Node env (session-reorder.test.ts).
 import { reorder } from './session-reorder';
+// resolveRowStatus is the PURE status-transition reducer (06.1-04 FIX 4a) — kept
+// React/xterm-free so the "configured/recipe self-exit → Inactive List" invariant is
+// unit-testable in the Node env (session-status.test.ts).
+import { resolveRowStatus } from './session-status';
 
 /**
  * Renderer-only row shape: the authoritative SessionRecord (main's source of truth)
@@ -445,9 +449,31 @@ export function SessionManager(): React.JSX.Element {
             // exited/errored session (SessionView also closes its detector gate).
             const agentState =
               p.notice || p.status === 'running' ? row.agentState : undefined;
+            // FIX 4a: present a configured/recipe SELF-EXIT ('exited'/'error') as
+            // 'not_started' so the row moves to the Inactive List IMMEDIATELY (mirroring
+            // the dormant record main moved it to, and the optimistic configured-live-
+            // Remove flip above). A notice event is informational (not a lifecycle
+            // transition) so it never triggers the flip; an ephemeral self-exit / any
+            // other transition passes its status through unchanged. When the row does
+            // land dormant we drop the dead pid + stale error/overlay so the Inactive-
+            // List entry is a clean restartable recipe.
+            const resolved = p.notice
+              ? p.status
+              : resolveRowStatus(row, p.status);
+            const movedToInactive =
+              !p.notice && resolved === 'not_started' && p.status !== 'not_started';
+            if (movedToInactive) {
+              return {
+                ...row,
+                status: 'not_started',
+                ptyPid: undefined,
+                errorMessage: undefined,
+                agentState: undefined,
+              };
+            }
             return {
               ...row,
-              status: p.status,
+              status: resolved,
               ptyPid: p.ptyPid ?? row.ptyPid,
               errorMessage,
               agentState,
