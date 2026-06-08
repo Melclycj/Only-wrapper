@@ -55,12 +55,34 @@ export function hasRendererIdentity(row: RowIdentity): boolean {
 }
 
 /**
+ * The non-running SELF-EXIT statuses an identity row presents as 'not_started' (the
+ * Inactive List). A self-exit means the process ended on its own — for an identity row the
+ * record is a recipe, not a frozen process, so it belongs in the Inactive List.
+ *
+ *   - 'exited' / 'error' — a self-exit (FIX 4a, round 1).
+ *
+ * NOTE (DEFECT A, round 3): 'stopped' is DELIBERATELY NOT here. The configured-live Remove
+ * path is handled MAIN-side: removeLive() broadcasts 'not_started' directly (the record's
+ * actual terminal state), so the renderer needs no special-case for it. Generalizing
+ * 'stopped'→not_started here would WRONGLY catch a RESTART's transient stopped→running and
+ * unmount the kept SessionView mid-restart — dropping the '— restarted —' separator seam
+ * and the re-run of the startup command (smoke SC3). A restart's 'stopped' must pass through
+ * so SessionView stays mounted across the respawn.
+ */
+const SELF_EXIT_STATUSES: ReadonlySet<SessionStatus> = new Set<SessionStatus>([
+  'exited',
+  'error',
+]);
+
+/**
  * Resolve the STATUS a row should present given an incoming pty:status `transition`.
  *
- * The only adjustment (FIX 4a): a SELF-EXIT ('exited'/'error') of an IDENTITY row is
+ * The only adjustment (FIX 4a): a SELF-EXIT ('exited' | 'error') of an IDENTITY row is
  * presented as 'not_started' so it moves to the Inactive List immediately (matching the
- * dormant record main moved it to). Every other transition — including an ephemeral
- * self-exit and any non-exit transition (running/stopped) — passes through unchanged.
+ * dormant record main moved it to). Every other transition — an ephemeral self-exit, or any
+ * non-self-exit transition ('running' / 'stopped' / 'not_started') — passes through
+ * unchanged. (The configured-live Remove arrives as a 'not_started' broadcast from main —
+ * DEFECT A — so it needs no special case here.)
  *
  * Pure (row, transition) → SessionStatus; the caller applies it to the row.
  */
@@ -68,8 +90,7 @@ export function resolveRowStatus(
   row: RowIdentity,
   transition: SessionStatus,
 ): SessionStatus {
-  const isSelfExit = transition === 'exited' || transition === 'error';
-  if (isSelfExit && hasRendererIdentity(row)) {
+  if (SELF_EXIT_STATUSES.has(transition) && hasRendererIdentity(row)) {
     return 'not_started';
   }
   return transition;

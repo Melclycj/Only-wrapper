@@ -66,18 +66,25 @@ export function applyStatusEvent(row: StatusRow, event: StatusEvent): StatusRow 
   }
 
   // ── LIFECYCLE transition ──
-  // FIX 4a (round 1): an IDENTITY row's self-exit ('exited'/'error') is presented as
-  // 'not_started' so it moves to the Inactive List immediately (matching the dormant
-  // record main moved it to). On that move we drop the dead pid + stale error/overlay so
-  // the Inactive-List entry is a clean restartable recipe. Otherwise the status passes
-  // through: capture the error message on 'error', clear it on any transition away from
-  // 'error', and clear the agent overlay on any transition away from 'running'.
+  // FIX 4a (round 1) + DEFECT A (round 3): an IDENTITY row's terminal non-running status
+  // ('exited' | 'error' | 'stopped') is presented as 'not_started' (resolveRowStatus) so
+  // it moves to the Inactive List immediately (matching the dormant record main moved it
+  // to). 'stopped' was added in round 3: the configured-live Remove path issues ptyStop →
+  // main broadcasts 'stopped', and without this the row reverted back to the Working Area.
+  // On that move we drop the dead pid + stale error/overlay so the Inactive-List entry is a
+  // clean restartable recipe. Otherwise the status passes through: capture the error
+  // message on 'error', clear it on any transition away from 'error', and clear the agent
+  // overlay on any transition away from 'running'.
   const errorMessage =
     event.status === 'error' ? event.notice ?? row.errorMessage : undefined;
   const agentState = event.status === 'running' ? row.agentState : undefined;
   const resolved = resolveRowStatus(row, event.status);
-  const movedToInactive =
-    resolved === 'not_started' && event.status !== 'not_started';
+  // A move to the Inactive List is any resolution to 'not_started' from a row that was NOT
+  // already dormant — covering BOTH the FIX 4a self-exit flip ('exited'/'error' → not_started
+  // for an identity row) AND the DEFECT A removeLive broadcast (main sends 'not_started'
+  // directly for the configured-live Remove). On that move we drop the dead pid + stale
+  // error/overlay so the Inactive-List entry is a clean restartable recipe.
+  const movedToInactive = resolved === 'not_started' && row.status !== 'not_started';
   if (movedToInactive) {
     return {
       ...row,

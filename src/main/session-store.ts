@@ -130,6 +130,12 @@ export class SessionStore {
     if (!this.db.data.ui || typeof this.db.data.ui !== 'object') {
       this.db.data.ui = {};
     }
+    // DEFECT B (round 3) hygiene: lowdb's read() replaces db.data wholesale with the file
+    // content, so a v1 file leaves db.data.version === 1 and every subsequent write would
+    // re-persist the STALE version (the on-disk file was observed stuck at version:1 while
+    // SCHEMA_VERSION is 2). Bump it here, post-coercion, so the next write records the
+    // current schema version — coerceOnLoad already applied the v1→v2 record migration.
+    this.db.data.version = SCHEMA_VERSION;
     return this.db.data;
   }
 

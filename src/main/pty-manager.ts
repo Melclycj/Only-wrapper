@@ -198,6 +198,16 @@ interface PtySession {
   status: SessionStatus;
   killTimer?: NodeJS.Timeout;
   userStopped: boolean;
+  /**
+   * DEFECT A (round 3): set true by removeLive() — the configured-live Remove path. It is
+   * DISTINCT from `userStopped` (the restart precursor, which keeps the record live as
+   * 'stopped'). When `removing` is true, onExit routes the kept record to the Inactive
+   * List (dormantRecords, not_started) instead of leaving it live — so a Remove never
+   * leaves a stale live 'stopped' row that the Sidebar partitions back into the Working
+   * Area. The Stop verb was abolished (D-01), so the ONLY non-removing userStopped exit is
+   * restart()'s internal stop() → respawn.
+   */
+  removing: boolean;
   record: SessionRecord;
 }
 
@@ -360,6 +370,7 @@ export class PtyManager {
       alive: true,
       status: 'running',
       userStopped: false,
+      removing: false,
       record,
     });
 
@@ -510,6 +521,16 @@ export class PtyManager {
         exitCode,
         userStopped: s?.userStopped ?? false,
       });
+      // DEFECT A (round 3): a removeLive() exit (the configured-live Remove path) retires
+      // the record to the Inactive List, so the BROADCAST status is 'not_started' — the
+      // record's actual terminal state — NOT 'stopped'. This is what lets the renderer
+      // present the row in the Inactive List WITHOUT generalizing 'stopped'→not_started for
+      // every identity row (which would wrongly catch a RESTART's transient stopped→running
+      // and unmount the kept SessionView mid-restart, dropping the '— restarted —' seam).
+      // A plain restart precursor (userStopped WITHOUT removing) still broadcasts 'stopped'
+      // so SessionView stays mounted across the respawn.
+      const removedLive = Boolean(s?.removing);
+      const broadcastStatus: SessionStatus = removedLive ? 'not_started' : status;
       // Update the kept record's status + drop the live pty handle (Pitfall 5). The
       // D-05 two-bucket routing below decides whether the record STAYS in
       // this.sessions (a user stop/restart precursor) or MOVES/vanishes (a self-exit).
@@ -519,7 +540,7 @@ export class PtyManager {
         s.record.status = status;
         s.record.ptyPid = undefined; // the OS process is gone
       }
-      this.setStatus(id, status, { exitCode });
+      this.setStatus(id, broadcastStatus, { exitCode });
       // D-05 generic notice for the ASYNC fork-then-die case (Pitfall 1): a bad cwd
       // or shell that passed pre-validation but failed inside the forked child arrives
       // here as an abnormal exit (code≠0 && !userStopped → 'error' via deriveStatus).
@@ -558,9 +579,19 @@ export class PtyManager {
       // reaches this routing — it stays an error broadcast (pty-spawn-error.test.ts).
       const selfExit =
         !(s?.userStopped) && (status === 'exited' || status === 'error');
-      if (s && selfExit) {
-        if (shouldPersist(s.record, this.sessionDefaults())) {
-          // Identity/recipe self-exit → Inactive List (dormant not_started, order kept).
+      // DEFECT A (round 3): a removeLive() exit (the configured-live Remove path) ALSO
+      // leaves the Working Area — even though it carries userStopped=true → 'stopped'. It
+      // routes to the SAME dormant-not_started bucket as a self-exit (a Removed configured
+      // session is a recipe in the Inactive List), so it never stays live as 'stopped'
+      // (the Sidebar would otherwise partition that back into the Working Area). The
+      // restart precursor (userStopped WITHOUT removing) is excluded — it must stay live so
+      // restart() can respawn under the same logicalId. (`removedLive` computed above.)
+      if (s && (selfExit || removedLive)) {
+        if (removedLive || shouldPersist(s.record, this.sessionDefaults())) {
+          // Identity/recipe self-exit OR an explicit Remove → Inactive List (dormant
+          // not_started, order kept). A removeLive() target is always a configured/identity
+          // session by construction (the renderer only Removes-to-dormant configured rows),
+          // so it persists unconditionally.
           this.sessions.delete(id);
           this.dormantRecords.set(id, {
             ...s.record,
@@ -712,6 +743,26 @@ export class PtyManager {
         // throws on kill of a dead child; cleanup must not crash.
       }
     }, STOP_GRACE_MS);
+  }
+
+  /**
+   * Remove a LIVE configured session (DEFECT A, round 3 — the configured-live Remove path
+   * behind SessionManager.confirmClose → window.api.ptyStop → IPC pty:stop). Kills the PTY
+   * like stop(), but marks the session `removing` so onExit routes the kept record to the
+   * Inactive List (dormantRecords, not_started) rather than leaving it live as 'stopped'.
+   *
+   * The distinction from stop() (the restart precursor) is deliberate: stop() must keep the
+   * record live as 'stopped' so restart() can respawn under the same logicalId; removeLive()
+   * instead retires the record to a dormant restartable recipe. The Stop verb was abolished
+   * (D-01), so the renderer's only "stop a live session" gesture is this Remove.
+   *
+   * Unknown/forged/already-dead id → no-op (T-03-01), mirroring stop().
+   */
+  removeLive(id: LogicalId): void {
+    const s = this.sessions.get(id);
+    if (!s || !s.alive) return; // unknown/forged/dead id (T-03-01)
+    s.removing = true; // onExit → route to dormant not_started (DEFECT A)
+    this.stop(id); // reuse the platform-aware graceful kill (SIGTERM→SIGKILL / win32 kill)
   }
 
   /**
@@ -1108,8 +1159,13 @@ export class PtyManager {
     // 03-01 lifecycle channels — registered inside the idempotency guard (T-03-02).
     // stop is fire-and-forget (.on); restart/list are request-response (.handle).
     // Each id-taking handler validates via the sessions/record store (T-03-01).
+    //
+    // DEFECT A (round 3): the renderer's only "stop a live session" gesture is the
+    // configured-live Remove (the Stop verb was abolished — D-01). So pty:stop routes to
+    // removeLive() — which retires the record to the Inactive List (dormant not_started)
+    // on exit — NOT the bare stop() (the restart precursor that keeps it live as 'stopped').
     ipcMain.on(PTY_CHANNELS.stop, (_event: IpcMainEvent, id: LogicalId) =>
-      this.stop(id),
+      this.removeLive(id),
     );
 
     ipcMain.handle(PTY_CHANNELS.restart, (_event, id: LogicalId) =>

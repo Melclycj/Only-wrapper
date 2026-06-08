@@ -6,6 +6,7 @@ import { PtyManager } from './pty-manager';
 import { SessionStore } from './session-store';
 import { validateBounds } from './window-bounds';
 import { matchSwitchKey, matchClearKey, type KeyInput } from './switch-keys';
+import { handleWindowClosed, handleWindowAllClosed } from './lifecycle';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -111,12 +112,14 @@ function createWindow(): void {
     }
   });
 
-  // Orphan-safe cleanup: kill every PTY when this window closes (Pitfall 6, T-02-06).
-  // detachWindow() FIRST so node-pty's synchronous final onData/onExit flushes during
-  // disposeAll() never hit a destroyed BrowserWindow (TERM-06/08 shutdown crash guard).
+  // Orphan-safe cleanup + DEFECT B store flush when this window closes (Pitfall 6,
+  // T-02-06). handleWindowClosed detaches the window FIRST (so node-pty's final
+  // onData/onExit flushes during disposeAll() never hit a destroyed BrowserWindow —
+  // TERM-06/08 shutdown guard), then FLUSHES the store (a session Started right before a
+  // dev window-close on macOS — where no before-quit fires — must be durable), then
+  // disposeAll()s every PTY. The handler is extracted to lifecycle.ts so it is unit-tested.
   win.on('closed', () => {
-    ptyManager.detachWindow();
-    ptyManager.disposeAll();
+    void handleWindowClosed(ptyManager, store);
   });
 
   // Load renderer
@@ -152,9 +155,14 @@ app.whenReady().then(async () => {
 });
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
+  // DEFECT B: flush the store on ALL platforms before any quit decision so the last window
+  // closing never drops a pending debounced write, THEN apply the platform quit policy
+  // (non-darwin quits; darwin stays resident — the dock-relaunch path).
+  void handleWindowAllClosed(store).finally(() => {
+    if (process.platform !== 'darwin') {
+      app.quit();
+    }
+  });
 });
 
 app.on('activate', () => {

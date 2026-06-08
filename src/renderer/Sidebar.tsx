@@ -27,6 +27,7 @@ import type { LogicalId, SessionIconSpec, SessionRecord } from '../shared/types'
 import type { AgentState } from '../shared/agent-state';
 import { presentation } from './status-colors';
 import { COLOR_INITIAL } from './icon-spec';
+import { startAffordances } from './start-affordances';
 
 /**
  * Render a SessionIconSpec across all three kinds — the SINGLE source of truth
@@ -198,6 +199,19 @@ function SortableSidebarRow({
   // D-06/D-14: a dormant entry with a saved startup command also offers a "Start without
   // command" affordance (bare shell, skipping the TERM-05 auto-run for that one launch).
   const hasStartupCmd = (s.startupCommand ?? '').trim().length > 0;
+  // DEFECT C (round 3): the ACTIVE dormant/error row renders an in-place IdleCard (whose
+  // "▶ Start session" is the primary Start). startAffordances suppresses the duplicate
+  // sidebar ▶ for that one active row so the two no longer co-render — every NON-active
+  // dormant row keeps its sidebar ▶. activeIsCard mirrors SessionManager's predicate
+  // (the active row shows the card when not_started OR error).
+  const activeIsCard =
+    isActive && (s.status === 'not_started' || s.status === 'error');
+  const startCtl = startAffordances({
+    status: s.status,
+    isActive,
+    activeIsCard,
+    startupCommand: s.startupCommand,
+  });
 
   return (
     <div
@@ -261,38 +275,41 @@ function SortableSidebarRow({
         {stat.label}
       </span>
       <span className="row-controls">
-        {!running &&
-          (dormant ? (
-            <button
-              type="button"
-              className="row-control row-control-start"
-              data-testid="start-session"
-              data-action="start"
-              title="Start session"
-              aria-label={`Start ${s.name}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                onStart(s.logicalId);
-              }}
-            >
-              <span aria-hidden="true">▶</span>
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="row-control"
-              data-testid="restart-session"
-              data-action="restart"
-              title="Restart session"
-              aria-label={`Restart ${s.name}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                onRestart(s.logicalId);
-              }}
-            >
-              <span aria-hidden="true">↻</span>
-            </button>
-          ))}
+        {/* DEFECT C: the sidebar ▶ primary Start renders ONLY when startAffordances says
+            so — i.e. NOT for the active dormant row whose IdleCard already owns the primary
+            Start. The Restart ↻ shows on a has-run non-running row (not dormant). */}
+        {startCtl.sidebarStart && (
+          <button
+            type="button"
+            className="row-control row-control-start"
+            data-testid="start-session"
+            data-action="start"
+            title="Start session"
+            aria-label={`Start ${s.name}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              onStart(s.logicalId);
+            }}
+          >
+            <span aria-hidden="true">▶</span>
+          </button>
+        )}
+        {!running && !dormant && (
+          <button
+            type="button"
+            className="row-control"
+            data-testid="restart-session"
+            data-action="restart"
+            title="Restart session"
+            aria-label={`Restart ${s.name}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              onRestart(s.logicalId);
+            }}
+          >
+            <span aria-hidden="true">↻</span>
+          </button>
+        )}
         {/* D-06/D-14: "Start without command" on an Inactive-List entry that has a saved
             startup command — a bare-shell launch that skips the TERM-05 auto-run for that
             one launch (the primary ▶ Start runs the command). */}
