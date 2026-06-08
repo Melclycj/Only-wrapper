@@ -404,6 +404,37 @@ describe('two-bucket self-exit lifecycle (FIX 4b: identity/recipe ⇒ persist)',
     expect(persisted.some((r) => r.logicalId === ephemeral.id)).toBe(false);
   });
 
+  it('a STALE onExit from a replaced child (re-Started under the same id) does NOT mutate the live session (Rule 1 race guard)', () => {
+    const mgr = new PtyManager();
+    mgr.registerIpc(fakeWindow());
+    // A configured session, user-stopped (Remove path) — its record is kept.
+    const { id } = mgr.create(bareOpts);
+    mgr.updateProfile(id, { name: 'Parlour Claude RC' });
+    const childA = spawnedChildren[0];
+    mgr.stop(id); // userStopped → 'stopped' on exit
+
+    // Re-Start under the SAME id BEFORE childA's exit drains (create({id}) overwrites
+    // this.sessions.get(id) with childB's PtySession — the dormant Start path).
+    mgr.create({ ...bareOpts, id });
+    const childB = spawnedChildren[1];
+    expect(childB).toBeDefined();
+
+    // NOW childA finally exits (the stale exit). Without the guard this would relabel
+    // the live childB session to 'exited' and (with configured) route it to dormant.
+    childA._fireExit({ exitCode: 0 });
+
+    const rec = mgr.listSessions().find((s) => s.logicalId === id);
+    // The live childB session must remain 'running' — the stale exit was ignored.
+    expect(rec).toBeDefined();
+    expect(rec?.status).toBe('running');
+    expect(rec?.ptyPid).toBe(childB.pid);
+
+    // childB's own exit still works normally (proves the guard didn't disable it).
+    childB._fireExit({ exitCode: 0 }); // self-exit of a configured session → dormant
+    const rec2 = mgr.listSessions().find((s) => s.logicalId === id);
+    expect(rec2?.status).toBe('not_started');
+  });
+
   it('a recipe session persists and RESTORES as a dormant Inactive-List entry on boot (FIX 4b round-trip)', () => {
     const mgr = new PtyManager();
     mgr.registerIpc(fakeWindow());

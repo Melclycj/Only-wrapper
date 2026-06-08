@@ -474,6 +474,16 @@ export class PtyManager {
     child.onExit(({ exitCode }) => {
       console.log(`[pty] exit code=${exitCode} (session ${id})`);
       const s = this.sessions.get(id);
+      // STALE-EXIT GUARD (Rule 1 bug — exposed by 06.1-04 FIX 4a): a session can be
+      // re-spawned under the SAME logicalId via create({id}) (the dormant Start path)
+      // while the PREVIOUS child is still draining its SIGTERM→exit. That overwrites
+      // this.sessions.get(id) with the NEW PtySession. When the OLD child's onExit then
+      // fires, `s` resolves to the NEW (live) session — and without this guard we would
+      // mutate/relabel/route the live session off a dead child's exitCode (e.g. flip a
+      // freshly-Started session to 'exited'/dormant). Only proceed if the exiting child
+      // IS the session's current pty. (restart() has its own respawned-once guard; this
+      // covers the create({id}) Start path that restart() does not orchestrate.)
+      if (s && s.pty !== child) return;
       // Clear any in-flight SIGKILL grace timer — the child exited first, so the
       // force-kill must never run (Pattern 3/4 grace-period race).
       if (s?.killTimer) {
