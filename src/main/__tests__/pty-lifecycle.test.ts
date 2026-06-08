@@ -349,23 +349,47 @@ describe('two-bucket self-exit lifecycle (FIX 4b: identity/recipe ⇒ persist)',
     expect(rec?.ptyPid).toBeUndefined();
   });
 
-  it('a user-stopped (restart precursor) is NOT moved to dormant — stays restartable in place (D-05)', () => {
+  it('stop() (the RESTART precursor) is NOT moved to dormant — stays restartable in place (D-05)', () => {
     const mgr = new PtyManager();
     mgr.registerIpc(fakeWindow());
     const { id } = mgr.create(liveOpts);
     const child = spawnedChildren[0];
 
-    // Configure it, then USER-stop it (userStopped → 'stopped', NOT a self-exit).
+    // ROUND 3 NOTE (D-01): stop() is now ONLY the internal restart() precursor — the
+    // user-facing "Stop" verb was abolished, and the configured-live Remove path uses
+    // removeLive() (the test below), NOT stop(). stop() must still leave the record live
+    // as 'stopped' so restart() can respawn under the same logicalId (the transient
+    // stopped→running of a restart). This contract is unchanged.
     mgr.updateProfile(id, { name: 'Parlour Claude RC' });
     mgr.stop(id);
     child._fireExit({ exitCode: 0 }); // userStopped=true → deriveStatus → 'stopped'
 
-    // A user stop is the restart precursor: the record must STAY as 'stopped' in the
-    // live map (so restart() can respawn under the same logicalId), NOT move to the
-    // Inactive List as 'not_started'.
     const rec = mgr.listSessions().find((s) => s.logicalId === id);
     expect(rec).toBeDefined();
     expect(rec?.status).toBe('stopped');
+  });
+
+  it('removeLive() of a configured-live session → moves the record to the Inactive List (not_started), NOT live "stopped" (DEFECT A defense-in-depth)', () => {
+    // DEFECT A (round 3): the configured-live Remove path (SessionManager.confirmClose →
+    // window.api.ptyStop → IPC pty:stop) must move the record to the Inactive List as a
+    // dormant not_started recipe — NOT leave it live as 'stopped' (which the renderer then
+    // partitioned back into the Working Area). Main-side defense-in-depth: removeLive()
+    // kills the PTY and, on exit, routes the kept record to dormantRecords as not_started.
+    const mgr = new PtyManager();
+    mgr.registerIpc(fakeWindow());
+    const { id } = mgr.create(liveOpts); // non-default cwd → identity
+    const child = spawnedChildren[0];
+    mgr.updateProfile(id, { name: 'Parlour Claude RC' }); // configured + identity
+
+    mgr.removeLive(id); // the Remove-of-a-live-configured-session primitive
+    child._fireExit({ exitCode: 0 }); // the kill resolves to an exit
+
+    const rec = mgr.listSessions().find((s) => s.logicalId === id);
+    // It must be REACHABLE as a dormant Inactive entry, not a live 'stopped' row.
+    expect(rec).toBeDefined();
+    expect(rec?.status).toBe('not_started');
+    expect(rec?.ptyPid).toBeUndefined();
+    expect(rec?.order).toBe(0); // order preserved (RESEARCH A2)
   });
 
   it('a BARE +New ephemeral self-exit → gone (absent from listSessions) (FIX 4b)', () => {

@@ -6,6 +6,14 @@
 // partition keeps in the WORKING AREA) — so it never visibly entered the Inactive List
 // mid-session. The reducer must instead present an IDENTITY row's self-exit as
 // 'not_started' so the partition (status==='not_started' → Inactive List) shows it.
+//
+// ROUND 3 (DEFECT A — Remove of a live session reverts Inactive→Working): the configured-
+// live Remove chain is fixed MAIN-side — removeLive() broadcasts 'not_started' (the
+// record's actual terminal state) so the reducer needs no 'stopped' special-case. Crucially
+// 'stopped' must STILL pass through here unchanged: a RESTART's transient stopped→running
+// would otherwise be caught and unmount the kept SessionView mid-restart (dropping the
+// '— restarted —' seam / startup re-run — smoke SC3). So this guard verifies 'stopped'
+// passes through for an identity row, while a 'not_started' broadcast lands it dormant.
 
 import { describe, it, expect } from 'vitest';
 import {
@@ -73,11 +81,29 @@ describe('resolveRowStatus (FIX 4a self-exit → Inactive List)', () => {
     expect(resolveRowStatus(row(), 'error')).toBe('error');
   });
 
-  it('non-exit transitions pass through unchanged even for a configured row', () => {
-    expect(resolveRowStatus(row({ configured: true }), 'running')).toBe('running');
+  // ── ROUND 3 (DEFECT A): 'stopped' must PASS THROUGH (restart safety); the Remove path
+  //    is handled main-side as a 'not_started' broadcast. ──
+  it('a CONFIGURED row "stopped" PASSES THROUGH (a restart precursor — keeps SessionView mounted; DEFECT A / SC3)', () => {
+    // The configured-live Remove is fixed in main (removeLive broadcasts 'not_started'),
+    // NOT by generalizing 'stopped' here. A restart's transient 'stopped' must pass through
+    // so the kept SessionView is not unmounted mid-restart (which would drop the
+    // '— restarted —' seam + startup re-run, smoke SC3).
     expect(resolveRowStatus(row({ configured: true }), 'stopped')).toBe('stopped');
+  });
+
+  it('a CONFIGURED row "not_started" broadcast (the removeLive Remove path) lands it dormant → Inactive List', () => {
+    // removeLive() broadcasts the record's actual terminal state ('not_started'), which the
+    // Sidebar partition routes to the Inactive List — no 'stopped' special-case needed.
     expect(resolveRowStatus(row({ configured: true }), 'not_started')).toBe(
       'not_started',
     );
+  });
+
+  it('a BARE ephemeral row "stopped" also passes through', () => {
+    expect(resolveRowStatus(row(), 'stopped')).toBe('stopped');
+  });
+
+  it('running transitions pass through unchanged even for a configured row', () => {
+    expect(resolveRowStatus(row({ configured: true }), 'running')).toBe('running');
   });
 });

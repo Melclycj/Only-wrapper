@@ -100,10 +100,27 @@ describe('applyStatusEvent — preserves the FIX 4a + lifecycle behavior (regres
     expect(next.errorMessage).toBeUndefined();
   });
 
-  it('leaving running (stopped) clears the agent overlay', () => {
+  it('leaving running (stopped) clears the agent overlay AND passes through as stopped (restart safety — DEFECT A / SC3)', () => {
+    // ROUND 3: 'stopped' must NOT flip to not_started here — a restart's transient
+    // stopped→running would otherwise unmount the kept SessionView mid-restart (dropping
+    // the '— restarted —' seam + startup re-run). The configured-live Remove is handled
+    // main-side as a 'not_started' broadcast (the test below).
     const live = recipeRow({ status: 'running', agentState: 'in-progress' });
     const next = applyStatusEvent(live, { status: 'stopped' });
     expect(next.status).toBe('stopped');
+    expect(next.agentState).toBeUndefined();
+  });
+
+  // ── ROUND 3 (DEFECT A): the removeLive() Remove path broadcasts 'not_started' ──
+  it('an identity row "not_started" broadcast (the removeLive Remove path) moves to the Inactive List + drops the pid/overlay', () => {
+    // removeLive() (confirmClose → ptyStop → IPC pty:stop) broadcasts the record's actual
+    // terminal state, 'not_started'. The reducer must land it in the Inactive List with the
+    // dead pid + stale overlay dropped, so the Removed configured session reads as a clean
+    // dormant recipe and does NOT revert to the Working Area (DEFECT A).
+    const live = recipeRow({ status: 'running', ptyPid: 4242, agentState: 'in-progress' });
+    const next = applyStatusEvent(live, { status: 'not_started' });
+    expect(next.status).toBe('not_started');
+    expect(next.ptyPid).toBeUndefined();
     expect(next.agentState).toBeUndefined();
   });
 });

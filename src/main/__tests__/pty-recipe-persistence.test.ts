@@ -86,6 +86,7 @@ vi.mock('../shell-resolver', () => ({
 
 import { PtyManager } from '../pty-manager';
 import { SessionStore } from '../session-store';
+import { handleWindowClosed } from '../lifecycle';
 
 function fakeWindow(): never {
   return {
@@ -151,6 +152,53 @@ describe('recipe persistence round-trip (ITEM 3): an unedited startupCommand rec
     expect(restored).toBeDefined();
     expect(restored?.status).toBe('not_started'); // dormant Inactive-List entry
     expect(restored?.startupCommand).toBe('codex'); // the recipe survived
+  });
+
+  it('DEFECT B: a freshly-Started recipe is on disk after a WINDOW CLOSE (dev close, no before-quit) — driven through the real close handler', async () => {
+    // DEFECT B (round 3): on macOS, closing the dev window does NOT fire before-quit, and
+    // the OLD win.on('closed') handler only disposed PTYs WITHOUT flushing the store — so a
+    // session created within the ~300ms debounce window (before any trailing write) was lost
+    // on close (the on-disk file showed sessions:[]). This test drives the EXTRACTED close
+    // handler (handleWindowClosed) — the same function index.ts wires into win.on('closed')
+    // — and asserts the just-Started recipe is durable, WITHOUT ever calling store.flush()
+    // directly (the pre-existing tests bypassed the handler that way).
+    const store = new SessionStore(storeFile, 300); // realistic 300ms debounce
+    await store.load();
+    const mgr = new PtyManager();
+    mgr.registerIpc(fakeWindow());
+    mgr.setStoreSignal(() => {
+      store.setSessions(mgr.listConfiguredSessions());
+      store.setUi(mgr.getUiState());
+    });
+
+    // Start a recipe session, then IMMEDIATELY close the window (within the debounce
+    // window — no trailing write has landed yet; store.isDirty() is true).
+    const { id } = mgr.create({ cols: 80, rows: 24, cwd: FAKE_HOME });
+    mgr.updateProfile(id, { startupCommand: 'codex' });
+    expect(store.isDirty()).toBe(true); // pending, not yet written
+
+    // The dev window closes. The handler MUST flush the store before/with disposeAll.
+    await handleWindowClosed(mgr, store);
+
+    // The on-disk file must now contain the recipe (durable on a window-close).
+    const onDisk = JSON.parse(fs.readFileSync(storeFile, 'utf8'));
+    const persisted = onDisk.sessions.find(
+      (s: { logicalId: string }) => s.logicalId === id,
+    );
+    expect(persisted).toBeDefined();
+    expect(persisted.startupCommand).toBe('codex');
+    // Secondary hygiene: the persisted version is bumped to the current SCHEMA_VERSION.
+    expect(onDisk.version).toBe(2);
+
+    // And a reopen restores it as a dormant Inactive-List entry.
+    const store2 = new SessionStore(storeFile, 0);
+    const data = await store2.load();
+    const mgr2 = new PtyManager();
+    mgr2.registerIpc(fakeWindow());
+    mgr2.hydrate(data.sessions);
+    const restored = mgr2.listSessions().find((s) => s.logicalId === id);
+    expect(restored?.status).toBe('not_started');
+    expect(restored?.startupCommand).toBe('codex');
   });
 
   it('a recipe that is STILL RUNNING at quit persists and restores as dormant (no self-exit needed)', async () => {

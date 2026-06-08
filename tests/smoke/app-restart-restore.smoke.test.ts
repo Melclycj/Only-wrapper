@@ -212,18 +212,25 @@ describe('App-restart restore → Inactive List + first Start has no separator s
     expect(dormantId).not.toBe('');
     expect(await rowIdByNameInSection(uniqueName, 'working-area')).toBe('');
 
-    // 4) Start the dormant entry (the Inactive-List ▶). A brand-new SessionView mounts
+    // 4) Start the dormant entry. ROUND 3 (DEFECT C): selecting the dormant row makes it
+    //    active → its in-place IdleCard renders, and the IdleCard's "▶ Start session" is the
+    //    SINGLE primary Start for the active dormant row (the duplicate sidebar ▶ is now
+    //    suppressed — exactly one primary Start per dormant entry). So Start via the IdleCard
+    //    affordance (data-testid="idle-start-session"). A brand-new SessionView mounts
     //    (hasRunBefore=false) and spawns a FRESH process.
     await clickSidebarRow(dormantId);
-    await browser.execute((sid: string) => {
-      const row = document.querySelector<HTMLElement>(
-        `[data-testid="inactive-list"] .sidebar-row[data-session-id="${sid}"]`,
-      );
-      const start = row?.querySelector<HTMLElement>(
-        '[data-testid="start-session"]',
-      );
-      start?.click();
-    }, dormantId);
+    await browser.waitUntil(
+      async () =>
+        browser.execute(
+          () =>
+            document.querySelector('[data-testid="idle-start-session"]') !== null,
+        ),
+      {
+        timeout: 5000,
+        timeoutMsg: 'IdleCard Start affordance did not render for the active dormant row',
+      },
+    );
+    await clickByTestId('idle-start-session');
 
     // Wait for the freshly-spawned shell to paint a prompt so the buffer is populated.
     await waitForTextIn(dormantId, '$', 12000).catch(async () => {
