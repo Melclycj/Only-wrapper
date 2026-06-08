@@ -1,10 +1,11 @@
 ---
 phase: 6
 slug: robustness-flow-control-polish
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: validated
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-06-07
+human_verified: 2026-06-09  # Phase 6 lifecycle sign-off completed via the 06.1 redesign + human-verify (amber/TERM-09, two-bucket/TERM-12, fidelity)
 ---
 
 # Phase 6 — Validation Strategy
