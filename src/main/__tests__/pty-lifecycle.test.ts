@@ -260,14 +260,24 @@ describe('PtyManager lifecycle (SC3, TERM-07)', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// The D-05 / D-02 two-bucket lifecycle (implemented in Plan 06.1-03 — now GREEN).
+// The two-bucket self-exit lifecycle (06.1-03), RE-SPEC'd for the FIX-4b persistence
+// policy = IDENTITY/RECIPE (06.1-04, user decision superseding the original edit-only
+// D-02).
 //
-// onExit routes a configured self-exit → Inactive List (dormant 'not_started',
-// order preserved), an ephemeral self-exit → gone, and leaves a user-stopped
-// restart precursor in place. updateProfile auto-promotes to configured (D-02) and
-// listConfiguredSessions() filters the persisted snapshot to configured records.
+// onExit now routes a self-exit that has IDENTITY (configured OR a recipe:
+// startupCommand / custom name / icon / cwd / shell) → Inactive List (dormant
+// 'not_started', order preserved); a BARE ephemeral self-exit (all defaults, no
+// command) → gone; and leaves a user-stopped restart precursor in place.
+// listConfiguredSessions() (the persisted snapshot) now keeps "configured OR
+// hasIdentity" records, NOT only configured===true. A bare blank +New still never
+// persists.
+//
+// NOTE on cwd: the mocked os.homedir() is FAKE_HOME (/Users/fake-home), so a session
+// spawned with cwd:undefined resolves to FAKE_HOME — the DEFAULT cwd (no identity). A
+// session spawned with the explicit '/tmp/project' has a NON-default cwd → it now has
+// identity under FIX 4b. The bare-ephemeral fixtures therefore spawn with cwd:undefined.
 // ─────────────────────────────────────────────────────────────────────────────
-describe('two-bucket self-exit lifecycle (D-05 / D-02)', () => {
+describe('two-bucket self-exit lifecycle (FIX 4b: identity/recipe ⇒ persist)', () => {
   beforeEach(() => {
     spawnCalls.length = 0;
     spawnedChildren.length = 0;
@@ -281,16 +291,19 @@ describe('two-bucket self-exit lifecycle (D-05 / D-02)', () => {
     vi.useRealTimers();
   });
 
+  // A live session in a NON-default cwd — under FIX 4b this alone gives it identity.
   const liveOpts: PtyCreateOptions = { cols: 80, rows: 24, cwd: '/tmp/project' };
+  // A truly BARE +New: cwd:undefined → resolves to FAKE_HOME (the default), default
+  // icon, auto name, no startup command → ephemeral (no identity) under FIX 4b.
+  const bareOpts: PtyCreateOptions = { cols: 80, rows: 24, cwd: undefined };
 
-  it('configured self-exit → Inactive List (not_started), removed from the Working Area', () => {
+  it('configured (edited) self-exit → Inactive List (not_started), removed from the Working Area', () => {
     const mgr = new PtyManager();
     mgr.registerIpc(fakeWindow());
-    const { id } = mgr.create(liveOpts);
+    const { id } = mgr.create(bareOpts);
     const child = spawnedChildren[0];
 
-    // D-02: setting metadata promotes the session to "configured" (Plan 03 wires
-    // updateProfile to set configured=true).
+    // Editing metadata promotes the session to "configured" (updateProfile sets it).
     mgr.updateProfile(id, { name: 'Parlour Claude RC' });
 
     // A self-exit (NOT user-initiated) after the session reached running.
@@ -298,14 +311,41 @@ describe('two-bucket self-exit lifecycle (D-05 / D-02)', () => {
 
     const sessions = mgr.listSessions();
     const rec = sessions.find((s) => s.logicalId === id);
-    // Plan-03 target: a configured self-exit drops to the Inactive List as a
-    // dormant, restartable not_started entry (NOT the current live-but-dead 'exited').
+    // A configured self-exit drops to the Inactive List as a dormant, restartable
+    // not_started entry.
     expect(rec).toBeDefined();
     expect(rec?.status).toBe('not_started');
-    // RESEARCH A2: the moved record PRESERVES its `order` so it reappears in the
-    // same sidebar position (the first/only session here → order 0).
+    // RESEARCH A2: the moved record PRESERVES its `order` (first/only session → 0).
     expect(rec?.order).toBe(0);
     // The pid is dropped (the OS process is gone — it is a dormant recipe now).
+    expect(rec?.ptyPid).toBeUndefined();
+  });
+
+  it('a RECIPE self-exit (startupCommand, never manually edited) → Inactive List (FIX 4b)', () => {
+    const mgr = new PtyManager();
+    mgr.registerIpc(fakeWindow());
+    // A bare-cwd session, but give it a startup command WITHOUT calling updateProfile
+    // through the edit form's name path — set it directly so `configured` stays
+    // undefined. updateProfile DOES set configured=true, so to isolate "identity, not
+    // configured" we set startupCommand then clear the configured flag the test cares
+    // about by NOT relying on it: we assert it persists on IDENTITY alone.
+    const { id } = mgr.create(bareOpts);
+    mgr.updateProfile(id, { startupCommand: 'claude --rc' });
+    // updateProfile set configured=true; to prove IDENTITY (not configured) drives the
+    // routing, strip configured off the live record before the exit.
+    const rec0 = mgr
+      .listSessions()
+      .find((s) => s.logicalId === id) as SessionRecord;
+    (rec0 as { configured?: boolean }).configured = undefined;
+
+    const child = spawnedChildren[0];
+    child._fireExit({ exitCode: 0 }); // self-exit
+
+    const rec = mgr.listSessions().find((s) => s.logicalId === id);
+    // FIX 4b: a command-bearing session (identity) self-exits into the Inactive List
+    // as a dormant not_started recipe, NOT gone — even with configured undefined.
+    expect(rec).toBeDefined();
+    expect(rec?.status).toBe('not_started');
     expect(rec?.ptyPid).toBeUndefined();
   });
 
@@ -328,39 +368,63 @@ describe('two-bucket self-exit lifecycle (D-05 / D-02)', () => {
     expect(rec?.status).toBe('stopped');
   });
 
-  it('ephemeral self-exit → gone (absent from listSessions)', () => {
+  it('a BARE +New ephemeral self-exit → gone (absent from listSessions) (FIX 4b)', () => {
     const mgr = new PtyManager();
     mgr.registerIpc(fakeWindow());
-    // No updateProfile call → the session stays ephemeral (configured undefined).
-    const { id } = mgr.create(liveOpts);
+    // A truly bare session: default cwd (FAKE_HOME via cwd:undefined), default icon,
+    // auto name, no startup command, never edited → no identity → ephemeral.
+    const { id } = mgr.create(bareOpts);
     const child = spawnedChildren[0];
 
     child._fireExit({ exitCode: 0 }); // self-exit
 
-    // Plan-03 target: an ephemeral self-exit vanishes entirely (not persisted, no
-    // Inactive entry). The CURRENT onExit retains it as 'exited' → this is RED now.
+    // A bare ephemeral self-exit vanishes entirely (not persisted, no Inactive entry).
     const sessions = mgr.listSessions();
     expect(sessions.some((s) => s.logicalId === id)).toBe(false);
   });
 
-  it('listConfiguredSessions() returns only configured===true records (D-02)', () => {
+  it('listConfiguredSessions() keeps configured OR identity records, drops bare ephemerals (FIX 4b)', () => {
     const mgr = new PtyManager();
     mgr.registerIpc(fakeWindow());
 
-    const ephemeral = mgr.create(liveOpts);
-    const configured = mgr.create(liveOpts);
+    // (a) a bare ephemeral (default everything, no command, never edited) → NOT persisted.
+    const ephemeral = mgr.create(bareOpts);
+    // (b) an explicitly-edited (configured) session → persisted.
+    const configured = mgr.create(bareOpts);
     mgr.updateProfile(configured.id, { name: 'Kept Session' });
+    // (c) a recipe session: a non-default cwd alone gives it identity (no edit needed).
+    const recipe = mgr.create(liveOpts);
 
-    // Plan 03 adds listConfiguredSessions(); until then the method is absent →
-    // this is honest RED (the guard assertion fails because it is not a function).
-    const maybe = (mgr as unknown as {
-      listConfiguredSessions?: () => SessionRecord[];
-    }).listConfiguredSessions;
-    expect(typeof maybe).toBe('function');
+    const persisted = mgr.listConfiguredSessions();
+    // The configured session is kept…
+    expect(persisted.some((r) => r.logicalId === configured.id)).toBe(true);
+    // …the recipe (non-default cwd) session is kept on IDENTITY alone…
+    expect(persisted.some((r) => r.logicalId === recipe.id)).toBe(true);
+    // …and the bare ephemeral is dropped.
+    expect(persisted.some((r) => r.logicalId === ephemeral.id)).toBe(false);
+  });
 
-    const configuredOnly = maybe ? maybe.call(mgr) : [];
-    expect(configuredOnly.every((r) => r.configured === true)).toBe(true);
-    expect(configuredOnly.some((r) => r.logicalId === configured.id)).toBe(true);
-    expect(configuredOnly.some((r) => r.logicalId === ephemeral.id)).toBe(false);
+  it('a recipe session persists and RESTORES as a dormant Inactive-List entry on boot (FIX 4b round-trip)', () => {
+    const mgr = new PtyManager();
+    mgr.registerIpc(fakeWindow());
+    // A command-bearing session (identity) that self-exits → dormant in THIS process.
+    const { id } = mgr.create(bareOpts);
+    mgr.updateProfile(id, { startupCommand: 'codex' });
+    spawnedChildren[0]._fireExit({ exitCode: 0 });
+
+    // The persisted snapshot includes it (identity) — simulate a boot by hydrating a
+    // FRESH manager from that snapshot (coerced to not_started, as the store does).
+    const snapshot = mgr.listConfiguredSessions();
+    expect(snapshot.some((r) => r.logicalId === id)).toBe(true);
+
+    const booted = new PtyManager();
+    booted.registerIpc(fakeWindow());
+    booted.hydrate(
+      snapshot.map((r) => ({ ...r, status: 'not_started', ptyPid: undefined })),
+    );
+    const restored = booted.listSessions().find((s) => s.logicalId === id);
+    expect(restored).toBeDefined();
+    expect(restored?.status).toBe('not_started'); // dormant Inactive-List entry
+    expect(restored?.startupCommand).toBe('codex'); // the recipe survived the round-trip
   });
 });

@@ -36,11 +36,12 @@ async function lastSessionId(): Promise<string> {
 }
 
 /**
- * CONFIGURE the session row `id` by editing its name (Plan 06.1-03, D-02): any metadata
- * edit one-way auto-promotes the session to `configured`, and ONLY configured records
- * persist (listConfiguredSessions). A bare `+ Add` session is ephemeral and is NOT written
- * to disk by design, so a test that asserts an added session lands on disk must configure
- * it first.
+ * CONFIGURE the session row `id` by editing its name (06.1-04 FIX 4b persist policy =
+ * IDENTITY/RECIPE): a recipe/configured session persists (listConfiguredSessions =
+ * configured OR hasIdentity), while a BARE `+ Add` session (default name/icon/cwd/shell,
+ * no startup command) is ephemeral and intentionally never written to disk. Editing the
+ * name both promotes it to `configured` AND gives it a custom-name identity, so a test
+ * that asserts an added session lands on disk configures it first.
  */
 async function configureRow(id: string, name: string): Promise<void> {
   await browser.execute((sid: string) => {
@@ -68,6 +69,42 @@ async function configureRow(id: string, name: string): Promise<void> {
       input.dispatchEvent(new Event('input', { bubbles: true }));
     }
   }, name);
+  await clickByTestId('edit-save');
+}
+
+/**
+ * Give the session row `id` a RECIPE by setting ONLY its startupCommand via the edit
+ * form (06.1-04 FIX 4b): a non-empty startupCommand is identity, so the session must
+ * persist. Does NOT change the name — proving the recipe (command) drives persistence,
+ * not a custom name. (The edit form also flips `configured`; the unit test
+ * session-identity.test.ts isolates "identity, not configured" deterministically.)
+ */
+async function setStartupCommand(id: string, command: string): Promise<void> {
+  await browser.execute((sid: string) => {
+    const row = document.querySelector<HTMLElement>(
+      `.sidebar-row[data-session-id="${sid}"]`,
+    );
+    row?.dispatchEvent(
+      new MouseEvent('dblclick', { bubbles: true, cancelable: true }),
+    );
+  }, id);
+  await browser.waitUntil(
+    async () =>
+      browser.execute(
+        () =>
+          document.querySelector('[data-testid="session-edit-modal"]') !== null,
+      ),
+    { timeout: 5000, timeoutMsg: 'edit modal did not open' },
+  );
+  await browser.execute((v: string) => {
+    const input = document.querySelector<HTMLInputElement | HTMLTextAreaElement>(
+      '[data-testid="edit-startup"]',
+    );
+    if (input) {
+      input.value = v;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+  }, command);
   await clickByTestId('edit-save');
 }
 
@@ -220,6 +257,45 @@ describe('Persistence smoke (SC1/SC2, D-13, D-10, Pitfall 1)', () => {
     const newest = sessions[sessions.length - 1];
     expect(typeof newest.logicalId).toBe('string');
     expect(typeof newest.name).toBe('string');
+  });
+
+  it('a RECIPE session (startupCommand, no name change) is persisted to the store (FIX 4b)', async () => {
+    // FIX 4b persist policy = IDENTITY/RECIPE: a non-empty startupCommand is identity,
+    // so a session given ONLY a startup command (its auto "Session N" name left intact)
+    // must land on disk — a recipe persists even without a custom name.
+    const before = await waitForStore();
+    const beforeCount = (before.parsed?.sessions ?? []).length;
+
+    await clickAddSession();
+    const id = await lastSessionId();
+    const command = `echo RECIPE_${Date.now()}`;
+    await setStartupCommand(id, command);
+
+    let after = before;
+    await browser.waitUntil(
+      async () => {
+        after = await readStore();
+        return (
+          after.exists &&
+          after.parsed !== null &&
+          (after.parsed.sessions ?? []).length > beforeCount
+        );
+      },
+      {
+        timeout: 8000,
+        interval: 200,
+        timeoutMsg: 'recipe (startupCommand) session was not persisted within 8000ms',
+      },
+    );
+
+    const sessions = (after.parsed?.sessions ?? []) as Array<{
+      logicalId?: unknown;
+      startupCommand?: unknown;
+    }>;
+    // The persisted set grew AND the new record carries the startup command recipe.
+    const persistedRecipe = sessions.find((s) => s.logicalId === id);
+    expect(persistedRecipe).toBeDefined();
+    expect(persistedRecipe?.startupCommand).toBe(command);
   });
 
   it('the dormant Start ▶ / live flip is exclusive (D-03)', async () => {

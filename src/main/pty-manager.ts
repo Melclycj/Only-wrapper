@@ -29,6 +29,10 @@ import { newLogicalId } from '../shared/id-factory';
 import { resolveShell } from './shell-resolver';
 import { selectShellProvider, type DiscoveredShell } from './shell-discovery';
 import { selectReadinessProbe } from './readiness-probe';
+import {
+  shouldPersist,
+  type SessionDefaults,
+} from './session-identity';
 
 /** IPC channel names (payloads carry `id` so the design scales to N sessions). */
 export const PTY_CHANNELS = {
@@ -90,6 +94,13 @@ export const READINESS_FAIL_NOTICE =
 /** Dimension clamp bounds — resize-bomb DoS guard (Security V5, T-02-03). */
 export const MIN_DIMENSION = 1;
 export const MAX_DIMENSION = 1000;
+
+/**
+ * The default emoji icon a brand-new session is born with (mirrors the literal in
+ * create()). Exported as the single source of truth so the FIX-4b identity predicate
+ * (session-identity.ts) compares against the SAME default create() assigns.
+ */
+export const DEFAULT_SESSION_ICON: SessionIconSpec = { type: 'emoji', value: '🖥️' };
 
 /**
  * Clamp a terminal dimension (cols/rows) to a sane 1..1000 range.
@@ -328,7 +339,7 @@ export class PtyManager {
       logicalId: id,
       ptyPid,
       name: opts.name ?? prior?.name ?? 'Session',
-      icon: prior?.icon ?? { type: 'emoji', value: '🖥️' },
+      icon: prior?.icon ?? DEFAULT_SESSION_ICON,
       cwd, // the resolved cwd (so a restart respects the original directory)
       shell, // the edited shell (A2) or the resolveShell() default
       startupCommand: prior?.startupCommand, // stored-only carry-through (TERM-05 deferred)
@@ -508,21 +519,23 @@ export class PtyManager {
       // must be LEFT in this.sessions so the restart path can respawn under the same
       // logicalId (existing behavior, unchanged). A self-exit instead leaves the
       // Working Area:
-      //   - configured (the user deliberately kept this session — D-02): MOVE the
-      //     record from this.sessions → this.dormantRecords coerced to 'not_started'
-      //     with the pid dropped and `order` PRESERVED (RESEARCH A2), so it reappears
-      //     in the Inactive List at the same sidebar position — "a stopped session is
-      //     a recipe, not a frozen process" surfaced as the dormant-restore model.
-      //   - ephemeral (a throwaway +New that was never edited): DELETE it from
-      //     this.sessions entirely — it is gone, never persisted, no Inactive entry.
+      //   - has IDENTITY (FIX 4b — configured OR a recipe: startupCommand / custom
+      //     name / icon / cwd / shell): MOVE the record from this.sessions →
+      //     this.dormantRecords coerced to 'not_started' with the pid dropped and
+      //     `order` PRESERVED (RESEARCH A2), so it reappears in the Inactive List at the
+      //     same sidebar position — "a stopped session is a recipe, not a frozen
+      //     process". This now covers a command-bearing session the user never manually
+      //     edited (the FIX-4b broadening), not just `configured === true` ones.
+      //   - ephemeral (a throwaway bare +New with all defaults and no command): DELETE
+      //     it from this.sessions entirely — it is gone, never persisted, no Inactive entry.
       // A spawn-failure (pid -1, the synchronous SC2 paths) returns from create()
       // BEFORE this listener is wired and is never in this.sessions, so it never
       // reaches this routing — it stays an error broadcast (pty-spawn-error.test.ts).
       const selfExit =
         !(s?.userStopped) && (status === 'exited' || status === 'error');
       if (s && selfExit) {
-        if (s.record.configured === true) {
-          // Configured self-exit → Inactive List (dormant not_started, order kept).
+        if (shouldPersist(s.record, this.sessionDefaults())) {
+          // Identity/recipe self-exit → Inactive List (dormant not_started, order kept).
           this.sessions.delete(id);
           this.dormantRecords.set(id, {
             ...s.record,
@@ -877,16 +890,37 @@ export class PtyManager {
   }
 
   /**
-   * Configured-only snapshot for the PERSISTED store (D-02). The store keeps ONLY
-   * records the user has deliberately configured (any updateProfile edit) so an
-   * unedited `+ New` ephemeral session never touches disk (T-06.1-11 info-disclosure
-   * mitigation). Filters listSessions() (which already merges live ∪ dormant by
-   * order) to `configured === true`. index.ts's syncStore() feeds the store from
-   * THIS method, not listSessions() — the live `sessions` map still surfaces every
-   * session (incl. ephemeral) to the renderer via listSessions().
+   * The default profile a bare `+ New` session is born with (FIX 4b) — resolved from
+   * the SAME sources create() uses (DEFAULT_SESSION_ICON, os.homedir() for the no-cwd
+   * default, resolveShell().shell for the no-shell default). Supplied to the pure
+   * identity predicate so it compares each record against the real spawn defaults.
+   */
+  private sessionDefaults(): SessionDefaults {
+    return {
+      icon: DEFAULT_SESSION_ICON,
+      cwd: os.homedir(),
+      shell: resolveShell().shell,
+    };
+  }
+
+  /**
+   * Persisted-store snapshot (FIX 4b — persistence policy = IDENTITY/RECIPE, user
+   * decision superseding the original edit-only D-02). The store keeps every record
+   * that is worth restoring: one the user explicitly configured via the edit form
+   * (`configured === true`) OR one that carries IDENTITY — a recipe (startupCommand /
+   * custom name / icon / cwd / shell). A bare `+ New` ephemeral session (all defaults,
+   * no command) still never touches disk (T-06.1-11 info-disclosure mitigation).
+   * Filters listSessions() (which already merges live ∪ dormant by order) through the
+   * pure shouldPersist() predicate. index.ts's syncStore() feeds the store from THIS
+   * method, not listSessions() — the live `sessions` map still surfaces every session
+   * (incl. ephemeral) to the renderer via listSessions().
+   *
+   * (Method name kept as listConfiguredSessions() to avoid a bridge/caller churn; its
+   * contract is now "persistable records", documented above.)
    */
   listConfiguredSessions(): SessionRecord[] {
-    return this.listSessions().filter((r) => r.configured === true);
+    const defaults = this.sessionDefaults();
+    return this.listSessions().filter((r) => shouldPersist(r, defaults));
   }
 
   /**
