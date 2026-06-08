@@ -29,12 +29,13 @@
 import { useEffect, useRef } from 'react';
 import type { LogicalId } from '../shared/types';
 import { createWatermark } from '../shared/flow-control';
+import { type AgentState } from '../shared/agent-state';
 import {
-  type AgentState,
-  classify,
+  type AgentTickState,
+  decideAgentTick,
+  initAgentTickState,
   TICK_MS,
-  SETTLE_MS,
-} from '../shared/agent-state';
+} from './agent-tick';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
@@ -264,25 +265,29 @@ export function SessionView({
     let paused = false;
 
     // ── Agent-state detector (TERM-09 / SC4 — D-09/D-10, zero IPC). SEAM A:
-    //    FRAME-STABILITY, not output-silence. A setInterval tick (every TICK_MS)
-    //    reads the live `term.buffer.active` viewport, FNV-1a-hashes the visible
-    //    text, and decides:
-    //      - hash CHANGED since last tick → the frame is churning (an animated
-    //        "Thinking…" repaints continuously) → 'in-progress' (the property the
-    //        old byte-silence model lacked, which left `claude --rc` permanently
-    //        blue), and re-arm the settle window.
-    //      - hash UNCHANGED for >= SETTLE_MS → the frame SETTLED → classify() the
-    //        settled viewport cursor region ('waiting' | 'free').
+    //    FRAME-STABILITY + a settle-INDEPENDENT 'waiting' fast path (FIX 1, 06.1-04).
+    //    A setInterval tick (every TICK_MS) reads the live `term.buffer.active`
+    //    viewport and hands it to the PURE `decideAgentTick` helper (agent-tick.ts),
+    //    which:
+    //      - runs classify() on EVERY frame and, once it reads 'waiting' for
+    //        WAITING_TICKS consecutive ticks (~300ms), emits 'waiting' IMMEDIATELY —
+    //        even while the full-frame hash is still churning. This is the FIX-1 core:
+    //        the real `claude` permission screen has a continuously-repainting footer
+    //        (elapsed-time / token counter), so the full-frame hash NEVER settles; the
+    //        old settle-then-classify gate therefore never fired and the prompt stayed
+    //        blue forever. classify() only returns 'waiting' for genuine menus
+    //        (oracle-proven), so the fast path is false-positive-safe.
+    //      - otherwise: hash CHANGED → 'in-progress' (animated "Thinking…" repaints);
+    //        hash UNCHANGED for >= SETTLE_MS → settled → classify() ('waiting'|'free').
     //    The detector is GATED on the session being 'running' (agentRunning, flipped
     //    by the status handler below) so a dormant/exited session is never classified
     //    (D-12). We emit only on CHANGE (lastAgent) to avoid parent render churn. The
     //    tick reads buffer.active even on a HIDDEN pane (term.write runs
     //    unconditionally below, and reading the buffer needs no WebGL context) — a
-    //    backgrounded `claude --rc` can therefore still settle to amber (D-12). ──
+    //    backgrounded `claude --rc` can therefore still resolve to amber (D-12). ──
     let agentRunning = false;
     let lastAgent: AgentState | null = null;
-    let lastHash: string | null = null;
-    let changeAt = performance.now();
+    let tickState: AgentTickState = initAgentTickState(performance.now());
     const emitAgent = (state: AgentState): void => {
       if (state === lastAgent) return;
       lastAgent = state;
@@ -304,33 +309,16 @@ export function SessionView({
       return out;
     };
 
-    // FNV-1a — a fast, non-crypto frame-equality hash (record.cjs). NOT a security
-    // control (T-06.1: this is a frame-change check, not a digest).
-    const fnv1a = (s: string): string => {
-      let h = 0x811c9dc5;
-      for (let i = 0; i < s.length; i++) {
-        h ^= s.charCodeAt(i);
-        h = Math.imul(h, 0x01000193);
-      }
-      return (h >>> 0).toString(16);
-    };
-
     // The frame-stability tick (D-09). Armed once per mount (the effect is keyed on
     // `id` only — Pitfall 7), gated on agentRunning, cleared in the effect cleanup.
     // On an in-place restart the SAME term persists, so the interval keeps running;
-    // the status handler resets lastHash/changeAt so the restart's fresh frame is
-    // re-evaluated from scratch.
+    // the status handler resets tickState so the restart's fresh frame is re-evaluated
+    // from scratch. The per-tick DECISION lives in the pure decideAgentTick helper so
+    // it is unit-testable without a DOM/xterm (agent-tick.test.ts).
     const agentTick = setInterval(() => {
       if (!agentRunning) return;
-      const lines = viewportLines();
-      const h = fnv1a(lines.join('\n'));
-      if (h !== lastHash) {
-        lastHash = h;
-        changeAt = performance.now();
-        emitAgent('in-progress');
-      } else if (performance.now() - changeAt >= SETTLE_MS) {
-        emitAgent(classify(lines));
-      }
+      const next = decideAgentTick(tickState, viewportLines(), performance.now());
+      if (next !== null) emitAgent(next);
     }, TICK_MS);
 
     const offData = window.api.onPtyData(id, (data) => {
@@ -441,16 +429,15 @@ export function SessionView({
           term.write(MOUSE_RESET + ALT_SCREEN_EXIT);
         }
         // Leaving 'running' (stopped/exited/error): close the gate so the
-        // frame-stability tick stops classifying, and reset the change-tracker so the
+        // frame-stability tick stops classifying, and reset the detector state so the
         // overlay does not linger (D-12 — SessionManager also clears its per-row
         // agentState on this transition). We do NOT clear `agentTick` here: the SAME
         // term persists across an in-place restart (keep-alive xterm), so the interval
-        // keeps running and is simply gated by `agentRunning`. Resetting
-        // lastHash/changeAt means a later restart's fresh frame is re-evaluated from
-        // scratch (Pitfall 7).
+        // keeps running and is simply gated by `agentRunning`. Resetting tickState
+        // (fresh hash + zeroed waiting streak) means a later restart's fresh frame is
+        // re-evaluated from scratch (Pitfall 7).
         agentRunning = false;
-        lastHash = null;
-        changeAt = performance.now();
+        tickState = initAgentTickState(performance.now());
         lastAgent = null;
       }
     });
