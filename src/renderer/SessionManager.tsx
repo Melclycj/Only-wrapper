@@ -603,7 +603,6 @@ export function SessionManager(): React.JSX.Element {
               session={activeRecord}
               agentState={activeRecord?.agentState}
               onClear={handleClear}
-              onRestart={handleRestart}
               onRemove={handleCloseRequest}
             />
             <div className="viewport-stack">

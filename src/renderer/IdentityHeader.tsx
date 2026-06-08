@@ -3,18 +3,20 @@
 //
 // A thin strip above the active terminal showing the active session's icon + name +
 // live status badge, PLUS a right-aligned control cluster (TERM-12 / D-06): Clear +
-// Restart + Remove. It reuses the SAME renderIcon + .row-name + presentation()-driven
-// badge markup as the Sidebar row, and the SAME .row-control button shape as the
-// Sidebar .row-controls cluster (verbatim) so identity + controls read consistently
+// Remove. It reuses the SAME renderIcon + .row-name + presentation()-driven badge
+// markup as the Sidebar row, and the SAME .row-control button shape as the Sidebar
+// .row-controls cluster (verbatim) so identity + controls read consistently
 // everywhere; it never re-derives status colors. Mounted inside the flex-column
 // .terminal-area above the .viewport-stack (RESEARCH Open Q2). The .row-name flex:1
 // pushes the badge + controls to the right edge.
 //
 // D-06 (two-bucket header — supersedes Phase-6 D-11): the header is LIVE-ONLY. It shows
-// Clear (always) + Restart + a Remove affordance. There is NO header Start (Start now
-// lives on every Inactive-List entry — D-01/D-06) and NO Stop verb. A dormant/errored
-// active session renders the IdleCard instead, so the header simply returns null when
-// the active session is not running.
+// Clear (always) + a Remove affordance. There is NO header Start (Start now lives on
+// every Inactive-List entry — D-01/D-06) and NO Stop verb. The header Restart (↻) was
+// REMOVED (06.1-04 FIX 3, user decision): restart capability lives via Remove →
+// Start-from-Inactive-List (a fresh process per D-04). A dormant/errored active session
+// renders the IdleCard instead, so the header simply returns null when the active
+// session is not running.
 // D-03 (Remove vs Delete): Remove (this header) kills the PTY but KEEPS the recipe for a
 // configured session → it lands in the Inactive List; for an ephemeral session it is
 // gone. Permanent Delete lives on the Inactive-List entry (the sidebar), behind a confirm.
@@ -45,8 +47,6 @@ export interface IdentityHeaderProps {
    * shown. SessionManager.handleClear reaches window.__sessionTerms[id] — NO PTY write.
    */
   onClear: (id: LogicalId) => void;
-  /** Restart the active session under the same logicalId (live-only — D-06). */
-  onRestart: (id: LogicalId) => void;
   /**
    * Remove the active LIVE session (D-03/D-06): kill the PTY but KEEP the recipe — a
    * configured session lands in the Inactive List (restartable), an ephemeral session is
@@ -60,7 +60,6 @@ export function IdentityHeader({
   session,
   agentState,
   onClear,
-  onRestart,
   onRemove,
 }: IdentityHeaderProps): React.JSX.Element | null {
   // D-06: the header is LIVE-ONLY. A null active session OR a non-running one (dormant /
@@ -81,11 +80,12 @@ export function IdentityHeader({
         <span className="status-dot" />
         {style.label}
       </span>
-      {/* Right-aligned control cluster (D-06): Clear + Restart + Remove — live-only, NO
-          Start, NO Stop. margin-left:auto sits it at the far edge after the badge (the
-          .row-name flex already consumes the middle). Buttons copy the Sidebar
-          .row-control shape verbatim; Clear is a text-labelled button. All are native
-          Tab-focusable <button>s (keyboard-focus fix lives in SessionView). */}
+      {/* Right-aligned control cluster (D-06): Clear + Remove — live-only, NO Start, NO
+          Stop, NO Restart (the header ↻ was removed in 06.1-04 FIX 3). margin-left:auto
+          sits it at the far edge after the badge (the .row-name flex already consumes
+          the middle). Buttons copy the Sidebar .row-control shape verbatim; Clear is a
+          text-labelled button. All are native Tab-focusable <button>s (keyboard-focus
+          fix lives in SessionView). */}
       <span className="header-controls">
         <button
           type="button"
@@ -100,20 +100,6 @@ export function IdentityHeader({
           }}
         >
           Clear
-        </button>
-        <button
-          type="button"
-          className="row-control"
-          data-testid="header-restart"
-          data-action="restart"
-          title="Restart session"
-          aria-label="Restart session"
-          onClick={(e) => {
-            e.stopPropagation();
-            onRestart(id);
-          }}
-        >
-          <span aria-hidden="true">↻</span>
         </button>
         <button
           type="button"

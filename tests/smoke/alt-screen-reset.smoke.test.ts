@@ -31,7 +31,6 @@ import {
   clickAddSession,
   clickSidebarRow,
   sendKeysTo,
-  clickByTestId,
   activeSessionId,
   ptyPidOf,
   killProcess,
@@ -39,6 +38,8 @@ import {
   viewportYOf,
   scrollViewportUp,
   bufferTypeOf,
+  openContextMenu,
+  clickMenuItem,
 } from './helpers/xterm-driver';
 
 /** data-session-id of the LAST sidebar row (a freshly-added session is appended). */
@@ -127,7 +128,9 @@ describe('Alt-screen + mouse-mode reset on restart + abnormal exit smoke (SEAM B
     for (let i = 0; i < RESTARTS; i++) {
       const before = await ptyPidOf(id);
       expect(before).toBeGreaterThan(0);
-      await clickByTestId('header-restart');
+      // Header ↻ removed (06.1-04 FIX 3); drive restart-in-place via the row context menu.
+      await openContextMenu(id);
+      await clickMenuItem('Restart');
       await browser.waitUntil(
         async () => {
           const n = await ptyPidOf(id);
@@ -174,11 +177,13 @@ describe('Alt-screen + mouse-mode reset on restart + abnormal exit smoke (SEAM B
       },
     );
 
-    // Header-Restart kills + respawns under the same logical id. SEAM B writes
-    // MOUSE_RESET on the restart's 'running' transition → mouseTrackingMode must read
-    // 'none' (the killed TUI never sent its own mouse-disable; D-13).
+    // Restart (via the row context menu — the header ↻ was removed in 06.1-04 FIX 3)
+    // kills + respawns under the same logical id. SEAM B writes MOUSE_RESET on the
+    // restart's 'running' transition → mouseTrackingMode must read 'none' (the killed
+    // TUI never sent its own mouse-disable; D-13).
     const before = await ptyPidOf(id);
-    await clickByTestId('header-restart');
+    await openContextMenu(id);
+    await clickMenuItem('Restart');
     await browser.waitUntil(
       async () => {
         const n = await ptyPidOf(id);
