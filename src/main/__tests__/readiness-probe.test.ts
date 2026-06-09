@@ -27,6 +27,7 @@ import {
   buildPosixProbe,
   selectReadinessProbe,
   MacReadinessProbe,
+  WindowsReadinessProbe,
 } from '../readiness-probe';
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -69,9 +70,59 @@ describe('readiness-probe pure helpers (Plan 05.1-01 Task 1)', () => {
     expect(probe.matches(fresh)).toBe(true);
   });
 
-  it("selectReadinessProbe('win32').forShell() THROWS (Phase-8 stub, D-03)", () => {
+  // ── Phase 8 fill (D-03): the unconditional Phase-8 throw is REMOVED. ──────────
+  describe("WindowsReadinessProbe.forShell() per-shell contract (D-03)", () => {
     const provider = selectReadinessProbe('win32');
-    expect(() => provider.forShell('/x')).toThrow(/Phase 8/);
+
+    it('is a WindowsReadinessProbe and no longer throws for any shell', () => {
+      expect(provider).toBeInstanceOf(WindowsReadinessProbe);
+      expect(() => provider.forShell('C:\\Program Files\\Git\\bin\\bash.exe')).not.toThrow();
+      expect(() => provider.forShell('C:\\Windows\\System32\\cmd.exe')).not.toThrow();
+    });
+
+    it('Git Bash → POSIX-reuse probe (: __JW_READY_<hex>__\\r marker, send-vs-match)', () => {
+      const probe = provider.forShell('C:\\Program Files\\Git\\bin\\bash.exe');
+      expect(probe.marker.startsWith(': __JW_READY_')).toBe(true);
+      expect(probe.marker.endsWith('\r')).toBe(true);
+      expect(probe.unsupported).toBeUndefined();
+      // send-vs-match: FALSE on the bare echo line, TRUE on a produced line.
+      expect(probe.matches(probe.nonce + '\r')).toBe(false);
+      expect(probe.matches('echo\n' + probe.nonce + '\nuser@host$ ')).toBe(true);
+    });
+
+    it('WSL → POSIX-reuse probe (the launched WSL shell is bash/zsh)', () => {
+      const probe = provider.forShell('C:\\Windows\\System32\\wsl.exe');
+      expect(probe.marker.startsWith(': __JW_READY_')).toBe(true);
+      expect(probe.marker.endsWith('\r')).toBe(true);
+      expect(probe.unsupported).toBeUndefined();
+      expect(probe.matches('boot\n' + probe.nonce + '\n$ ')).toBe(true);
+    });
+
+    it('CMD → degrade-loudly (unsupported notice, NO marker sent, matches() always false)', () => {
+      const probe = provider.forShell('C:\\Windows\\System32\\cmd.exe');
+      // Degrade contract: no bytes are ever sent (marker empty) and readiness never
+      // fires — the caller routes `unsupported` through the EXISTING onPtyStatus notice.
+      expect(probe.marker).toBe('');
+      expect(probe.matches('anything\n__JW_READY_x__\nC:\\> ')).toBe(false);
+      expect(probe.unsupported).toMatch(/auto-run unsupported on CMD/i);
+    });
+
+    it('PowerShell → degrade-loudly (unsupported notice; pwsh too)', () => {
+      const ps = provider.forShell('C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe');
+      expect(ps.marker).toBe('');
+      expect(ps.matches('PS C:\\> ')).toBe(false);
+      expect(ps.unsupported).toMatch(/auto-run unsupported on PowerShell/i);
+
+      const pwsh = provider.forShell('C:\\Program Files\\PowerShell\\7\\pwsh.exe');
+      expect(pwsh.marker).toBe('');
+      expect(pwsh.unsupported).toMatch(/auto-run unsupported on PowerShell/i);
+    });
+
+    it('selectReadinessProbe("win32").forShell(bash) returns a valid POSIX-reuse probe (no throw)', () => {
+      const probe = selectReadinessProbe('win32').forShell('/x/bash.exe');
+      expect(probe.marker.startsWith(': __JW_READY_')).toBe(true);
+      expect(probe.unsupported).toBeUndefined();
+    });
   });
 
   it("selectReadinessProbe('darwin') is a MacReadinessProbe with a __JW_READY_-sentinel CR marker", () => {

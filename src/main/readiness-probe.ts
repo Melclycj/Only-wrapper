@@ -11,12 +11,15 @@
 // which withholds every probe byte from the renderer; this module only defines
 // WHAT to send and WHEN to consider the shell ready.
 //
-// Real implementation: macOS provider this phase (zsh + bash share the POSIX ':'
-// builtin + CR semantics — one probe covers both — D-03). The Windows readiness
-// probe is deferred to Phase 8 behind this same seam; UNLIKE WindowsShellProvider
-// (which returns a safe default), WindowsReadinessProbe THROWS — there is NO safe
-// no-op readiness probe to fall back to, so a Windows auto-run must fail loudly
-// rather than silently mis-fire (PATTERNS line 40-41 / RESEARCH 277-281, D-03).
+// Real implementation: macOS provider (zsh + bash share the POSIX ':' builtin + CR
+// semantics — one probe covers both — D-03). The Windows provider is FILLED in Phase 8
+// behind this same seam (D-03): Git Bash + WSL REUSE the POSIX probe (they are
+// bash/POSIX); CMD + PowerShell have no safe no-op + an echo-self-match hazard that is
+// not byte-verifiable on the macOS dev box, so they DEGRADE-LOUDLY (marker='', never
+// matches, carry an `unsupported` notice routed through the EXISTING onPtyStatus channel
+// — zero new bridge key) rather than mis-fire an auto-run (PATTERNS 40-41 / RESEARCH
+// 188/331, locked D-03 fallback). Real-Windows CMD/PowerShell byte semantics is the
+// Plan 03 CI-smoke + human-verify item.
 
 import crypto from 'node:crypto';
 
@@ -39,6 +42,16 @@ export interface ShellReadinessProbe {
   readonly nonce: string;
   /** True once `buffer` shows the shell PROCESSED the marker (not merely echoed it). */
   matches(buffer: string): boolean;
+  /**
+   * DEGRADE-LOUDLY signal (D-03). When set, this shell has NO safe readiness probe
+   * (CMD/PowerShell on Windows — see WindowsReadinessProbe): the string is a fixed,
+   * human-readable "auto-run unsupported on <shell>" notice. A degrade probe sends
+   * NOTHING (`marker === ''`) and `matches()` is always false, so the caller must
+   * NOT auto-run; instead it surfaces this notice through the EXISTING onPtyStatus
+   * `notice?: string` channel (api-types.ts) — ZERO new bridge key, exactly like the
+   * 05.1 ready-timeout notice. Absent (undefined) for every real probe.
+   */
+  readonly unsupported?: string;
 }
 
 /** The platform-aware readiness seam (D-03), mirroring ShellDiscovery. One provider per platform. */
@@ -118,15 +131,52 @@ export class MacReadinessProbe implements ReadinessProbeProvider {
 }
 
 /**
- * Windows STUB (D-03) — real PowerShell/CMD/Git Bash/WSL readiness probes land at
- * Phase 8 behind this same seam. There is NO safe no-op readiness probe to fall
- * back to (unlike WindowsShellProvider, which returns a default), so this THROWS
- * rather than silently mis-firing an auto-run on an unverified Windows shell.
+ * PURE — a DEGRADE-LOUDLY readiness "probe" for a Windows shell with no byte-verified
+ * safe no-op marker (CMD/PowerShell — D-03). It sends NOTHING (`marker === ''`) and
+ * never matches, carrying a fixed `unsupported` notice the caller routes through the
+ * EXISTING onPtyStatus channel. This is the LOCKED-SAFE choice (D-03): a clear "start
+ * the command manually" notice beats a guessed echo marker that could mis-fire and
+ * inject garbage into a `claude --rc` session (RESEARCH 188/331). The notice is a fixed
+ * literal (no command/nonce/buffer interpolation — V7-safe).
+ */
+function buildDegradeProbe(shellLabel: string): ShellReadinessProbe {
+  return {
+    marker: '', // send NOTHING — no auto-run is attempted on a degraded shell.
+    nonce: '', // no nonce: nothing is injected, so there is nothing to scrub.
+    matches: () => false, // readiness never fires → caller withholds the command.
+    unsupported: `auto-run unsupported on ${shellLabel} — start the command manually`,
+  };
+}
+
+/**
+ * Windows readiness probe — FILLED in Phase 8 (D-03). Branches on the shell basename:
+ *
+ *   - Git Bash (/bash/i) and WSL (/wsl/i) → REUSE buildPosixProbe verbatim. Git Bash
+ *     IS bash and the launched WSL shell is bash/zsh, so the POSIX ':' no-op + CR +
+ *     send-vs-match contract applies unchanged (high confidence).
+ *   - CMD (/cmd/i) and PowerShell (/powershell|pwsh/i) → DEGRADE-LOUDLY. The POSIX ':'
+ *     no-op does NOT exist there, and an `echo`/`Write-Output` marker puts the nonce in
+ *     BOTH the command-echo line AND the output line, so a safe send-vs-match split is
+ *     [ASSUMED] (A4-A5) and is NOT byte-verifiable on the macOS dev box. Rather than ship
+ *     a marker that could mis-fire, we degrade loudly (locked D-03 fallback). Real-Windows
+ *     byte semantics for CMD/PowerShell readiness is the Plan 03 CI-smoke + human-verify item.
+ *   - Any other Windows shell falls through to the degrade path (safe default).
  */
 export class WindowsReadinessProbe implements ReadinessProbeProvider {
   forShell(shellPath: string): ShellReadinessProbe {
-    void shellPath; // No safe Windows readiness probe yet (Phase 8) — fail loudly.
-    throw new Error('Windows readiness probe is implemented in Phase 8 (D-03 seam stub).');
+    const base = shellPath.split(/[\\/]/).pop() ?? shellPath;
+    // Git Bash / WSL are POSIX — high confidence, reuse the verbatim POSIX probe.
+    if (/bash/i.test(base) || /wsl/i.test(base)) {
+      const nonce = `__JW_READY_${crypto.randomBytes(8).toString('hex')}__`;
+      return buildPosixProbe(nonce);
+    }
+    // [ASSUMED] A4-A5: CMD/PowerShell have no POSIX ':' no-op and the echo-self-match
+    // hazard (Pitfall 6) makes a safe send-vs-match split unverifiable on macOS. Real-
+    // Windows byte validation is the Plan 03 human-verify item; until then DEGRADE-LOUDLY.
+    if (/cmd/i.test(base)) return buildDegradeProbe('CMD');
+    if (/powershell/i.test(base) || /pwsh/i.test(base)) return buildDegradeProbe('PowerShell');
+    // Unknown Windows shell — safe default is the loud degrade (no guessed marker).
+    return buildDegradeProbe(base);
   }
 }
 
