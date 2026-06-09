@@ -196,9 +196,6 @@ function SortableSidebarRow({
   // A dormant (never-run) session shows Start ▶; a has-run non-running session
   // (stopped/exited/error) shows Restart ↻ (D-03). Dormant rows also dim slightly.
   const dormant = s.status === 'not_started';
-  // D-06/D-14: a dormant entry with a saved startup command also offers a "Start without
-  // command" affordance (bare shell, skipping the TERM-05 auto-run for that one launch).
-  const hasStartupCmd = (s.startupCommand ?? '').trim().length > 0;
   // DEFECT C (round 3): the ACTIVE dormant/error row renders an in-place IdleCard (whose
   // "▶ Start session" is the primary Start). startAffordances suppresses the duplicate
   // sidebar ▶ for that one active row so the two no longer co-render — every NON-active
@@ -310,10 +307,13 @@ function SortableSidebarRow({
             <span aria-hidden="true">↻</span>
           </button>
         )}
-        {/* D-06/D-14: "Start without command" on an Inactive-List entry that has a saved
+        {/* D-06/D-14: "Start without command" ⏵ on an Inactive-List entry that has a saved
             startup command — a bare-shell launch that skips the TERM-05 auto-run for that
-            one launch (the primary ▶ Start runs the command). */}
-        {dormant && hasStartupCmd && (
+            one launch (the primary ▶ Start runs the command). R3 (2026-06-09): gated through
+            startAffordances so it is SUPPRESSED on the ACTIVE dormant card row (where the
+            IdleCard ▶ is the sole Start surface) and no longer co-renders as a confusing
+            second, smaller Start button — every NON-active dormant recipe row still shows it. */}
+        {startCtl.startNoCmd && (
           <button
             type="button"
             className="row-control"

@@ -42,6 +42,15 @@ export interface StartAffordances {
   startNoCmd: boolean;
   /** How many PRIMARY Start affordances this row renders — MUST be ≤ 1 (DEFECT C). */
   primaryStartCount: number;
+  /**
+   * How many Start-LABELED controls this row renders TOTAL across the sidebar AND the
+   * IdleCard — the sidebar ▶ + the "Start without command" ⏵ + the IdleCard ▶. For the
+   * ACTIVE dormant row this MUST be exactly 1 (the IdleCard ▶) — R3 (2026-06-09): the
+   * round-3 fix only deduped the PRIMARY ▶ and left the ⏵ co-rendering with the card, so
+   * the user saw "two Start buttons of different size" and, clicking the small ⏵, hit the
+   * skip-command path ("command not run on start", R1).
+   */
+  totalStartCount: number;
 }
 
 /**
@@ -54,7 +63,10 @@ export interface StartAffordances {
  *     is SUPPRESSED (DEFECT C — the two used to co-render).
  *   - A NON-active dormant row → the sidebar ▶ is the single primary Start (it has no card).
  *   - "Start without command" ⏵ is a SEPARATE affordance (dormant + a saved command); it is
- *     NOT counted in primaryStartCount.
+ *     NOT counted in primaryStartCount. R3 (2026-06-09): it is ALSO suppressed on the ACTIVE
+ *     dormant card row so that row collapses to exactly ONE Start-labeled control TOTAL — the
+ *     IdleCard ▶ (handleStart → runs the saved command). A NON-active dormant recipe row keeps
+ *     its sidebar ▶ + ⏵ pair (D-06), so it is NOT over-suppressed.
  */
 export function startAffordances(input: StartAffordanceInput): StartAffordances {
   const dormant = input.status === 'not_started';
@@ -64,8 +76,20 @@ export function startAffordances(input: StartAffordanceInput): StartAffordances 
   // The sidebar ▶ is the primary Start for every dormant row EXCEPT the active one whose
   // IdleCard already owns it — suppress the duplicate there (DEFECT C).
   const sidebarStart = dormant && !idleCardStart;
+  // "Start without command" ⏵: a dormant row with a saved command — EXCEPT the active card
+  // row, where the IdleCard ▶ is the sole Start surface (R3). Co-rendering the ⏵ there was
+  // the "two Start buttons" defect AND, when clicked, the skip-command path (R1).
   const startNoCmd =
-    dormant && (input.startupCommand ?? '').trim().length > 0;
+    dormant &&
+    !idleCardStart &&
+    (input.startupCommand ?? '').trim().length > 0;
   const primaryStartCount = (sidebarStart ? 1 : 0) + (idleCardStart ? 1 : 0);
-  return { sidebarStart, idleCardStart, startNoCmd, primaryStartCount };
+  const totalStartCount = primaryStartCount + (startNoCmd ? 1 : 0);
+  return {
+    sidebarStart,
+    idleCardStart,
+    startNoCmd,
+    primaryStartCount,
+    totalStartCount,
+  };
 }
