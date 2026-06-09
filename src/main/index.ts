@@ -1,7 +1,9 @@
 import { app, BrowserWindow, ipcMain, dialog, screen } from 'electron';
 import path from 'node:path';
+import os from 'node:os';
 import started from 'electron-squirrel-startup';
 import { buildWebPreferences } from './window-config';
+import { isUnsupportedWindows } from './os-gate';
 import { PtyManager } from './pty-manager';
 import { SessionStore } from './session-store';
 import { validateBounds } from './window-bounds';
@@ -163,6 +165,22 @@ ipcMain.handle('dialog:pick-directory', async (): Promise<string | null> => {
 // (so createWindow can read the restored bounds). Every step is awaited before the
 // window opens so a restored session is visible on first paint (PERS-02).
 app.whenReady().then(async () => {
+  // ── D-05 ConPTY pre-window gate (SC4) ──
+  // On a pre-1809 Windows host (build < 17763) node-pty's terminal engine
+  // (ConPTY) is unavailable, so spawning would crash. Refuse to launch with a
+  // NATIVE error dialog BEFORE store.load()/hydrate()/createWindow() — i.e.
+  // before ANY node-pty spawn path — then quit cleanly. The module-scope
+  // squirrel `if (started) app.quit()` guard (above) stays first; this runs
+  // inside whenReady, after it. Non-win32 / supported builds fall through.
+  if (isUnsupportedWindows(process.platform, os.release())) {
+    dialog.showErrorBox(
+      'Windows 10 build 1809 or later required',
+      'Just-Wrapper needs Windows 10 build 1809 (10.0.17763) or newer for its ' +
+        'terminal engine (ConPTY). Please update Windows and try again.',
+    );
+    app.quit();
+    return; // do NOT proceed to load/hydrate/createWindow
+  }
   const data = await store.load();
   ptyManager.hydrate(data.sessions); // restored records → dormant (not_started)
   ptyManager.setStoreSignal(syncStore); // every mutation debounce-writes (D-13)
