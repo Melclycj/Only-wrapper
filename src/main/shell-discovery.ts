@@ -161,12 +161,11 @@ export class WindowsShellProvider implements ShellDiscovery {
     ];
 
     // Windows-aware default, independent of resolveShell() (Pitfall 3): prefer
-    // ComSpec (cmd.exe), else the well-known CMD path, else the first candidate —
-    // so the dropdown is never empty even if every well-known path is missing.
+    // ComSpec (cmd.exe), else the well-known CMD path. path.join always returns a
+    // non-empty string, so this is unconditionally truthy — the dropdown's
+    // never-empty guarantee holds even if no well-known path exists on disk.
     const windowsDefault =
-      process.env.ComSpec ||
-      path.join(systemRoot, 'System32', 'cmd.exe') ||
-      candidates[0];
+      process.env.ComSpec || path.join(systemRoot, 'System32', 'cmd.exe');
 
     return buildWindowsShellList(candidates, windowsDefault, (p) => fs.existsSync(p));
   }

@@ -118,6 +118,23 @@ describe('readiness-probe pure helpers (Plan 05.1-01 Task 1)', () => {
       expect(pwsh.unsupported).toMatch(/auto-run unsupported on PowerShell/i);
     });
 
+    it('unknown Windows shell → catch-all degrade-loudly (IN-02; basename in notice)', () => {
+      const probe = provider.forShell('C:\\tools\\nu\\nu.exe');
+      expect(probe.marker).toBe(''); // sends nothing
+      expect(probe.nonce).toBe('');
+      expect(probe.matches('anything')).toBe(false); // readiness never fires
+      expect(probe.unsupported).toMatch(/auto-run unsupported on nu\.exe/i);
+    });
+
+    it('degrade notice sanitizes a control-char/newline basename (WR-02)', () => {
+      // A corrupt session store could load a shellPath whose basename carries
+      // control chars; the notice must stay printable-ASCII only.
+      const probe = provider.forShell('C:\\evil\\bad\x1b[31m\nshell.exe');
+      expect(probe.unsupported).toBeDefined();
+      // no ESC, no newline survives into the user-facing notice
+      expect(probe.unsupported).not.toMatch(/[\x00-\x1f]/);
+    });
+
     it('selectReadinessProbe("win32").forShell(bash) returns a valid POSIX-reuse probe (no throw)', () => {
       const probe = selectReadinessProbe('win32').forShell('/x/bash.exe');
       expect(probe.marker.startsWith(': __JW_READY_')).toBe(true);

@@ -140,11 +140,16 @@ export class MacReadinessProbe implements ReadinessProbeProvider {
  * literal (no command/nonce/buffer interpolation — V7-safe).
  */
 function buildDegradeProbe(shellLabel: string): ShellReadinessProbe {
+  // Sanitize the label before it lands in a user-facing notice (WR-02): the
+  // catch-all path derives it from a session-store shellPath basename, which a
+  // corrupt/tampered store could load with control chars or newlines. Keep
+  // printable ASCII only, length-cap, and fall back to a fixed phrase if empty.
+  const safeLabel = shellLabel.replace(/[^\x20-\x7E]/g, '').slice(0, 40) || 'this shell';
   return {
     marker: '', // send NOTHING — no auto-run is attempted on a degraded shell.
     nonce: '', // no nonce: nothing is injected, so there is nothing to scrub.
     matches: () => false, // readiness never fires → caller withholds the command.
-    unsupported: `auto-run unsupported on ${shellLabel} — start the command manually`,
+    unsupported: `auto-run unsupported on ${safeLabel} — start the command manually`,
   };
 }
 

@@ -21,13 +21,21 @@ const config: ForgeConfig = {
     // credential (all values read from process.env). `osxSign: {}` means "sign
     // with the default identity" when an identity env var is present.
     osxSign: process.env.APPLE_IDENTITY ? {} : undefined,
-    osxNotarize: process.env.APPLE_ID
-      ? {
-          appleId: process.env.APPLE_ID,
-          appleIdPassword: process.env.APPLE_PASSWORD!,
-          teamId: process.env.APPLE_TEAM_ID!,
-        }
-      : undefined,
+    // Guard all three notarize vars together: if APPLE_ID is set but either
+    // companion is missing, fail FAST with a clear message instead of passing
+    // `undefined` into Forge and surfacing an opaque "invalid credentials" error
+    // deep in the notarization step (WR-01). No env → undefined → unsigned, clean.
+    osxNotarize: ((): { appleId: string; appleIdPassword: string; teamId: string } | undefined => {
+      const { APPLE_ID, APPLE_PASSWORD, APPLE_TEAM_ID } = process.env;
+      if (!APPLE_ID) return undefined;
+      if (!APPLE_PASSWORD || !APPLE_TEAM_ID) {
+        throw new Error(
+          'osxNotarize: APPLE_ID is set but APPLE_PASSWORD and/or APPLE_TEAM_ID is missing. ' +
+            'Set all three for notarization, or none for an unsigned build.',
+        );
+      }
+      return { appleId: APPLE_ID, appleIdPassword: APPLE_PASSWORD, teamId: APPLE_TEAM_ID };
+    })(),
     // node-pty's prebuilt .node binaries cannot be loaded from inside the ASAR
     // archive (CLAUDE.md "Loading .node native files from inside ASAR"; Pitfall 4).
     // unpack them so they land in app.asar.unpacked/ on the read-only resources dir.
