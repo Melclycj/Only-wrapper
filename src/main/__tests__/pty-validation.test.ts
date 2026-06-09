@@ -16,6 +16,7 @@ import {
   isStringData,
   MIN_DIMENSION,
   MAX_DIMENSION,
+  PtyManager,
 } from '../pty-manager';
 
 describe('clampDimension — resize-bomb DoS guard (T-02-03, Security V5)', () => {
@@ -66,5 +67,48 @@ describe('isStringData — write type guard (T-02-02, Security V5)', () => {
     expect(isStringData({})).toBe(false);
     expect(isStringData(['a'])).toBe(false);
     expect(isStringData(Buffer.from('x'))).toBe(false);
+  });
+});
+
+describe('setUiState scrollback — validate-in-main (T-07-01, Security V5)', () => {
+  it('holds a valid in-range scrollback', () => {
+    const mgr = new PtyManager();
+    mgr.setUiState({ scrollback: 3000 });
+    expect(mgr.getUiState().scrollback).toBe(3000);
+  });
+
+  it('clamps a below-minimum scrollback up to 1000', () => {
+    const mgr = new PtyManager();
+    mgr.setUiState({ scrollback: 999 });
+    expect(mgr.getUiState().scrollback).toBe(1000);
+  });
+
+  it('clamps an above-maximum scrollback down to 50000', () => {
+    const mgr = new PtyManager();
+    mgr.setUiState({ scrollback: 99999 });
+    expect(mgr.getUiState().scrollback).toBe(50000);
+  });
+
+  it('leaves scrollback unset for a non-number payload (no throw)', () => {
+    const mgr = new PtyManager();
+    expect(() => mgr.setUiState({ scrollback: 'x' })).not.toThrow();
+    expect(mgr.getUiState().scrollback).toBeUndefined();
+  });
+
+  it('leaves scrollback unset for a non-finite payload (NaN/Infinity)', () => {
+    const mgr = new PtyManager();
+    mgr.setUiState({ scrollback: Number.NaN });
+    expect(mgr.getUiState().scrollback).toBeUndefined();
+    mgr.setUiState({ scrollback: Number.POSITIVE_INFINITY });
+    expect(mgr.getUiState().scrollback).toBeUndefined();
+  });
+
+  it('is a no-op for a forged non-object payload (no throw, scrollback unchanged)', () => {
+    const mgr = new PtyManager();
+    mgr.setUiState({ scrollback: 4000 });
+    expect(() => mgr.setUiState(null)).not.toThrow();
+    expect(() => mgr.setUiState('not-an-object')).not.toThrow();
+    // The earlier valid value survives a subsequent forged payload.
+    expect(mgr.getUiState().scrollback).toBe(4000);
   });
 });

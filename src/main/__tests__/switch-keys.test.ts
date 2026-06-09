@@ -11,7 +11,12 @@
 // the `key` path which holds on both macOS and Windows for these chords.
 
 import { describe, it, expect } from 'vitest';
-import { matchSwitchKey, matchClearKey, type KeyInput } from '../switch-keys';
+import {
+  matchSwitchKey,
+  matchClearKey,
+  matchSearchKey,
+  type KeyInput,
+} from '../switch-keys';
 
 function key(partial: Partial<KeyInput>): KeyInput {
   return {
@@ -102,5 +107,55 @@ describe('matchClearKey (Clear chord — D-13)', () => {
 
   it('returns null for a bare K with no modifier', () => {
     expect(matchClearKey(key({ key: 'k' }))).toBeNull();
+  });
+});
+
+describe('matchSearchKey (find chord — TERM-10, D-02/D-03)', () => {
+  it('macOS Cmd+F resolves to a search intent (logical key)', () => {
+    expect(matchSearchKey(key({ meta: true, key: 'f' }), 'darwin')).toEqual({
+      kind: 'search',
+    });
+  });
+
+  it('macOS Cmd+F resolves to a search intent via the physical code KeyF', () => {
+    expect(
+      matchSearchKey(key({ meta: true, code: 'KeyF', key: '' }), 'darwin'),
+    ).toEqual({ kind: 'search' });
+  });
+
+  it('macOS Ctrl+F returns null — readline forward-char MUST survive (D-03)', () => {
+    expect(
+      matchSearchKey(key({ control: true, meta: false, key: 'f' }), 'darwin'),
+    ).toBeNull();
+  });
+
+  it('Windows Ctrl+F (control, no meta) resolves to a search intent', () => {
+    expect(
+      matchSearchKey(key({ control: true, meta: false, key: 'f' }), 'win32'),
+    ).toEqual({ kind: 'search' });
+  });
+
+  it('Windows Ctrl+F resolves via the physical code KeyF', () => {
+    expect(
+      matchSearchKey(key({ control: true, code: 'KeyF', key: '' }), 'win32'),
+    ).toEqual({ kind: 'search' });
+  });
+
+  it('returns null for a non-keyDown event (e.g. keyUp)', () => {
+    expect(
+      matchSearchKey(key({ type: 'keyUp', meta: true, key: 'f' }), 'darwin'),
+    ).toBeNull();
+  });
+
+  it('returns null for a non-F key with the primary modifier (Cmd+G)', () => {
+    expect(matchSearchKey(key({ meta: true, key: 'g' }), 'darwin')).toBeNull();
+    expect(
+      matchSearchKey(key({ control: true, key: 'g' }), 'win32'),
+    ).toBeNull();
+  });
+
+  it('returns null for a bare F with no modifier on either platform', () => {
+    expect(matchSearchKey(key({ key: 'f' }), 'darwin')).toBeNull();
+    expect(matchSearchKey(key({ key: 'f' }), 'win32')).toBeNull();
   });
 });

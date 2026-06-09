@@ -121,6 +121,44 @@ describe('SessionStore (PERS-01 / PERS-02 / D-13)', () => {
     expect(data.ui).toEqual(ui);
   });
 
+  it('round-trips a valid ui.scrollback through write → read (TERM-11, D-04)', async () => {
+    const ui: StoreSchema['ui'] = {
+      collapsed: false,
+      bounds: { x: 0, y: 0, width: 1024, height: 768 },
+      scrollback: 12000,
+    };
+    const writer = new SessionStore(storeFile);
+    await writer.load();
+    writer.setUi(ui);
+    await writer.flush();
+
+    const reader = new SessionStore(storeFile);
+    const data = await reader.load();
+    expect(data.ui.scrollback).toBe(12000);
+    expect(data.ui).toEqual(ui);
+  });
+
+  it('tolerates a loaded ui slot with an absent scrollback (read-time default applies, no throw)', async () => {
+    // A ui slot persisted WITHOUT scrollback (a pre-Phase-7 store) must load cleanly:
+    // coerceOnLoad is untouched for the ui slot, and the read-time default (5000) is
+    // applied by the renderer/clampScrollback — load() itself never throws or invents one.
+    const ui: StoreSchema['ui'] = {
+      collapsed: true,
+      bounds: { x: 10, y: 10, width: 800, height: 600 },
+    };
+    const writer = new SessionStore(storeFile);
+    await writer.load();
+    writer.setUi(ui);
+    await writer.flush();
+
+    const reader = new SessionStore(storeFile);
+    const data = await reader.load();
+    expect(data.ui.scrollback).toBeUndefined();
+    // The rest of the ui slot is intact — an absent scrollback is NOT corruption.
+    expect(data.ui.collapsed).toBe(true);
+    expect(data.ui.bounds).toEqual(ui.bounds);
+  });
+
   it('backs up a corrupt store to .corrupt-* and starts fresh without throwing', async () => {
     // Write a malformed JSON file at the store path.
     fs.writeFileSync(storeFile, '{ this is not valid json ]', 'utf8');
