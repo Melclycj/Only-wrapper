@@ -136,6 +136,14 @@ export class SessionStore {
     // SCHEMA_VERSION is 2). Bump it here, post-coercion, so the next write records the
     // current schema version — coerceOnLoad already applied the v1→v2 record migration.
     this.db.data.version = SCHEMA_VERSION;
+    // TEMP STORE-DEBUG (2026-06-09, remove after R2 diagnosis):
+    // eslint-disable-next-line no-console
+    console.error(
+      '[STORE-DEBUG] load: file=%s loadedSessions=%d names=%o',
+      this.file,
+      this.db.data.sessions.length,
+      this.db.data.sessions.map((s) => s.name),
+    );
     return this.db.data;
   }
 
@@ -216,6 +224,14 @@ export class SessionStore {
       clearTimeout(this.saveTimer);
       this.saveTimer = null;
     }
+    // TEMP STORE-DEBUG (2026-06-09, remove after R2 diagnosis): log EVERY flush incl. no-ops.
+    // eslint-disable-next-line no-console
+    console.error(
+      '[STORE-DEBUG] flush: dirty=%s file=%s inMemSessions=%d',
+      this.dirty,
+      this.file,
+      this.db?.data?.sessions?.length ?? -1,
+    );
     if (!this.dirty || !this.db) return; // nothing pending → no-op
     this.dirty = false;
     await this.db.write(); // steno atomic write
