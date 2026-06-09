@@ -26,7 +26,7 @@
 // The ONLY bridge to main is window.api (contextBridge). xterm runs here; the PTY
 // lives in main.
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { LogicalId } from '../shared/types';
 import { createWatermark } from '../shared/flow-control';
 import { type AgentState } from '../shared/agent-state';
@@ -42,6 +42,8 @@ import { WebLinksAddon } from '@xterm/addon-web-links';
 import { Unicode11Addon } from '@xterm/addon-unicode11';
 import { WebglAddon } from '@xterm/addon-webgl';
 import { CanvasAddon } from '@xterm/addon-canvas';
+import { SearchAddon } from '@xterm/addon-search';
+import { SearchBar } from './SearchBar';
 import '@xterm/xterm/css/xterm.css';
 import './terminal.css';
 
@@ -130,20 +132,42 @@ export interface SessionViewProps {
    * onPtyData stream this view already consumes — no bridge change.
    */
   onAgentState: (id: LogicalId, state: AgentState) => void;
+  /**
+   * Whether THIS session's in-terminal search bar is open (07-02 TERM-10). True only
+   * for the active session whose find chord toggled it open — SessionManager gates this
+   * on `=== activeId` so a backgrounded pane never shows the bar. Drives the SearchBar
+   * overlay render below.
+   */
+  searchOpen: boolean;
+  /** Dismiss the search bar (Esc / ✕) — routes up to clear SessionManager's searchOpenId. */
+  onCloseSearch: () => void;
 }
 
 export function SessionView({
   id,
   active,
   onAgentState,
+  searchOpen,
+  onCloseSearch,
 }: SessionViewProps): React.JSX.Element {
+  // The OUTER wrapper (.session-view) hosts both the inner xterm mount and the
+  // SearchBar overlay; the xterm opens on `mountRef` so the SearchBar can be a DOM
+  // SIBLING (never inside `.xterm`) — its <input> events never reach the PTY (SC3).
   const containerRef = useRef<HTMLDivElement>(null);
+  const mountRef = useRef<HTMLDivElement>(null);
 
   // Live xterm + fit handles, shared between the mount effect and the activate
   // effect. Refs (not state) so toggling `active` never tears down the instance.
   const termRef = useRef<Terminal | null>(null);
   const fitRef = useRef<FitAddon | null>(null);
   const webglRef = useRef<WebglAddon | null>(null);
+  // The SearchAddon loaded ONCE per term (07-02 Pitfall 4); disposed in cleanup before
+  // term.dispose(). Passed to the per-view SearchBar so its query drives findNext/Prev.
+  const searchRef = useRef<SearchAddon | null>(null);
+  // Re-render trigger: searchRef.current is null on first render (the addon is created
+  // in the mount effect AFTER the first paint). Flip this once the addon exists so the
+  // SearchBar receives the live addon instead of a stale null.
+  const [searchReady, setSearchReady] = useState(false);
   // Tracks whether this session has reached 'running' at least once. A SECOND
   // 'running' status is a RESTART (not the first spawn) → write the dim separator
   // into the SAME instance, preserving scrollback (D-03).
@@ -159,7 +183,10 @@ export function SessionView({
   // ── Mount effect: create the xterm once, bind to the prop `id`, keep alive. ──
   // Keyed on `id` only (NOT `active`) so switching tabs never disposes the term.
   useEffect(() => {
-    const container = containerRef.current;
+    // xterm opens on the INNER mount div (not the .session-view wrapper) so the
+    // SearchBar overlay can be a sibling of `.xterm`. The fit addon measures this
+    // element; the ResizeObserver + contextmenu listener bind here too.
+    const container = mountRef.current;
     if (!container) return;
 
     // 1. The xterm instance — verbatim from TerminalPane (scrollback 10000,
@@ -184,6 +211,16 @@ export function SessionView({
     const uni = new Unicode11Addon();
     term.loadAddon(uni);
     term.unicode.activeVersion = '11';
+
+    // SearchAddon (07-02 TERM-10) — pure JS (no WebGL/GPU concern), loaded ONCE for
+    // the term's whole life (the term is keep-alive across tab switches; never load
+    // per-search). Disposed in the cleanup before term.dispose() (Pitfall 4). Flip
+    // searchReady so the SearchBar render below receives the live addon (it was null
+    // on the first paint, before this effect ran).
+    const search = new SearchAddon();
+    searchRef.current = search;
+    term.loadAddon(search);
+    setSearchReady(true);
 
     // 3. Open + initial fit, guarded with proposeDimensions() so a not-yet-
     //    measurable container (e.g. a hidden pane on first mount) does not mis-size
@@ -481,6 +518,12 @@ export function SessionView({
       if (wc.__sessionTerms && wc.__sessionTerms[id] === term) {
         delete wc.__sessionTerms[id];
       }
+      // Dispose the SearchAddon BEFORE the term (07-02 Pitfall 4 — no dangling addon /
+      // decoration subscription on session removal). The SearchBar's own
+      // onDidChangeResults subscription is torn down by its useEffect cleanup.
+      searchRef.current?.dispose();
+      searchRef.current = null;
+      setSearchReady(false);
       term.dispose();
       termRef.current = null;
       fitRef.current = null;
@@ -520,6 +563,19 @@ export function SessionView({
       className={active ? 'session-view active' : 'session-view'}
       data-session-id={id}
       {...(active ? {} : { 'hidden-pane': '' })}
-    />
+    >
+      {/* Inner xterm mount — the terminal opens here so the SearchBar overlay below is
+          a DOM SIBLING of `.xterm` (never a child), keeping its <input> events off the
+          PTY (SC3 / Pitfall 3). */}
+      <div ref={mountRef} className="term-mount" />
+      {/* In-terminal search bar (07-02 TERM-10). Renders only when this view's
+          searchOpen is true (gated upstream on === activeId). searchReady is read so
+          the live SearchAddon (created post-mount) is passed instead of a stale null. */}
+      <SearchBar
+        open={searchOpen}
+        searchAddon={searchReady ? searchRef.current : null}
+        onClose={onCloseSearch}
+      />
+    </div>
   );
 }
