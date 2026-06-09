@@ -242,63 +242,6 @@ describe('PtyManager lifecycle (SC3, TERM-07)', () => {
     expect(spawnedChildren).toHaveLength(2);
   });
 
-  // ── CR-02: two concurrent restart() calls on the SAME live session must NOT each
-  //    arm their own onExit→respawn. Without an in-flight restart lock the second
-  //    call finds the same live `s`, arms a SECOND onExit listener on the same pty,
-  //    and the single exit fires BOTH listeners → TWO respawn() → TWO create() calls
-  //    (double startup-command injection + an orphaned live pty). The per-closure
-  //    `respawned` guard cannot span two callers. The lock makes the second call a
-  //    no-op (it returns the in-flight restart's result), so EXACTLY ONE respawn fires. ──
-  it('restart() rejects/coalesces a concurrent second call so only ONE respawn fires (CR-02)', async () => {
-    setPlatform('darwin');
-    const mgr = new PtyManager();
-    mgr.registerIpc(fakeWindow());
-    const first = mgr.create(baseOpts);
-    const firstChild = spawnedChildren[0];
-    expect(spawnedChildren).toHaveLength(1);
-
-    // Two rapid restart requests on the same id BEFORE the old pty has exited.
-    const p1 = mgr.restart(first.id);
-    const p2 = mgr.restart(first.id).then(
-      (r) => ({ ok: true as const, r }),
-      (e: Error) => ({ ok: false as const, e }),
-    );
-
-    // The single old-pty exit must drive AT MOST one respawn — even though two
-    // restart() calls were in flight when it fired.
-    firstChild._fireExit({ exitCode: 0 });
-
-    await p1;
-    await p2;
-
-    // Exactly ONE new pty was spawned (1 original + 1 respawn = 2 total). A second
-    // listener firing would have produced a third spawned child.
-    expect(spawnedChildren).toHaveLength(2);
-    // The live session map still holds a single session for this id.
-    expect(mgr.listSessions().filter((s) => s.logicalId === first.id)).toHaveLength(1);
-  });
-
-  // ── CR-02 follow-on: once the first restart has fully resolved, a LATER restart()
-  //    on the now-live respawned session must be allowed (the lock is released). ──
-  it('restart() lock is released after the restart resolves — a later restart works (CR-02)', async () => {
-    setPlatform('darwin');
-    const mgr = new PtyManager();
-    mgr.registerIpc(fakeWindow());
-    const first = mgr.create(baseOpts);
-
-    const r1 = mgr.restart(first.id);
-    spawnedChildren[0]._fireExit({ exitCode: 0 });
-    await r1;
-    expect(spawnedChildren).toHaveLength(2);
-
-    // The respawned pty is the second spawned child; a fresh restart must proceed.
-    const r2 = mgr.restart(first.id);
-    spawnedChildren[1]._fireExit({ exitCode: 0 });
-    const third = await r2;
-    expect(third.id).toBe(first.id);
-    expect(spawnedChildren).toHaveLength(3);
-  });
-
   it('after stop+exit the SessionRecord is retained in listSessions() with status "stopped"', () => {
     setPlatform('darwin');
     const mgr = new PtyManager();

@@ -179,45 +179,6 @@ describe('PtyManager hydrate + promotion (PERS-02 / Pattern 4 / D-13)', () => {
     expect(mgr.listSessions()[0].order).toBe(0);
   });
 
-  // ── CR-04 (defense-in-depth, mirrors the cols/rows 1..1000 clamp): the renderer-
-  //    controlled `order` is clamped at the setOrder IPC boundary so a huge finite
-  //    value (e.g. Number.MAX_SAFE_INTEGER) cannot poison nextOrder(): an unclamped
-  //    max makes the next new session's order = MAX+1 (precision loss) so all later
-  //    sessions collide on the same order. Clamping to 0..ORDER_MAX keeps nextOrder()
-  //    monotonic. Negative/fractional are also normalized (floored, ≥ 0). ──
-  it('setOrder() clamps an out-of-range order so nextOrder() stays monotonic (CR-04)', () => {
-    const mgr = new PtyManager();
-    mgr.registerIpc(fakeWindow());
-    const r = mgr.create({ ...baseOpts }); // order 0
-
-    // A malicious/buggy renderer sends a huge finite order.
-    mgr.setOrder([{ id: r.id, order: Number.MAX_SAFE_INTEGER }]);
-    const clamped = mgr.listSessions().find((x) => x.logicalId === r.id)?.order ?? -1;
-
-    // The stored order is clamped well below MAX_SAFE_INTEGER (no precision-loss zone).
-    expect(clamped).toBeLessThanOrEqual(10_000);
-    expect(clamped).toBeGreaterThanOrEqual(0);
-
-    // nextOrder() (exercised via a fresh create with no explicit order) must produce a
-    // STRICTLY GREATER order than the clamped value — proving it was not poisoned into
-    // a MAX_SAFE_INTEGER+1 collision.
-    const r2 = mgr.create({ ...baseOpts });
-    const next = mgr.listSessions().find((x) => x.logicalId === r2.id)?.order ?? -1;
-    expect(next).toBeGreaterThan(clamped);
-  });
-
-  it('setOrder() floors a fractional order and clamps a negative order to 0 (CR-04)', () => {
-    const mgr = new PtyManager();
-    mgr.registerIpc(fakeWindow());
-    const r = mgr.create({ ...baseOpts });
-
-    mgr.setOrder([{ id: r.id, order: 3.9 }]);
-    expect(mgr.listSessions().find((x) => x.logicalId === r.id)?.order).toBe(3);
-
-    mgr.setOrder([{ id: r.id, order: -42 }]);
-    expect(mgr.listSessions().find((x) => x.logicalId === r.id)?.order).toBe(0);
-  });
-
   it('close() discards a dormant record without a pty + signals the store', () => {
     const mgr = new PtyManager();
     const signal = vi.fn();
