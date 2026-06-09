@@ -40,11 +40,22 @@ export interface SearchBarProps {
 // present so `onDidChangeResults` fires (Pitfall 1). The two overview-ruler fields
 // are REQUIRED (non-optional) by the xterm ISearchDecorationOptions type. Amber wash
 // for all matches; strong amber for the active match; blue active overview tick.
+//
+// GAP-07-G2/G3 ROOT CAUSE (07-05 re-verify): these were authored in oklch() to mirror
+// 07-UI-SPEC §Color verbatim — but xterm's `css.toColor` only fast-paths #hex / rgb() /
+// rgba(); every OTHER format (incl. oklch) falls to a <canvas> round-trip that THROWS
+// "Unsupported css format" whenever the resulting alpha !== 255. The two TRANSLUCENT
+// match backgrounds (alpha 0.32 / 0.7) therefore threw at RENDER time and never painted —
+// the "N of M" count still worked because onDidChangeResults is colour-agnostic. That is
+// the exact G3 (no highlight) + G2 (no active-match paint) symptom. Fix: keep the SAME
+// visual amber/blue, but express it in regex-safe rgba()/hex so xterm can parse it
+// (oklch(0.66 0.15 60) → rgb(211,120,18) / #d37812; oklch(0.62 0.14 248) → #328bd6).
+// The COLOUR is unchanged — only the unparseable string FORMAT is corrected.
 const MATCH_DECORATIONS = {
-  matchBackground: 'oklch(0.66 0.15 60 / 0.32)',
-  activeMatchBackground: 'oklch(0.66 0.15 60 / 0.7)',
-  matchOverviewRuler: 'oklch(0.66 0.15 60)',
-  activeMatchColorOverviewRuler: 'oklch(0.62 0.14 248)',
+  matchBackground: 'rgba(211, 120, 18, 0.32)',
+  activeMatchBackground: 'rgba(211, 120, 18, 0.7)',
+  matchOverviewRuler: '#d37812',
+  activeMatchColorOverviewRuler: '#328bd6',
 } as const;
 
 interface MatchState {
