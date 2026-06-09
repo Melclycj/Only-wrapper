@@ -51,16 +51,18 @@ export interface SearchBarProps {
 // (oklch(0.66 0.15 60) → rgb(211,120,18) / #d37812; oklch(0.62 0.14 248) → #328bd6).
 // The COLOUR is unchanged — only the unparseable string FORMAT is corrected.
 const MATCH_DECORATIONS = {
-  // 07-05 re-verify (round 3): the spec's intent is "the current match STANDS OUT from the
-  // rest" (the exact colours were Claude's discretion). Two alphas of the SAME amber
-  // (0.32 vs 0.7→0.95) read as indistinguishable on the live dark canvas — the human could
-  // not tell the active match apart. Switched to TWO DISTINCT HUES per the user's call:
-  // a faint YELLOW wash for all matches, a strong AMBER/orange for the current match. A hue
-  // difference is far more separable than an alpha difference and removes any ambiguity.
-  matchBackground: 'rgba(232, 220, 100, 0.32)', // faint yellow — every match
-  activeMatchBackground: 'rgba(211, 120, 18, 0.92)', // strong amber — the current match
-  matchOverviewRuler: '#e8dc64', // yellow tick for all matches
-  activeMatchColorOverviewRuler: '#d37812', // amber tick for the active match (matches the wash)
+  // 07-05 re-verify (round 4): two distinct HUES (round 3) made the active match
+  // distinguishable — confirming the active decoration DOES render — but the faint YELLOW
+  // all-match wash was too LIGHT, so white terminal text on it washed out (low contrast).
+  // Fix per the user's call: keep both warm/amber-family but make the MANY matches DARK
+  // (white text stays readable where you actually read) and put the single brighter colour
+  // on the ACTIVE match only (the one you've already found). Over the dark --term-bg
+  // (#1e232c) the 0.32 amber composites dark → white-text contrast ≈ 7:1 (readable); the
+  // active bright-orange composites bright → it pops out as "the current one".
+  matchBackground: 'rgba(211, 120, 18, 0.32)', // dark amber wash — every match, white text readable
+  activeMatchBackground: 'rgba(255, 145, 40, 0.9)', // bright orange — the current match (the beacon)
+  matchOverviewRuler: '#d37812', // amber tick for all matches
+  activeMatchColorOverviewRuler: '#ff9128', // bright-orange tick for the active match
 } as const;
 
 interface MatchState {
