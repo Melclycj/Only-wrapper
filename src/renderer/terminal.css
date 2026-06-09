@@ -874,6 +874,20 @@ body {
   outline-offset: 1px;
 }
 
+/* ── Preferences modal (07-03, TERM-11 / D-08) — extensible settings stack ─────── */
+
+/* The Preferences body: a vertical list of .edit-field setting groups (one now —
+ * scrollback). Reuses the shipped .edit-field gap/margins verbatim; adding a future
+ * setting = appending another .edit-field group, no layout rewrite (D-08). No new
+ * modal-shell CSS — the dialog reuses the shipped .modal-* classes. The helper line
+ * (.idle-card-helper) sits below the input in --ink-faint; a slim top margin keeps it
+ * from crowding the modal-actions row when it wraps to two lines. */
+.prefs-body {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 8px;
+}
+
 /* ── Session edit form (D-04) — fields + the "Applies on restart" group ───────── */
 
 .modal-dialog-edit {
