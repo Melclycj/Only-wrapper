@@ -33,6 +33,7 @@ import {
   shouldPersist,
   type SessionDefaults,
 } from './session-identity';
+import { clampScrollback } from './store-schema';
 
 /** IPC channel names (payloads carry `id` so the design scales to N sessions). */
 export const PTY_CHANNELS = {
@@ -242,6 +243,8 @@ export class PtyManager {
   private readonly uiState: {
     collapsed?: boolean;
     bounds?: { x: number; y: number; width: number; height: number };
+    // 07-01 (TERM-11, D-04): the validated, clamped xterm scrollback line cap.
+    scrollback?: number;
   } = {};
 
   /**
@@ -1089,7 +1092,14 @@ export class PtyManager {
         this.uiState.bounds = { x, y, width, height };
       }
     }
-    this.signalStore(); // collapse/bounds changed → debounce-write (D-12/D-13)
+    // 07-01 scrollback (TERM-11, D-04, T-07-01): only a finite number is accepted;
+    // it is clamped into [1000, 50000] BEFORE any disk write. A forged / out-of-range
+    // / non-finite scrollback clamps or no-ops — never writes arbitrary data.
+    const { scrollback } = ui as { scrollback?: unknown };
+    if (typeof scrollback === 'number' && Number.isFinite(scrollback)) {
+      this.uiState.scrollback = clampScrollback(scrollback);
+    }
+    this.signalStore(); // collapse/bounds/scrollback changed → debounce-write (D-12/D-13)
   }
 
   /**
@@ -1097,7 +1107,11 @@ export class PtyManager {
    * push them into the store's ui slot on every change (05-02, D-12). Returns a
    * shallow copy so callers cannot mutate the internal state.
    */
-  getUiState(): { collapsed?: boolean; bounds?: { x: number; y: number; width: number; height: number } } {
+  getUiState(): {
+    collapsed?: boolean;
+    bounds?: { x: number; y: number; width: number; height: number };
+    scrollback?: number;
+  } {
     return { ...this.uiState };
   }
 

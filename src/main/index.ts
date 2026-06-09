@@ -5,7 +5,12 @@ import { buildWebPreferences } from './window-config';
 import { PtyManager } from './pty-manager';
 import { SessionStore } from './session-store';
 import { validateBounds } from './window-bounds';
-import { matchSwitchKey, matchClearKey, type KeyInput } from './switch-keys';
+import {
+  matchSwitchKey,
+  matchClearKey,
+  matchSearchKey,
+  type KeyInput,
+} from './switch-keys';
 import { handleWindowClosed, handleWindowAllClosed } from './lifecycle';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
@@ -109,6 +114,16 @@ function createWindow(): void {
     if (clear) {
       event.preventDefault();
       win.webContents.send('session:switch', clear);
+      return;
+    }
+    // Find chord (Cmd+F macOS / Ctrl+F Windows — TERM-10, D-02/D-03). Rides the SAME
+    // 'session:switch' channel as a { kind: 'search' } intent (NO new bridge key) and is
+    // intercepted here so the chord NEVER reaches xterm/the PTY (app-wins). macOS Ctrl+F
+    // is NOT matched (matchSearchKey returns null) so readline forward-char survives.
+    const search = matchSearchKey(key, process.platform);
+    if (search) {
+      event.preventDefault();
+      win.webContents.send('session:switch', search);
     }
   });
 

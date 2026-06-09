@@ -33,7 +33,33 @@ export interface StoreSchema {
   ui: {
     collapsed?: boolean;
     bounds?: { x: number; y: number; width: number; height: number };
+    // 07-01 (TERM-11, D-04): persisted xterm scrollback line cap. ADDITIVE and
+    // migration-safe — an absent value loads as the read-time default (5000 via
+    // clampScrollback at the read site). Does NOT require a SCHEMA_VERSION bump
+    // (the ui slot already tolerates {} — same precedent as collapsed/bounds).
+    scrollback?: number;
   };
+}
+
+/** D-04 scrollback bounds + default (TERM-11). */
+export const SCROLLBACK_MIN = 1000 as const;
+export const SCROLLBACK_MAX = 50000 as const;
+export const SCROLLBACK_DEFAULT = 5000 as const;
+
+/**
+ * Clamp an untrusted scrollback value into the inclusive D-04 range
+ * [SCROLLBACK_MIN, SCROLLBACK_MAX] with SCROLLBACK_DEFAULT for any invalid input.
+ *
+ * - A non-number or non-finite value (undefined, null, NaN, ±Infinity, string,
+ *   object) → SCROLLBACK_DEFAULT (5000, the midpoint default per D-04).
+ * - Otherwise the value is rounded and clamped into [1000, 50000].
+ *
+ * PURE — no I/O, no electron, unit-tested directly (scrollback-clamp.test.ts).
+ * Used both renderer-side (input clamp) and main-side (setUiState validate, T-07-01).
+ */
+export function clampScrollback(n: unknown): number {
+  if (typeof n !== 'number' || !Number.isFinite(n)) return SCROLLBACK_DEFAULT;
+  return Math.max(SCROLLBACK_MIN, Math.min(SCROLLBACK_MAX, Math.round(n)));
 }
 
 /**

@@ -19,7 +19,12 @@ export type SwitchIntent =
   // new bridge key is added (EXPECTED_API_KEYS stays driven by pickDirectory only).
   // Cmd+K (macOS) / Ctrl+Shift+K (Windows) clears the active session's visible buffer
   // without killing the PTY; the renderer's onSwitchSession handler routes it.
-  | { kind: 'clear' };
+  | { kind: 'clear' }
+  // 07-01 (TERM-10, D-02/D-03): the Find chord ALSO rides the EXISTING
+  // 'session:switch' channel — it adds NO new bridge key. Cmd+F (macOS) / Ctrl+F
+  // (Windows) opens the active session's search bar; the renderer's onSwitchSession
+  // handler toggles it. macOS Ctrl+F deliberately does NOT match (readline forward-char).
+  | { kind: 'search' };
 
 /**
  * The subset of Electron's `Input` the matcher reads. Kept structural (not the
@@ -98,5 +103,43 @@ export function matchClearKey(i: KeyInput): SwitchIntent | null {
   if (i.meta) return { kind: 'clear' };
   // Windows: Ctrl+Shift+K only — plain Ctrl+K is reserved for readline kill-line (D-13).
   if (i.control && i.shift) return { kind: 'clear' };
+  return null;
+}
+
+// A1-defensive: accept the logical `key` ('f') OR the physical `code` ('KeyF'), so
+// the Find chord matches regardless of layout (mirrors isKeyK / digit1to9).
+function isKeyF(i: KeyInput): boolean {
+  return i.key === 'f' || i.code === 'KeyF';
+}
+
+/**
+ * Resolve a key event into a Find intent ({kind:'search'}), or null when it is not
+ * the Find chord. Pure + electron-free (Node-testable). Never throws.
+ *
+ * The platform asymmetry is the crux (Pitfall 2 / D-03) — the matcher takes the
+ * platform explicitly (caller passes process.platform) so it stays testable:
+ *   - macOS ('darwin'):   Cmd+F (meta)        → { kind: 'search' }
+ *                         Ctrl+F (control)    → null  ← readline forward-char MUST
+ *                                                       survive; we never steal it
+ *   - Windows/other:      Ctrl+F (control,    → { kind: 'search' }
+ *                          no meta)
+ *   - non-keyDown / non-F → null
+ *
+ * The intent rides the EXISTING 'session:switch' channel (no new bridge key); main
+ * preventDefault()s on a match so the chord never reaches xterm/the PTY (D-02/D-03).
+ */
+export function matchSearchKey(
+  i: KeyInput,
+  platform: NodeJS.Platform,
+): SwitchIntent | null {
+  if (i.type !== 'keyDown') return null;
+  if (!isKeyF(i)) return null;
+  if (platform === 'darwin') {
+    // macOS: ONLY Cmd+F. Ctrl+F falls through to readline (forward-char) — D-03.
+    if (i.meta) return { kind: 'search' };
+    return null;
+  }
+  // Windows and any non-darwin platform: Ctrl+F (without Cmd/meta).
+  if (i.control && !i.meta) return { kind: 'search' };
   return null;
 }
