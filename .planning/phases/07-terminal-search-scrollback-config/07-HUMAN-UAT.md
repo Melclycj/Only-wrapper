@@ -1,11 +1,11 @@
 ---
-status: partial
+status: signed-off
 phase: 07-terminal-search-scrollback-config
 source: [07-04-PLAN.md, 07-VALIDATION.md]
 verified_by: human (macOS-first manual checklist)
 started: 2026-06-09
-updated: 2026-06-09
-nyquist_signed_off: false
+updated: 2026-06-10
+nyquist_signed_off: true
 ---
 
 # Phase 7 — Human Verification (macOS-first)
@@ -13,8 +13,28 @@ nyquist_signed_off: false
 Manual sign-off of the interactive search + scrollback surface per `07-VALIDATION.md`
 Manual-Only Verifications. Run during the Plan 07-04 human-verify checkpoint.
 
-**Outcome: NOT signed off — 5 defects found (3 High, 1 Medium, 1 Low).**
-`nyquist_compliant` / `wave_0_complete` remain FALSE; TERM-10 / TERM-11 remain Pending.
+**Outcome (initial run, 2026-06-09): NOT signed off — 5 defects found (3 High, 1 Medium, 1 Low).**
+**Outcome (re-verify after 07-05 gap-closure, 2026-06-10): SIGNED OFF — all 5 gaps closed.**
+`nyquist_compliant` / `wave_0_complete` are now TRUE; TERM-10 / TERM-11 marked Complete.
+
+## Gap Resolution (07-05 gap-closure)
+
+All 5 gaps were behavioral defects in the TERM-10 search slice (TERM-11 passed entirely on
+the initial run). Closed in plan 07-05 and re-verified on macOS 2026-06-10:
+
+| Gap | Resolution | Status |
+|-----|------------|--------|
+| G3 (no highlight) | **Root cause:** decoration colours were `oklch()` — xterm's `css.toColor` rejects translucent non-`rgba()` formats (throws "Unsupported css format" when alpha != 255), so the highlight never painted while the colour-agnostic count still worked. Fixed to regex-safe `rgba()`/hex. | resolved |
+| G2 (no repaint until scroll) | Same oklch root cause for the active-match highlight; once the colour parses, the native decoration render + the addon's scroll-into-view paint the active match. The first-attempt `term.refresh` "flush" was wrong (it caused a scroll-freeze by re-hitting the throwing colour every frame) and was removed. | resolved |
+| G4 (Aa advances) | `incremental: true` could not hold across a case flip (findNext always advances via `_findNextAndSelect`; on a case change the current selection no longer matches). Replaced with `clearSelection()` before the re-issued findNext → recompute lands on the first match of the new mode, no forward drift. | resolved |
+| G1 (no auto-focus) | The rAF imperative focus did not stick. Replaced with the input's `autoFocus` (the bar returns null when closed, so the `<input>` is a fresh mount on every open) + SessionView guards its `term.focus()` on `!searchOpen`. | resolved |
+| G5 (no refocus on close) | SessionView refocuses the term on the searchOpen true→false falling edge (was already fixed in the first 07-05 attempt). | resolved |
+
+**Follow-up polish (signed off in the same re-verify):** the active match was initially
+indistinguishable from the other matches (two alphas of one amber read the same on the dark
+canvas; a faint-yellow wash was too light for white terminal text). Final scheme: a **dark amber**
+wash for all matches (white text ≈ 7:1 contrast, readable) + a **bright-orange** active match
+(the beacon) — distinguishable by hue + lightness while keeping match text readable.
 
 ## Verified PASS (9 / 14 checks)
 

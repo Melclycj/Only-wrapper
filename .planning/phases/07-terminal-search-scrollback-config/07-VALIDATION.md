@@ -1,10 +1,11 @@
 ---
 phase: 7
 slug: terminal-search-scrollback-config
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: signed-off
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-06-09
+signed_off: 2026-06-10
 ---
 
 # Phase 7 — Validation Strategy
@@ -80,11 +81,13 @@ created: 2026-06-09
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 60s
-- [ ] `nyquist_compliant: true` set in frontmatter (flips when Wave 0 stubs land + macOS-first manual checklist signed off)
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 60s
+- [x] `nyquist_compliant: true` set in frontmatter (flips when Wave 0 stubs land + macOS-first manual checklist signed off)
 
-**Approval:** pending
+**Approval:** APPROVED (macOS-first manual checklist signed off by user 2026-06-10, after the
+07-05 gap-closure of G1..G5 + the search-highlight colour-contrast follow-up). All 13 checklist
+items confirmed; TERM-10 / TERM-11 marked Complete.
