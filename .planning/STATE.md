@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 07-03-PLAN.md (TERM-11 scrollback config + Preferences modal slice)
-last_updated: "2026-06-09T14:45:37.392Z"
-last_activity: 2026-06-09
+stopped_at: Phase 07 COMPLETE — TERM-10 search + TERM-11 scrollback config signed off (07-05 gap-closure of search defects G1..G5)
+last_updated: "2026-06-10T00:50:00.000Z"
+last_activity: 2026-06-10
 progress:
   total_phases: 10
   completed_phases: 8
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-03)
 
 **Core value:** Real terminal fidelity — `claude --rc`, `codex`, `vim`, `ssh`, REPLs all behave exactly like a native terminal inside the wrapper.
-**Current focus:** Phase 07 — terminal-search-scrollback-config
+**Current focus:** Phase 08 — cross-platform-packaging (next; Phase 07 complete)
 
 ## Current Position
 
-Phase: 8
+Phase: 8 (cross-platform-packaging) — NOT STARTED
 Plan: Not started
 Status: Ready to execute
-Last activity: 2026-06-09
+Last activity: 2026-06-10 -- Phase 07 COMPLETE (TERM-10 search + TERM-11 scrollback config; 07-05 closed search defects G1..G5; human-verified + verifier 9/9)
 
-Progress: [███████████████████░] 95% (Phase 06.1 plans: 3.5/4 — 04 impl + gap-closure done, 2nd human-verify pending)
+Progress: [████████████████░░░░] 80% (8/10 phases complete, 33/34 plans)
 
 ## Performance Metrics
 
