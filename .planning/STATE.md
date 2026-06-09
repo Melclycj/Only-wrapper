@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: paused
+status: executing
 stopped_at: Phase 7 UI-SPEC approved
-last_updated: "2026-06-09T06:52:50.305Z"
-last_activity: 2026-06-09 -- Phase 7 planning complete
+last_updated: "2026-06-09T07:30:00.000Z"
+last_activity: 2026-06-09 -- Completed 07-01-PLAN.md (search+scrollback contract foundation)
 progress:
   total_phases: 10
   completed_phases: 7
-  total_plans: 29
-  completed_plans: 28
+  total_plans: 33
+  completed_plans: 29
   percent: 70
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-03)
 
 **Core value:** Real terminal fidelity — `claude --rc`, `codex`, `vim`, `ssh`, REPLs all behave exactly like a native terminal inside the wrapper.
-**Current focus:** Phase 06.1 — terminal-lifecycle-state-machine-and-agent-state-detection-r
+**Current focus:** Phase 07 — terminal-search-scrollback-config
 
 ## Current Position
 
-Phase: 7
-Plan: Not started
-Status: Paused at the FOURTH end-of-phase human-verify (06.1-04 Task 3). Rounds 1-2 fixed earlier defects; the THIRD human-verify left three defects — A (Remove of a live session reverts Inactive→Working), B (dev window close loses an unsaved session on macOS), C (two Start buttons on the active dormant entry). Round 3 RED-reproduced and fixed all three: A → new PtyManager.removeLive() routes the configured-live Remove to dormant not_started AND broadcasts 'not_started' (stop() unchanged for restart-in-place; 'stopped' kept passing through renderer-side so a restart's transient stopped→running does not unmount the kept SessionView — SC3 safe); B → src/main/lifecycle.ts flush-on-window-close (+ store version bump to SCHEMA_VERSION); C → src/renderer/start-affordances.ts renders exactly one primary Start per dormant entry (active → IdleCard owns it, sidebar ▶ suppressed). Each locked with a RED→GREEN test. tsc clean, eslint src/ tests/ clean, 256 unit tests GREEN, 14/14 smoke spec files GREEN. nyquist_compliant stays false in 06-VALIDATION.md + 06.1-VALIDATION.md until the user re-verifies.
-Last activity: 2026-06-09 -- Phase 7 planning complete
+Phase: 07 (terminal-search-scrollback-config) — EXECUTING
+Plan: 2 of 4
+Status: Executing Phase 07 (07-01 complete)
+Last activity: 2026-06-09 -- Completed 07-01-PLAN.md (search+scrollback contract foundation)
 
 Progress: [███████████████████░] 95% (Phase 06.1 plans: 3.5/4 — 04 impl + gap-closure done, 2nd human-verify pending)
 
@@ -85,6 +85,7 @@ Progress: [███████████████████░] 95% (Ph
 | Phase 06.1 P03 | ~12min | 2 tasks | 3 files |
 | Phase 06.1 P04 | ~38min | 2 of 3 tasks (human-verify pending) | 9 files |
 | Phase 06.1 P04 gap-closure r1 | ~75min | 5 fixes (FIX1/3/4a/4b + stale-exit guard) | 3 new modules + 3 new tests + 8 modified |
+| Phase 07 P01 | ~18min | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -148,6 +149,7 @@ Recent decisions affecting current work:
 - [Phase ?]: 06.1-02: MOUSE_RESET fires on onPtyExit (the reliable death signal) + unconditionally on the running transition (idempotent), NOT gated on hasRunBeforeRef — the initial/first-restart running broadcast races ahead of the status subscription, so gating would skip the user's first restart and leave the scroll-wheel hot (D-13).
 - [Phase ?]: 06.1-02: abnormal-exit is scrollback-preserving (MOUSE_RESET + ALT_SCREEN_EXIT, no term.reset()/RIS) per RESEARCH Open Q1 — flagged for human-verify (blank-vs-preserve crash frame).
 - [Phase 06.1-04]: Renderer two-bucket UI (TERM-12/TERM-09 surface). Sidebar partitions the order-sorted rows into a labeled Working Area (status !== 'not_started'; the error card stays here per D-05) + Inactive List (not_started) — one SortableContext spans all ids so cross-section drag-reorder is intact; each Inactive entry carries Start ▶ + Start-without-command (start-no-cmd-session) + permanent Delete (delete-session). IdentityHeader is LIVE-ONLY = Clear + Restart + Remove (header-remove); the contextual header Start (header-start) branch is DELETED (D-06 supersedes Phase-6 D-11). Remove vs Delete split behind the one ConfirmModal (removeMode): Remove of a CONFIGURED live session = window.api.ptyStop + an optimistic renderer flip to not_started (→ Inactive List in-session; main keeps the configured record so it restores dormant next boot) — NOT a new main primitive (Plan 03's stop() keeps a user-stopped session 'stopped' in the live map by design, so the dormant flip lives in the renderer); Remove of an ephemeral + any Delete = window.api.ptyClose (permanent). configured is mirrored onto the renderer row at the edit save sites. Keyboard-focus fix in SessionView.attachCustomKeyEventHandler: when the keydown target is NOT xterm's .xterm-helper-textarea, return false so the browser handles Tab/Space/Enter natively (focus traversal + button activation) and no key is fed to the PTY. No new bridge key (window-config.ts untouched, 19 keys; status-colors.ts untouched — D-14). NEW app-restart-restore.smoke proves D-08 (configured persists on disk + a dormant first Start has no '— restarted —'); the literal OS relaunch is not driveable under @wdio/electron-service (ephemeral per-launch userData + reloadSession drops the CDP bridge) so the smoke drives the Remove→dormant restore-equivalent path. Rule-1 test-correctness fix: persistence.smoke + reorder.smoke now configure sessions before asserting on-disk persistence (a Plan-03 D-02 regression those smokes — run unit-only by Plan 03 — had left RED). 206 unit GREEN, tsc + eslint clean, 14/14 smoke GREEN. Task 3 (end-of-phase human-verify) is BLOCKING and NOT yet run — nyquist_compliant stays false in both VALIDATION files until explicit user approval. one-way auto-promotes a session to configured (configured=true set unconditionally after any metadata field write — touching the profile = the user keeps it; never reset to false; create() stays ephemeral). New PtyManager.listConfiguredSessions() filters listSessions() to configured===true; index.ts syncStore() persists from it (session-store.ts setSessions stays a dumb setter, untouched) so an unedited +New session never touches disk (D-02, T-06.1-11). onExit selfExit routing (selfExit = !userStopped && (status==='exited'||status==='error')): a configured self-exit MOVES the record sessions→dormantRecords coerced to not_started with pid dropped + order preserved (Inactive List, RESEARCH A2); an ephemeral self-exit is delete()d (gone, no persistence); a user-stopped Stop/Restart precursor ('stopped') STAYS in the live map so restart() respawns under the same logicalId. Spawn-failure (pid -1) returns before onExit is wired → stays an error broadcast (pty-spawn-error green). Routing runs AFTER the error-notice broadcast so the fork-then-die error card still gets its status+notice. No new bridge key (configured rides the existing updateProfile channel — security.guard 19-key invariant green). 206 unit tests GREEN, tsc + eslint clean. The three Wave-0 RED lifecycle scaffolds are now GREEN.
+- [Phase 07-01]: Interface-first Wave 0 foundation for both Phase-7 features. Pure `matchSearchKey(i, platform)` find-chord matcher is a NEW sibling of matchClearKey (NOT a change to matchSwitchKey): macOS Cmd+F→{kind:'search'}, macOS Ctrl+F→null (readline forward-char survives — D-03), Windows Ctrl+F→{kind:'search'}; rides the EXISTING 'session:switch' channel (zero new bridge key) via a before-input-event sibling block. Pure `clampScrollback(n)` (1000-50000, default 5000 D-04, non-finite→default, rounded) + additive `ui.scrollback?:number` (no SCHEMA_VERSION bump — ui slot already tolerates {}). setUiState clamps a finite scrollback IN MAIN before write (T-07-01). The ONLY new bridge key is `getUiState` (19→20, read-only main→renderer invoke returning validated prefs for the boot-read seed) via the atomic 4-site lockstep (api-types + window-config + preload + registerIpc/unregisterIpc); persistUiState payload WIDENED with scrollback (same key). @xterm/addon-search pinned EXACT 0.15.0 (0.16.0 dropped the verifiable peer @xterm/xterm@^5.0.0 field; 0.15.0 is the last with it) — pure-JS browser bundle, zero .node, no @electron/rebuild. 283 unit GREEN (35 files), tsc + eslint clean. security.guard GREEN at 20 keys (dynamic assertion, no test change). Renderer wiring (SearchBar/PreferencesModal/scrollback seed) deferred to Plans 02/03.
 - [Phase 06.1-04 gap-closure r1]: First human-verify FAILED → 4 fixes + 1 follow-on, each locked. (1) Amber settle-independence: extracted SEAM A per-tick decision into pure src/renderer/agent-tick.ts (decideAgentTick); now runs classify() EVERY tick and emits 'waiting' after WAITING_TICKS(3)≈300ms even while the full-frame hash churns (the real claude footer repaints forever → it never settled → amber never fired). classify() untouched (oracle green); ❯ caret NOT reintroduced. (2) Header Restart ↻ REMOVED (user decision) — live header = Clear + Remove; onRestart prop + SessionManager pass-through gone; restart-in-place + the '— restarted —' divider STAY (still reachable via row/context-menu Restart — assessed not-dead). (3) FIX4b persist policy = IDENTITY/RECIPE (supersedes edit-only D-02): persist if 'configured OR hasIdentity' where identity = startupCommand | custom name (not auto 'Session N') | custom icon | non-default cwd | non-default shell; pure src/main/session-identity.ts gates listConfiguredSessions() + onExit self-exit routing; DEFAULT_SESSION_ICON is the single-source default; 06.1-CONTEXT.md D-02 refined. A bare blank +New stays ephemeral. (4) FIX4a self-exit→Inactive flip: pure src/renderer/session-status.ts (resolveRowStatus/hasRendererIdentity) presents an IDENTITY row's 'exited'/'error' as 'not_started' so it enters the Inactive List mid-session (was only on next boot). (5) Follow-on Rule-1 race guard: child.onExit no-ops when s.pty!==child — the dormant Start (create({id})) re-spawns under the same id while the old child drains SIGTERM, and the stale exit was relabeling the live session (exposed by FIX4a; app-restart-restore smoke was timing out). 234 unit GREEN (30 files), tsc + eslint(src/tests) clean, 14/14 smoke GREEN (packaged). nyquist_compliant NOT flipped — awaiting 2nd human-verify. Pre-existing .planning/spikes/*.cjs lint errors (8) are out of scope → deferred-items.md.
 
 ### Pending Todos
@@ -178,6 +180,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-09T06:12:03.740Z
-Stopped at: Phase 7 UI-SPEC approved
-Resume file: .planning/phases/07-terminal-search-scrollback-config/07-UI-SPEC.md
+Last session: 2026-06-09T07:30:00.000Z
+Stopped at: Completed 07-01-PLAN.md (search+scrollback contract foundation)
+Resume file: .planning/phases/07-terminal-search-scrollback-config/07-02-PLAN.md

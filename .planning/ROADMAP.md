@@ -272,12 +272,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. A global settings panel exposes a scrollback buffer size setting; changing it takes effect for new sessions and has a sensible default (e.g., 3000 lines)
   3. Search can be dismissed with Escape and does not interfere with terminal keyboard input when inactive
 
-**Plans:** 4 plans
+**Plans:** 1/4 plans complete
 **UI hint:** yes
 
 **Wave 1**
 
-- [ ] 07-01-PLAN.md — Foundation: install @xterm/addon-search + pure matchSearchKey ({kind:'search'} variant, macOS-Ctrl+F→null) + clampScrollback + setUiState scrollback validate + atomic 19→20 bridge lockstep (getUiState read key; persistUiState payload widened) + all Wave 0 RED unit tests (TERM-10/TERM-11)
+- [x] 07-01-PLAN.md — Foundation: installed @xterm/addon-search@0.15.0 (exact, pure-JS) + pure matchSearchKey ({kind:'search'} variant, macOS-Ctrl+F→null D-03) + clampScrollback + setUiState scrollback validate (T-07-01) + atomic 19→20 bridge lockstep (getUiState read key; persistUiState payload widened) + all Wave 0 RED→GREEN unit tests; 283 unit + tsc + eslint clean (`d2e1e7b`, `70091a9`, `70d17ab`) (TERM-10/TERM-11)
 
 **Wave 2** *(blocked on Wave 1)*
 
@@ -320,5 +320,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 5.1 → 6 → 7 �
 | 5. Persistence + Shell Discovery | 4/4 | Complete    | 2026-06-06 |
 | 5.1. TERM-05 startup-command auto-run (INSERTED) | 3/3 | Complete    | 2026-06-06 |
 | 6. Robustness + Flow-Control Polish | 3/4 | In Progress|  |
-| 7. Terminal Search + Scrollback Config | 0/4 | Planned | - |
+| 7. Terminal Search + Scrollback Config | 1/4 | In Progress | - |
 | 8. Cross-Platform Packaging | 0/TBD | Not started | - |
