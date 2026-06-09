@@ -8,6 +8,26 @@ import type { ForgeConfig } from '@electron-forge/shared-types';
 
 const config: ForgeConfig = {
   packagerConfig: {
+    // App identity + icon pipeline (D-07). `icon` carries NO extension — Forge
+    // appends `.icns` on macOS and `.ico` on Windows automatically, resolving
+    // assets/icon.icns / assets/icon.ico (placeholder art, swap-by-file later).
+    name: 'Just-Wrapper',
+    appBundleId: 'com.justwrapper.app',
+    icon: 'assets/icon',
+    // macOS signing / notarization slots (D-04). UNSIGNED by default: with no
+    // APPLE_* env present both resolve to `undefined`, so Forge ships an
+    // unsigned .app and skips notarization cleanly. Enabling real signing later
+    // is a config-FREE flip — set the env vars in CI/locally; NEVER commit a
+    // credential (all values read from process.env). `osxSign: {}` means "sign
+    // with the default identity" when an identity env var is present.
+    osxSign: process.env.APPLE_IDENTITY ? {} : undefined,
+    osxNotarize: process.env.APPLE_ID
+      ? {
+          appleId: process.env.APPLE_ID,
+          appleIdPassword: process.env.APPLE_PASSWORD!,
+          teamId: process.env.APPLE_TEAM_ID!,
+        }
+      : undefined,
     // node-pty's prebuilt .node binaries cannot be loaded from inside the ASAR
     // archive (CLAUDE.md "Loading .node native files from inside ASAR"; Pitfall 4).
     // unpack them so they land in app.asar.unpacked/ on the read-only resources dir.
@@ -56,7 +76,10 @@ const config: ForgeConfig = {
     onlyModules: [],
   },
   makers: [
-    new MakerSquirrel({}),
+    // Windows Setup.exe icon (D-07) — a REAL multi-size .ico, not a renamed PNG.
+    // `windowsSign` is intentionally UNSET: a stray cert config makes Squirrel
+    // invoke signtool and hang CI (Pitfall 4); unsigned is the D-04 lock.
+    new MakerSquirrel({ setupIcon: 'assets/icon.ico' }),
     new MakerZIP({}, ['darwin']),
     new MakerDeb({}),
     new MakerRpm({}),
