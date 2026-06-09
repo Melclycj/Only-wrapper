@@ -48,7 +48,7 @@ created: 2026-06-09
 | TERM-11 / D-07 | scrollback survives reopen (persist → load round-trip; coerceOnLoad migration-safe) | unit | extend `src/main/__tests__/session-store.test.ts` / `store-schema.test.ts` | ❌ Wave 0 — extend |
 | TERM-11 / SC2 / D-05 | Changing the setting applies to new sessions AND live terms (`term.options.scrollback = N`) | manual (macOS-first) — needs live xterm | macOS manual | ❌ Wave 0 |
 | TERM-11 / D-06 | Lowering trims existing scrollback rows on open terminals (accepted) | manual | macOS manual | ❌ Wave 0 |
-| security invariant | `EXPECTED_API_KEYS` unchanged (19); preload surface exact | unit | existing `src/shared/__tests__/security.guard.test.ts` — MUST stay GREEN | ✅ exists — must remain passing |
+| security invariant | `EXPECTED_API_KEYS` 19→20 (`getUiState` added; search chord adds zero); preload surface exact | unit | existing `src/shared/__tests__/security.guard.test.ts` — MUST stay GREEN | ✅ exists — must remain passing at 20 keys |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 

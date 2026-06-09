@@ -399,17 +399,19 @@ The existing path: renderer `window.api.persistUiState(ui)` → preload `ipcRend
 
 **Note:** All core API claims (SearchAddon surface, decorations-gated event, -1 threshold, scrollback runtime-settable, 5.5.0 WebGL fix, package legitimacy) are `[VERIFIED]`/`[CITED]`, not assumed.
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Boot-read channel for the persisted scrollback value.**
    - What we know: the value persists into `store.data.ui` (or `settings`); the renderer needs it to seed `new Terminal({ scrollback })` on first mount and to initialize the Preferences field.
    - What's unclear: whether the renderer can receive it through an existing channel (`listSessions` returns only `SessionRecord[]`; `getUiState` is a main-internal accessor not currently bridged to the renderer) or needs ONE new read bridge key.
    - Recommendation: planner traces the boot data flow in `index.ts` + `SessionManager` boot effect and picks the minimal path. Prefer reusing an existing inbound channel; if a new key is unavoidable, it is the single allowable 19→20 expansion and must go through the full atomic lockstep (api-types + window-config array + preload + security.guard) like 06-01's `pickDirectory`. Until first-render read exists, a sensible interim is to default to 5000 on boot and apply the persisted value once read.
+   - **RESOLVED:** Plan 07-01 adds `getUiState` as the 20th validated read key (19→20 atomic lockstep, `pickDirectory`-style), rather than widening the `listSessions` response shape. The renderer reads it in the boot effect (`window.api.getUiState()`) to seed the initial `scrollback` state; the default remains 5000 until the read resolves.
 
 2. **Gear-icon placement (Claude's discretion, D-08).**
    - What we know: `Sidebar.tsx` has the collapse toggle (top) and the `+ Add session` button (bottom); both expanded and collapsed-rail modes exist.
    - What's unclear: expanded-body vs collapsed-rail placement.
    - Recommendation: place the gear near the collapse toggle / footer so it's reachable in both modes; UI-phase or planner decides per DESIGN.md. Not a research blocker.
+   - **RESOLVED:** Plan 07-03 places the gear in the sidebar's pinned-control row at the top of `<nav>`, as a sibling of the existing collapse chevron (`.sidebar-collapse`), reachable in both expanded and collapsed-rail modes. It is NOT placed in the footer near `+ Add session` (those are distinct affordances).
 
 ## Environment Availability
 
