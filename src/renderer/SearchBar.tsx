@@ -52,7 +52,13 @@ export interface SearchBarProps {
 // The COLOUR is unchanged — only the unparseable string FORMAT is corrected.
 const MATCH_DECORATIONS = {
   matchBackground: 'rgba(211, 120, 18, 0.32)',
-  activeMatchBackground: 'rgba(211, 120, 18, 0.7)',
+  // 07-05 re-verify: the spec's intent is "the current match STANDS OUT from the rest"
+  // (the exact alpha was Claude's discretion). On the live dark canvas 0.32 vs 0.7 amber
+  // read as the same wash — the active match was indistinguishable. Raised to a near-solid
+  // 0.95 so the current match is unmistakably stronger than the 0.32 all-match wash while
+  // staying in the SAME amber hue the design reserves for "matched text" (blue stays the
+  // active overview-ruler tick only). Honors the design GOAL, tunes the discretionary value.
+  activeMatchBackground: 'rgba(211, 120, 18, 0.95)',
   matchOverviewRuler: '#d37812',
   activeMatchColorOverviewRuler: '#328bd6',
 } as const;
