@@ -308,14 +308,14 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. PTY spawn works correctly inside the ASAR-packaged app on both platforms — `spawn-helper` (macOS) and `conpty.node` (Windows) are found outside the ASAR archive
   4. On a Windows machine below build 1809, the app displays a clear "Windows 10 build 1809 or later required" error at startup instead of crashing silently
 
-**Plans:** 3 plans
+**Plans:** 2/3 plans executed
 **Mode:** mvp
 **UI hint:** no
 
 **Wave 1** *(file-disjoint — run in parallel)*
 
 - [x] 08-01-PLAN.md — macOS-buildable slice: pure os-gate.ts + ConPTY pre-window dialog gate (D-05/SC4) + icon/appId/env-gated sign slots (D-04/D-07) + assets + PACKAGING.md + OS-conditional wdio + packaged PTY round-trip smoke (SC1 mac/SC3) — PKG-01
-- [ ] 08-02-PLAN.md — Windows seam fills: real WindowsShellProvider enumeration (D-02, never-empty) + WindowsReadinessProbe (D-03, POSIX reuse for Git Bash/WSL, degrade-loudly for CMD/PowerShell) + their unit tests — PKG-01
+- [x] 08-02-PLAN.md — Windows seam fills: real WindowsShellProvider enumeration (D-02, never-empty) + WindowsReadinessProbe (D-03, POSIX reuse for Git Bash/WSL, degrade-loudly for CMD/PowerShell) + their unit tests — PKG-01
 
 **Wave 2** *(blocked on Wave 1 — has checkpoint)*
 
@@ -336,4 +336,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 5.1 → 6 → 7 �
 | 5.1. TERM-05 startup-command auto-run (INSERTED) | 3/3 | Complete    | 2026-06-06 |
 | 6. Robustness + Flow-Control Polish | 3/4 | In Progress|  |
 | 7. Terminal Search + Scrollback Config | 5/5 | Complete    | 2026-06-09 |
-| 8. Cross-Platform Packaging | 1/3 | In Progress | - |
+| 8. Cross-Platform Packaging | 2/3 | In Progress|  |

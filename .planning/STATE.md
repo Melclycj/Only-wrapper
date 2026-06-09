@@ -4,13 +4,13 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Completed 08-01-PLAN.md
-last_updated: "2026-06-10T02:11:08Z"
+last_updated: "2026-06-09T16:20:47.592Z"
 last_activity: 2026-06-10 -- Completed Phase 8 Plan 01 (macOS-buildable packaging slice)
 progress:
   total_phases: 10
   completed_phases: 8
   total_plans: 37
-  completed_plans: 34
+  completed_plans: 35
   percent: 80
 ---
 
@@ -26,8 +26,8 @@ See: .planning/PROJECT.md (updated 2026-06-03)
 ## Current Position
 
 Phase: 8 (cross-platform-packaging) — EXECUTING
-Plan: 2 of 3
-Status: Executing Phase 8 (08-01 complete)
+Plan: 3 of 3
+Status: Ready to execute
 Last activity: 2026-06-10 -- Completed Phase 8 Plan 01 (macOS-buildable packaging slice)
 
 Progress: [████████████████░░░░] 80% (8/10 phases complete, 34/37 plans)
@@ -90,6 +90,7 @@ Progress: [████████████████░░░░] 80% (8/
 | Phase 07 P02 | ~14min | 3 tasks | 4 files |
 | Phase 07 P03 | ~16min | 3 tasks | 7 files |
 | Phase 08 P01 | ~7min | 3 tasks | 12 files |
+| Phase 08 P02 | 12min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -159,6 +160,7 @@ Recent decisions affecting current work:
 - [Phase 06.1-04 gap-closure r1]: First human-verify FAILED → 4 fixes + 1 follow-on, each locked. (1) Amber settle-independence: extracted SEAM A per-tick decision into pure src/renderer/agent-tick.ts (decideAgentTick); now runs classify() EVERY tick and emits 'waiting' after WAITING_TICKS(3)≈300ms even while the full-frame hash churns (the real claude footer repaints forever → it never settled → amber never fired). classify() untouched (oracle green); ❯ caret NOT reintroduced. (2) Header Restart ↻ REMOVED (user decision) — live header = Clear + Remove; onRestart prop + SessionManager pass-through gone; restart-in-place + the '— restarted —' divider STAY (still reachable via row/context-menu Restart — assessed not-dead). (3) FIX4b persist policy = IDENTITY/RECIPE (supersedes edit-only D-02): persist if 'configured OR hasIdentity' where identity = startupCommand | custom name (not auto 'Session N') | custom icon | non-default cwd | non-default shell; pure src/main/session-identity.ts gates listConfiguredSessions() + onExit self-exit routing; DEFAULT_SESSION_ICON is the single-source default; 06.1-CONTEXT.md D-02 refined. A bare blank +New stays ephemeral. (4) FIX4a self-exit→Inactive flip: pure src/renderer/session-status.ts (resolveRowStatus/hasRendererIdentity) presents an IDENTITY row's 'exited'/'error' as 'not_started' so it enters the Inactive List mid-session (was only on next boot). (5) Follow-on Rule-1 race guard: child.onExit no-ops when s.pty!==child — the dormant Start (create({id})) re-spawns under the same id while the old child drains SIGTERM, and the stale exit was relabeling the live session (exposed by FIX4a; app-restart-restore smoke was timing out). 234 unit GREEN (30 files), tsc + eslint(src/tests) clean, 14/14 smoke GREEN (packaged). nyquist_compliant NOT flipped — awaiting 2nd human-verify. Pre-existing .planning/spikes/*.cjs lint errors (8) are out of scope → deferred-items.md.
 
 - [Phase 08-01]: macOS-buildable packaging slice complete. (1) Pure electron-free `src/main/os-gate.ts` (mirrors shell-resolver.ts): `MIN_WINDOWS_BUILD=17763`, `parseWindowsBuild` (regex group-3 BUILD, like node-pty's own parser), `isUnsupportedWindows` (win32 + parseable build < floor; **fail-OPEN** on unparseable so a parse quirk never bricks a supported host; non-win32 never gated). Wired at the TOP of `app.whenReady` in index.ts BEFORE store.load() — native `dialog.showErrorBox`→`app.quit()`→`return`, so the gate precedes every node-pty spawn path (D-05/SC4). 9 fixture-string unit tests GREEN. (2) Placeholder `assets/icon.{icns,ico,png}` (icns via iconutil/sips; **real multi-size .ico** 16–256, `file`→"MS Windows icon resource", not a renamed PNG) + `assets/README.md` (swap-by-file later). `forge.config.ts` EXTENDED additively: name/appBundleId/`icon:'assets/icon'` (no ext) + **env-gated** `osxSign: process.env.APPLE_IDENTITY ? {} : undefined` / `osxNotarize: process.env.APPLE_ID ? {...} : undefined` (unsigned default, D-04, **zero secret committed**) + `MakerSquirrel({setupIcon:'assets/icon.ico'})`; `windowsSign` left UNSET. The proven `asar.unpackDir` / `ignore` keep-clause / `rebuildConfig.onlyModules:[]` (D-06) are **byte-for-byte unchanged**. package.json author+appId. `docs/PACKAGING.md` (make overview, `xattr -dr com.apple.quarantine`, env-gated signing flip). (3) `wdio.conf.ts` `appBinaryPath` now a `process.platform==='win32'` ternary on `os.arch()` (darwin .app / win32 .exe for Plan-03 CI); `pty-roundtrip.smoke.test.ts` stale RED banner removed, `echo hello` is the cross-platform SC3 invariant, `$TERM`/Ctrl+C guarded to non-win32 (it.skip). **Real proof on dev box**: `npm run make`→`out/Just-Wrapper-darwin-arm64/Just-Wrapper.app` (icon applied, bundle id com.justwrapper.app, spawn-helper unpacked+executable); `npm run test:smoke`→15/15 spec files, pty-roundtrip 3/3 GREEN (PTY echoes from inside app.asar.unpacked). 301 unit GREEN, EXPECTED_API_KEYS stays exactly **20** (window-config.ts untouched, security.guard GREEN), tsc clean. **Zero new bridge keys, zero new package installs.**
+- [Phase ?]: 08-02: CMD/PowerShell readiness degrades-loudly; Windows shell default from ComSpec unconditional (D-05); zero new bridge keys (EXPECTED_API_KEYS=20)
 
 ### Pending Todos
 
@@ -189,6 +191,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-10T02:11:08Z
+Last session: 2026-06-09T16:20:41.277Z
 Stopped at: Completed 08-01-PLAN.md
 Resume file: .planning/phases/08-cross-platform-packaging/08-02-PLAN.md

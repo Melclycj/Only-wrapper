@@ -50,7 +50,7 @@ Requirements for the initial release. Derived from the user's FR-01–FR-21 spec
 
 ### Packaging
 
-- [ ] **PKG-01**: App packages as a runnable/installable local desktop app for both Windows and macOS from a single codebase (MVP feature set)
+- [x] **PKG-01**: App packages as a runnable/installable local desktop app for both Windows and macOS from a single codebase (MVP feature set)
 
 ## v2 Requirements
 
@@ -127,7 +127,7 @@ Populated during roadmap creation. Each v1 requirement maps to exactly one phase
 | TERM-12 | Phase 6: Robustness + Flow-Control Polish | Complete |
 | PERS-01 | Phase 5: Persistence + Shell Discovery | Complete |
 | PERS-02 | Phase 5: Persistence + Shell Discovery | Complete |
-| PKG-01 | Phase 8: Cross-Platform Packaging | Pending |
+| PKG-01 | Phase 8: Cross-Platform Packaging | Complete |
 
 **Coverage:**
 
