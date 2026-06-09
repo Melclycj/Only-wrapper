@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Paused at 06.1-04 Task 3 — FOURTH end-of-phase human-verify (gap-closure round 3 complete; defects A/B/C fixed + locked, 256 unit + 14/14 smoke GREEN)
-last_updated: "2026-06-08T09:00:00.000Z"
-last_activity: 2026-06-08 -- 06.1-04 gap-closure round 3: fixed Remove-revert (A, removeLive→dormant+not_started broadcast), dev-close session loss (B, flush-on-close + version bump), duplicate Start button (C, startAffordances single-primary); awaiting 4th human-verify
+status: paused
+stopped_at: 06.1-04 gap-closure round 1 complete (5 fix commits, all suites GREEN); PAUSED at the SECOND Task 3 end-of-phase human-verify (BLOCKING — not self-approved)
+last_updated: "2026-06-09T00:12:43.811Z"
+last_activity: 2026-06-09
 progress:
   total_phases: 10
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 29
   completed_plans: 28
-  percent: 62
+  percent: 70
 ---
 
 # Project State
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-06-03)
 
 ## Current Position
 
-Phase: 06.1 (terminal-lifecycle-state-machine-and-agent-state-detection-r) — EXECUTING
-Plan: 4 of 4 (in-progress)
+Phase: 7
+Plan: Not started
 Status: Paused at the FOURTH end-of-phase human-verify (06.1-04 Task 3). Rounds 1-2 fixed earlier defects; the THIRD human-verify left three defects — A (Remove of a live session reverts Inactive→Working), B (dev window close loses an unsaved session on macOS), C (two Start buttons on the active dormant entry). Round 3 RED-reproduced and fixed all three: A → new PtyManager.removeLive() routes the configured-live Remove to dormant not_started AND broadcasts 'not_started' (stop() unchanged for restart-in-place; 'stopped' kept passing through renderer-side so a restart's transient stopped→running does not unmount the kept SessionView — SC3 safe); B → src/main/lifecycle.ts flush-on-window-close (+ store version bump to SCHEMA_VERSION); C → src/renderer/start-affordances.ts renders exactly one primary Start per dormant entry (active → IdleCard owns it, sidebar ▶ suppressed). Each locked with a RED→GREEN test. tsc clean, eslint src/ tests/ clean, 256 unit tests GREEN, 14/14 smoke spec files GREEN. nyquist_compliant stays false in 06-VALIDATION.md + 06.1-VALIDATION.md until the user re-verifies.
-Last activity: 2026-06-08 -- 06.1-04 gap-closure round 3 (2 commits: 01f7c3e test, c48d521 fix)
+Last activity: 2026-06-09
 
 Progress: [███████████████████░] 95% (Phase 06.1 plans: 3.5/4 — 04 impl + gap-closure done, 2nd human-verify pending)
 
@@ -36,7 +36,7 @@ Progress: [███████████████████░] 95% (Ph
 
 **Velocity:**
 
-- Total plans completed: 22
+- Total plans completed: 26
 - Average duration: — min
 - Total execution time: 0 hours
 
@@ -50,6 +50,7 @@ Progress: [███████████████████░] 95% (Ph
 | 04 | 4 | - | - |
 | 05 | 4 | - | - |
 | 05.1 | 3 | - | - |
+| 06.1 | 4 | - | - |
 
 **Recent Trend:**
 

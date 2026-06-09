@@ -245,7 +245,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Goal:** The terminal lifecycle is a clean two-bucket model (a Working Area of live sessions + an Inactive List of dormant configured sessions, no "Stop" verb), agent-state detection reads "Waiting for you" from frame-stability (not output-silence) so `claude --rc` is correctly amber on a confirmation prompt and never stuck blue, and the Core-Value scroll/`[%30/]` fidelity regression after alt-screen apps is fixed.
 **Requirements:** TERM-09, TERM-12
 **Depends on:** Phase 6
-**Plans:** 3/4 executed; 06.1-04 implementation + gap-closure round 1 done, all smokes GREEN, paused at the SECOND end-of-phase human-verify
+**Plans:** 4/4 plans complete
 
 **Wave 0**
 
