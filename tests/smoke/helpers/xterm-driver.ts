@@ -333,6 +333,33 @@ export async function pressSwitchChord(
   );
 }
 
+/**
+ * Drive the global Find chord (Cmd+F on macOS / Ctrl+F elsewhere — TERM-10, D-02/D-03)
+ * so it reaches the MAIN-process `before-input-event` interceptor (matchSearchKey →
+ * { kind: 'search' } on the EXISTING 'session:switch' channel — zero new bridge key).
+ *
+ * Same native path as pressSwitchChord/pressClearChord: WDIO's CDP-backed `browser.keys`
+ * does NOT traverse Electron's native before-input-event pipeline (the A1 empirical finding
+ * recorded in pressSwitchChord above), so a `browser.keys([Meta, 'f'])` would never fire the
+ * main-side interceptor. We drive the chord through `webContents.sendInputEvent` instead,
+ * which DOES reach before-input-event. macOS uses meta+F; Windows/other use control+F (and
+ * macOS Ctrl+F is deliberately NOT matched, so readline forward-char survives — D-03).
+ */
+export async function pressFindChord(): Promise<void> {
+  const modifiers = process.platform === 'darwin' ? ['meta'] : ['control'];
+  await browser.electron.execute(
+    (electron, mods: string[]) => {
+      const win = electron.BrowserWindow.getAllWindows()[0];
+      win?.webContents.sendInputEvent({
+        type: 'keyDown',
+        keyCode: 'f',
+        modifiers: mods as Electron.InputEvent['modifiers'],
+      } as Electron.InputEvent);
+    },
+    modifiers,
+  );
+}
+
 /** Read the visible text of the active session's identity header (`.identity-header`). */
 export async function readIdentityHeader(): Promise<string> {
   return browser.execute(() => {
