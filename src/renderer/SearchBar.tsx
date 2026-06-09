@@ -18,6 +18,7 @@
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { ISearchOptions, SearchAddon } from '@xterm/addon-search';
+import { decideCaseToggle } from './search-recompute';
 
 export interface SearchBarProps {
   open: boolean;
@@ -134,13 +135,25 @@ export function SearchBar({
   const handleToggleCase = useCallback(() => {
     setCaseSensitive((prev) => {
       const next = !prev;
-      // Re-run the current query immediately with the flipped flag so the count +
-      // highlights update (07-UI-SPEC §1). Build a fresh opts here since `opts` (memo)
-      // has not recomputed yet inside this updater.
-      runSearch(query, { caseSensitive: next, decorations: { ...MATCH_DECORATIONS } });
+      // GAP-07-G4: recompute the count + highlights for the FLIPPED case mode WITHOUT
+      // advancing the active match. The old path called runSearch → addon.findNext,
+      // which steps to the NEXT match (the +1 jump per click). decideCaseToggle gates
+      // the recompute (empty bar = no-op, mirroring runSearch's empty-query clear), and
+      // we re-issue findNext with `incremental: true` — per @xterm/addon-search this
+      // "expands the selection if it still matches the term" instead of stepping forward,
+      // so the active match holds while the decorations/count refresh for the new mode.
+      // Build a fresh opts here since `opts` (memo) has not recomputed yet in this updater.
+      const addon = searchAddon;
+      if (addon && decideCaseToggle(query).shouldRecompute) {
+        addon.findNext(query, {
+          caseSensitive: next,
+          incremental: true,
+          decorations: { ...MATCH_DECORATIONS },
+        });
+      }
       return next;
     });
-  }, [runSearch, query]);
+  }, [searchAddon, query]);
 
   const handleNext = useCallback(() => {
     if (query.length === 0) return;
