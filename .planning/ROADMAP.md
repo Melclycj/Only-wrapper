@@ -272,7 +272,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. A global settings panel exposes a scrollback buffer size setting; changing it takes effect for new sessions and has a sensible default (e.g., 3000 lines)
   3. Search can be dismissed with Escape and does not interfere with terminal keyboard input when inactive
 
-**Plans:** 1/4 plans complete
+**Plans:** 4/5 plans complete (07-04 human-verify surfaced 5 search defects → 07-05 gap closure)
 **UI hint:** yes
 
 **Wave 1**
@@ -289,7 +289,11 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 4** *(blocked on Wave 3 — has checkpoint)*
 
-- [ ] 07-04-PLAN.md — Nyquist sign-off: best-effort search-bar smoke + full suite green + blocking macOS-first human-verify (search/scrollback checklist) → flip nyquist_compliant (TERM-10/TERM-11)
+- [x] 07-04-PLAN.md — Nyquist sign-off attempt: best-effort search-bar smoke + full suite green + blocking macOS-first human-verify ran → 9/14 PASS, 5 SEARCH defects found (07-HUMAN-UAT.md G1..G5); nyquist NOT flipped (TERM-10/TERM-11)
+
+**Wave 5** *(gap closure — fixes the 5 G1..G5 search defects from 07-04; has checkpoint)*
+
+- [ ] 07-05-PLAN.md — Gap closure G1..G5: WebGL render-flush after every search op (G3 highlight + G2 active-match repaint, plumbed SessionView→SearchBar via term.refresh) + Aa recompute-in-place pure helper (G4, no advance) + robust auto-focus on open (G1) + terminal refocus on close (G5) + blocking macOS-first re-verify → flip nyquist_compliant (TERM-10/TERM-11)
 
 ### Phase 8: Cross-Platform Packaging
 
