@@ -285,7 +285,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 3** *(blocked on Wave 2)*
 
-- [ ] 07-03-PLAN.md — TERM-11 scrollback slice: Preferences modal + sidebar gear + renderer clampScrollback + SessionManager scrollback state (boot-read via getUiState, fan-out, persist via persistUiState) + SessionView scrollback prop seed + live-apply effect (gear → set → live-apply → persist → restore) (TERM-11)
+- [x] 07-03-PLAN.md — TERM-11 scrollback slice: PreferencesModal (ConfirmModal-cloned, extensible .prefs-body) + sidebar ⚙ gear in a .sidebar-pinned row (dual-mode) + pure renderer clampScrollback (verbatim mirror, defense in depth) + SessionManager scrollback state (boot-read via getUiState, prop fan-out, persist via persistUiState) + SessionView scrollback prop seed (replaces hardcoded 10000) + guarded live-apply effect (gear → set → live-apply → persist → restore; zero new keys, surface 20); 290 unit + tsc + eslint + security.guard(20) clean (`ecdcf71`, `8f7e6a3`, `6996904`) (TERM-11)
 
 **Wave 4** *(blocked on Wave 3 — has checkpoint)*
 
