@@ -10,6 +10,7 @@ import { describe, it, expect } from 'vitest';
 import {
   parseEtcShells,
   buildShellList,
+  buildWindowsShellList,
   selectShellProvider,
   MacShellProvider,
   WindowsShellProvider,
@@ -79,6 +80,74 @@ describe('buildShellList (D-05 / D-06)', () => {
   it('labels each entry by basename', () => {
     const out = buildShellList(['/bin/bash'], '/bin/zsh', exists(['/bin/zsh', '/bin/bash']));
     expect(out.map((s) => s.label)).toEqual(['zsh', 'bash']);
+  });
+});
+
+describe('buildWindowsShellList (D-02 / D-05)', () => {
+  const exists = (paths: string[]) => (p: string) => paths.includes(p);
+
+  // Windows-style backslash fixture paths (mirror the real candidate set).
+  const POWERSHELL = 'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe';
+  const PWSH7 = 'C:\\Program Files\\PowerShell\\7\\pwsh.exe';
+  const CMD = 'C:\\Windows\\System32\\cmd.exe';
+  const GITBASH = 'C:\\Program Files\\Git\\bin\\bash.exe';
+  const WSL = 'C:\\Windows\\System32\\wsl.exe';
+
+  it('places the Windows-aware default FIRST (D-05 default-first)', () => {
+    const out = buildWindowsShellList(
+      [POWERSHELL, CMD, GITBASH, WSL],
+      CMD,
+      exists([POWERSHELL, CMD, GITBASH, WSL]),
+    );
+    expect(out[0]).toEqual({ path: CMD, label: 'CMD' });
+  });
+
+  it('enumerates all on-disk candidates with friendly labels (D-02)', () => {
+    const out = buildWindowsShellList(
+      [POWERSHELL, PWSH7, CMD, GITBASH, WSL],
+      CMD,
+      exists([POWERSHELL, PWSH7, CMD, GITBASH, WSL]),
+    );
+    expect(out).toEqual([
+      { path: CMD, label: 'CMD' },
+      { path: POWERSHELL, label: 'PowerShell' },
+      { path: PWSH7, label: 'PowerShell 7' },
+      { path: GITBASH, label: 'Git Bash' },
+      { path: WSL, label: 'WSL' },
+    ]);
+  });
+
+  it('never returns empty: only the default on disk → exactly [{default}] (D-05)', () => {
+    const out = buildWindowsShellList([POWERSHELL, GITBASH, WSL], CMD, exists([CMD]));
+    expect(out).toEqual([{ path: CMD, label: 'CMD' }]);
+  });
+
+  it('hard D-05: default is included even when NOTHING is on disk (existsFn all-false)', () => {
+    // Running the Windows provider on the macOS dev box: no candidate exists on disk,
+    // yet the dropdown must still carry the default (never-empty invariant).
+    const out = buildWindowsShellList([POWERSHELL, GITBASH, WSL], CMD, exists([]));
+    expect(out).toEqual([{ path: CMD, label: 'CMD' }]);
+  });
+
+  it('de-dupes when the default is ALSO present in candidates', () => {
+    const out = buildWindowsShellList([CMD, POWERSHELL], CMD, exists([CMD, POWERSHELL]));
+    expect(out.map((s) => s.path)).toEqual([CMD, POWERSHELL]);
+    expect(out).toHaveLength(2);
+  });
+
+  it('filters out candidates that are not on disk', () => {
+    const out = buildWindowsShellList(
+      [POWERSHELL, GITBASH, WSL],
+      CMD,
+      exists([CMD, GITBASH]),
+    );
+    expect(out.map((s) => s.path)).toEqual([CMD, GITBASH]);
+  });
+
+  it('falls back to the raw basename for an unmapped shell (backslash split)', () => {
+    const CUSTOM = 'C:\\tools\\nu.exe';
+    const out = buildWindowsShellList([CUSTOM], CUSTOM, exists([CUSTOM]));
+    expect(out).toEqual([{ path: CUSTOM, label: 'nu.exe' }]);
   });
 });
 

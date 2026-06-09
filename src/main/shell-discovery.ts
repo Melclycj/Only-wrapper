@@ -6,11 +6,13 @@
 //
 // Real implementation: macOS provider this phase (reads /etc/shells + always
 // includes the resolved $SHELL, filters to on-disk entries, de-dupes — D-05/D-06).
-// The Windows enumeration (PowerShell/CMD/Git Bash/WSL) is deferred to Phase 8
-// behind this same seam (D-07); the WindowsShellProvider stub returns the resolved
-// default so the dropdown is NEVER empty (D-05 safety holds cross-platform).
+// The Windows enumeration (PowerShell/CMD/Git Bash/WSL) is FILLED in Phase 8
+// behind this same seam (D-02): buildWindowsShellList mirrors buildShellList — a
+// Windows-aware default FIRST so the dropdown is NEVER empty (D-05 safety holds
+// cross-platform), on-disk filtered via an injected existsFn, de-duped by path.
 
 import fs from 'node:fs';
+import path from 'node:path';
 import { resolveShell } from './shell-resolver';
 
 /** A single shell entry for the dropdown: full path + a basename label. */
@@ -80,16 +82,93 @@ export class MacShellProvider implements ShellDiscovery {
 }
 
 /**
- * Windows provider — STUB (D-07). The real enumeration of PowerShell/CMD/Git
- * Bash/WSL lands in Phase 8 behind this seam. For now it returns the resolved
- * default so the dropdown is never empty (D-05 safety holds cross-platform).
+ * PURE — build the de-duped, on-disk-filtered Windows shell list (D-02), mirroring
+ * buildShellList for the POSIX case:
+ *   - `windowsDefault` is ALWAYS placed first (D-05 never-empty: even if every
+ *     well-known shell path is missing on disk, the default keeps the dropdown
+ *     usable). The Windows default is computed independently of resolveShell()
+ *     (Pitfall 3: resolveShell() yields /bin/zsh on Windows) — see discover().
+ *   - entries are filtered to those that exist on disk (`existsFn` injected for
+ *     testability, mirrors buildShellList).
+ *   - duplicates (by path) are dropped, preserving first-seen order.
+ *   - labels come from a friendly basename→label map, falling back to the raw
+ *     basename (split on BOTH separators since Windows paths use backslashes).
+ */
+export function buildWindowsShellList(
+  candidates: string[],
+  windowsDefault: string,
+  existsFn: (p: string) => boolean,
+): DiscoveredShell[] {
+  // Friendly labels keyed by basename (lowercased); unmapped → raw basename (D-02).
+  const labelMap: Record<string, string> = {
+    'powershell.exe': 'PowerShell',
+    'pwsh.exe': 'PowerShell 7',
+    'cmd.exe': 'CMD',
+    'bash.exe': 'Git Bash',
+    'wsl.exe': 'WSL',
+  };
+  const labelFor = (p: string): string => {
+    const base = p.split(/[\\/]/).pop() ?? p; // Windows paths use backslashes
+    return labelMap[base.toLowerCase()] ?? base;
+  };
+  const seen = new Set<string>();
+  const out: DiscoveredShell[] = [];
+  // The default is UNCONDITIONALLY first and is NOT existsFn-filtered — this is the
+  // hard D-05 never-empty guarantee: even when every well-known shell is missing on
+  // disk (e.g. running the Windows provider on the macOS dev box), the dropdown still
+  // carries one usable entry. Only the ADDITIONAL candidates are on-disk filtered.
+  if (windowsDefault) {
+    seen.add(windowsDefault);
+    out.push({ path: windowsDefault, label: labelFor(windowsDefault) });
+  }
+  for (const p of candidates) {
+    if (!p || seen.has(p) || !existsFn(p)) continue; // de-dupe + on-disk filter
+    seen.add(p);
+    out.push({ path: p, label: labelFor(p) });
+  }
+  return out;
+}
+
+/**
+ * Windows provider — FILLED in Phase 8 (D-02). Enumerates PowerShell / CMD / Git
+ * Bash / WSL from ENV-EXPANDED well-known paths (process.env.SystemRoot /
+ * ProgramFiles, NOT hardcoded C:\), filters to on-disk via real fs.existsSync, and
+ * places a Windows-aware default FIRST so the dropdown is never empty (D-05).
+ *
+ * The default is derived from process.env.ComSpec (cmd.exe) — NOT resolveShell(),
+ * which returns /bin/zsh on Windows ($SHELL is unset there — Pitfall 3 latent bug).
+ *
+ * [ASSUMED] candidate paths below are byte-validated on real Windows in Plan 03's
+ * CI smoke + human-verify (Assumptions A1-A3); CITED ones come from CLAUDE.md.
  */
 export class WindowsShellProvider implements ShellDiscovery {
   discover(): DiscoveredShell[] {
-    const resolved = resolveShell().shell;
-    return resolved
-      ? [{ path: resolved, label: resolved.split(/[\\/]/).pop() ?? resolved }]
-      : [];
+    const systemRoot = process.env.SystemRoot ?? 'C:\\Windows';
+    const programFiles = process.env.ProgramFiles ?? 'C:\\Program Files';
+
+    const candidates = [
+      // PowerShell (Windows PowerShell 5.x) — CITED: CLAUDE.md.
+      path.join(systemRoot, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe'),
+      // PowerShell 7 (pwsh, optional) — [ASSUMED] A1 (Plan 03 human-verify).
+      path.join(programFiles, 'PowerShell', '7', 'pwsh.exe'),
+      // CMD — [ASSUMED] A2 (Plan 03 human-verify).
+      path.join(systemRoot, 'System32', 'cmd.exe'),
+      // Git Bash — [ASSUMED] A3 (Plan 03 human-verify); try both bin/ and usr/bin/.
+      path.join(programFiles, 'Git', 'bin', 'bash.exe'),
+      path.join(programFiles, 'Git', 'usr', 'bin', 'bash.exe'),
+      // WSL — CITED: CLAUDE.md.
+      path.join(systemRoot, 'System32', 'wsl.exe'),
+    ];
+
+    // Windows-aware default, independent of resolveShell() (Pitfall 3): prefer
+    // ComSpec (cmd.exe), else the well-known CMD path, else the first candidate —
+    // so the dropdown is never empty even if every well-known path is missing.
+    const windowsDefault =
+      process.env.ComSpec ||
+      path.join(systemRoot, 'System32', 'cmd.exe') ||
+      candidates[0];
+
+    return buildWindowsShellList(candidates, windowsDefault, (p) => fs.existsSync(p));
   }
 }
 
