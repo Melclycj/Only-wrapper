@@ -26,6 +26,11 @@ import { Sidebar } from './Sidebar';
 import { ConfirmModal } from './ConfirmModal';
 import { ContextMenu } from './ContextMenu';
 import { SessionEditModal } from './SessionEditModal';
+import { PreferencesModal } from './PreferencesModal';
+// clampScrollback is the PURE renderer-side scrollback clamp (07-03, D-04) — used to
+// snap the boot-read + any committed value before it drives the SessionView prop /
+// persistUiState. The MAIN setUiState clamp remains the persistence security boundary.
+import { clampScrollback, SCROLLBACK_DEFAULT } from './scrollback-clamp';
 import { IdentityHeader } from './IdentityHeader';
 import { IdleCard } from './IdleCard';
 import { WelcomeEmptyState } from './WelcomeEmptyState';
@@ -105,6 +110,28 @@ export function SessionManager(): React.JSX.Element {
       return next;
     });
   }, []);
+
+  // ── Scrollback config (07-03, TERM-11 / SC2 / D-04/D-05) ──────────────────────────
+  // The global xterm scrollback line cap, OWNED here and fanned out as a prop to every
+  // SessionView (D-05). Boot default 5000 (D-04) until the boot effect reads the persisted
+  // value via getUiState (07-01 read key) below. A SessionView seeds new Terminal({
+  // scrollback }) from this prop and live-applies a change via term.options.scrollback (D-05).
+  const [scrollback, setScrollback] = useState<number>(SCROLLBACK_DEFAULT);
+  // Whether the gear-launched Preferences modal is open. Hosted like editingId/closingId.
+  const [preferencesOpen, setPreferencesOpen] = useState(false);
+
+  // Commit a new scrollback value (from the Preferences field). Clamp it (D-04), drive the
+  // SessionView props (fan-out is automatic via the prop + the SessionView live-apply
+  // effect — no per-term loop here), and persist through the EXISTING validated
+  // persistUiState path (no new bridge key; main re-clamps before any disk write — T-07-01).
+  const handleSetScrollback = useCallback((n: number) => {
+    const clamped = clampScrollback(n);
+    setScrollback(clamped);
+    window.api.persistUiState({ scrollback: clamped });
+  }, []);
+
+  const handleOpenPreferences = useCallback(() => setPreferencesOpen(true), []);
+  const handleClosePreferences = useCallback(() => setPreferencesOpen(false), []);
 
   // Guards the boot effect so a fast double-mount (React StrictMode dev) does not
   // auto-add two default sessions.
@@ -434,6 +461,14 @@ export function SessionManager(): React.JSX.Element {
       const sorted = [...existing].sort((a, b) => a.order - b.order);
       setSessions(sorted);
       setActiveId(sorted.length > 0 ? sorted[0].logicalId : null);
+      // 07-03 (TERM-11 / SC2, RESEARCH Open Q1): seed the live scrollback from the
+      // persisted UI prefs via the 07-01 getUiState read key. A persisted value clamps
+      // through clampScrollback (D-04); an absent value leaves the 5000 boot default, so
+      // every SessionView (and any new term) honors the restored value on the next paint.
+      const ui = await window.api.getUiState();
+      if (typeof ui?.scrollback === 'number') {
+        setScrollback(clampScrollback(ui.scrollback));
+      }
     })();
   }, []);
 
@@ -606,6 +641,7 @@ export function SessionManager(): React.JSX.Element {
         collapsed={collapsed}
         onToggleCollapse={handleToggleCollapse}
         onReorder={handleReorder}
+        onOpenPreferences={handleOpenPreferences}
       />
       {/* Flex-column terminal area (RESEARCH Open Q2): the identity header sits above
           the .viewport-stack; SessionView panes keep inset:0 inside the stack. When the
@@ -635,6 +671,10 @@ export function SessionManager(): React.JSX.Element {
                   // (07-02 TERM-10 / 07-UI-SPEC §1).
                   searchOpen={s.logicalId === activeId && searchOpenId === s.logicalId}
                   onCloseSearch={handleCloseSearch}
+                  // 07-03 (TERM-11 / D-05): the global scrollback cap. SessionView seeds
+                  // new Terminal({ scrollback }) from it and live-applies a change via
+                  // term.options.scrollback on prop change (fan-out to all open terms).
+                  scrollback={scrollback}
                 />
               ))}
               {activeIsCard && activeRecord !== null && (
@@ -713,6 +753,15 @@ export function SessionManager(): React.JSX.Element {
           cancelEdit();
         }}
         onCancel={cancelEdit}
+      />
+      {/* Gear-launched Preferences modal (07-03, TERM-11 / D-08). Hosts the scrollback
+          field; live-applies on commit via handleSetScrollback (fan-out to open terms +
+          persist) and dismisses with a single "Done". Hosted like the other modals. */}
+      <PreferencesModal
+        open={preferencesOpen}
+        onClose={handleClosePreferences}
+        scrollback={scrollback}
+        onScrollbackChange={handleSetScrollback}
       />
     </div>
   );

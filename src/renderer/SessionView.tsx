@@ -141,6 +141,13 @@ export interface SessionViewProps {
   searchOpen: boolean;
   /** Dismiss the search bar (Esc / ✕) — routes up to clear SessionManager's searchOpenId. */
   onCloseSearch: () => void;
+  /**
+   * The global xterm scrollback line cap (07-03 TERM-11 / D-04/D-05), owned by
+   * SessionManager (boot-read via getUiState, default 5000). Seeds new Terminal({
+   * scrollback }) on mount and live-applies on change via term.options.scrollback (the
+   * effect below). Lowering trims off-screen rows (D-06 — expected, not a bug).
+   */
+  scrollback: number;
 }
 
 export function SessionView({
@@ -149,6 +156,7 @@ export function SessionView({
   onAgentState,
   searchOpen,
   onCloseSearch,
+  scrollback,
 }: SessionViewProps): React.JSX.Element {
   // The OUTER wrapper (.session-view) hosts both the inner xterm mount and the
   // SearchBar overlay; the xterm opens on `mountRef` so the SearchBar can be a DOM
@@ -189,10 +197,13 @@ export function SessionView({
     const container = mountRef.current;
     if (!container) return;
 
-    // 1. The xterm instance — verbatim from TerminalPane (scrollback 10000,
-    //    allowProposedApi for unicode11, JetBrains Mono, TERMINAL_THEME).
+    // 1. The xterm instance — verbatim from TerminalPane EXCEPT scrollback, which now
+    //    SEEDS from the global `scrollback` prop (07-03 TERM-11 / D-04, default 5000)
+    //    instead of the old hardcoded 10000. The live-apply effect below keeps it in sync
+    //    when the user changes the Preferences value (D-05). allowProposedApi for
+    //    unicode11, JetBrains Mono, TERMINAL_THEME otherwise unchanged.
     const term = new Terminal({
-      scrollback: 10000,
+      scrollback,
       allowProposedApi: true,
       cursorStyle: 'block',
       cursorBlink: true,
@@ -553,6 +564,21 @@ export function SessionView({
       webglRef.current = null;
     }
   }, [active, id]);
+
+  // ── Scrollback live-apply effect (07-03 TERM-11 / D-05). When the global scrollback
+  //    prop changes (the user committed a new value in Preferences), assign it to THIS
+  //    term's live options. Runtime-settable scalar — no re-fit needed (scrollback does
+  //    not change cols/rows) and the SearchAddon/WebGL lifecycle is untouched. Guarded on
+  //    an ACTUAL change so a re-render with the same value never reassigns (Pitfall 5).
+  //    Runs for hidden panes too (the term persists across tab switches), so every open
+  //    session honors the change immediately. Lowering trims off-screen rows (D-06 —
+  //    expected, reversible-by-raising, not a bug). ──
+  useEffect(() => {
+    const term = termRef.current;
+    if (term && term.options.scrollback !== scrollback) {
+      term.options.scrollback = scrollback;
+    }
+  }, [scrollback]);
 
   // visibility-based hiding (NOT display:none — Pattern 8). The `active` class +
   // `hidden-pane` attribute drive the CSS in terminal.css. data-session-id is the
