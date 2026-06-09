@@ -308,7 +308,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. PTY spawn works correctly inside the ASAR-packaged app on both platforms — `spawn-helper` (macOS) and `conpty.node` (Windows) are found outside the ASAR archive
   4. On a Windows machine below build 1809, the app displays a clear "Windows 10 build 1809 or later required" error at startup instead of crashing silently
 
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans executed
 **Mode:** mvp
 **UI hint:** no
 
@@ -319,9 +319,9 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 2** *(blocked on Wave 1 — has checkpoint)*
 
-- [ ] 08-03-PLAN.md — GitHub Actions 2-OS matrix (windows-latest + macos-latest, npm ci → make → test:smoke → artifact, no secrets, D-01) + blocking canonical claude --rc human-verify (SC2) + Nyquist sign-off — PKG-01
-  - [x] Task 1: CI matrix `.github/workflows/build.yml` committed (b85b434), YAML valid, zero secrets, unsigned
-  - [ ] Task 2: blocking canonical `claude --rc` packaged human-verify (SC2) + live SC4 dialog — AWAITING user approval; `nyquist_compliant` NOT flipped
+- [x] 08-03-PLAN.md — GitHub Actions 2-OS matrix (windows-latest + macos-latest, npm ci → make → test:smoke → artifact, no secrets, D-01) + blocking canonical claude --rc human-verify (SC2) + Nyquist sign-off — PKG-01
+  - [x] Task 1: CI matrix `.github/workflows/build.yml` committed (b85b434/015fb0d), YAML valid, zero secrets, unsigned
+  - [x] Task 2: canonical `claude --rc` packaged human-verify APPROVED 2026-06-10 — SC2 LIVE-CONFIRMED on macOS; SC1(win)/SC3(win) CI-produced (best-effort on real Windows); SC4 logic-proven (os-gate.test.ts GREEN, no pre-1809 host); `nyquist_compliant` flipped true on explicit approval
 
 ## Progress
 

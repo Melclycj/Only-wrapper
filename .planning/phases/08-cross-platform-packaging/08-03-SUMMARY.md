@@ -3,7 +3,7 @@ phase: 08-cross-platform-packaging
 plan: 03
 subsystem: ci-packaging
 tags: [github-actions, ci-matrix, cross-platform, unsigned, no-secrets, packaging, human-verify]
-status: in-progress
+status: complete
 # Dependency graph
 requires:
   - phase: 08-cross-platform-packaging
@@ -31,24 +31,24 @@ key-decisions:
   - "make stays a HARD gate (no continue-on-error); test:smoke ships as a real gate first — relax to best-effort ONLY on observed CI headless flake, noted here"
   - "ZERO secrets referenced; unsigned build (maker-squirrel unsigned by default, osxSign/osxNotarize env-gated off) — D-04 lock; negative grep enforces"
   - "NO mandatory native rebuild step in the workflow — the postinstall (fix-node-pty.cjs) does the opportunistic non-fatal rebuild during npm ci (D-06)"
-requirements-completed: []
+requirements-completed: [PKG-01]
 metrics:
-  duration: "~10min (Task 1 only; Task 2 awaiting human-verify)"
-  completed: "2026-06-10 (Task 1)"
-  tasks: "1 of 2 (Task 2 = blocking human-verify, awaiting user approval)"
-  files: 2
+  duration: "~10min Task 1 + human-verify turnaround"
+  completed: "2026-06-10 (both tasks; Task 2 approved)"
+  tasks: "2 of 2 (Task 2 = blocking human-verify, user-approved)"
+  files: 3
 ---
 
 # Phase 8 Plan 03: CI Matrix + Canonical Human-Verify Summary
 
-**Stood up the 2-OS GitHub Actions build matrix that is the canonical producer + verifier of the cross-platform distributables (windows-latest + macos-latest, `npm ci` -> `npm run make` -> `npm run test:smoke` -> upload `out/make`, zero secrets, unsigned). Task 2 — the blocking canonical `claude --rc` packaged human-verify (SC2) + live pre-1809 dialog (SC4) — is AWAITING explicit user approval; `nyquist_compliant` has NOT been flipped.**
+**Stood up the 2-OS GitHub Actions build matrix that is the canonical producer + verifier of the cross-platform distributables (windows-latest + macos-latest, `npm ci` -> `npm run make` -> `npm run test:smoke` -> upload `out/make`, zero secrets, unsigned), then cleared the blocking canonical `claude --rc` packaged human-verify (SC2). The user ran `npm run make`, opened the packaged macOS `.app`, created the canonical session (Name "Parlour Claude RC" / Icon 🛋️ / real project dir / Command `claude --rc`) and confirmed it launches interactively — SC2 LIVE-CONFIRMED on macOS (2026-06-10). On that explicit approval, `nyquist_compliant: true` was flipped in `08-VALIDATION.md`. PKG-01 satisfied (Definition-of-Done item 6).**
 
 ## Status
 
 | Task | Type | State |
 |------|------|-------|
 | 1 — GitHub Actions 2-OS build matrix (D-01 / SC1 both OSes) | auto | ✅ DONE — committed `b85b434`, YAML valid, all acceptance criteria pass |
-| 2 — Canonical `claude --rc` packaged human-verify + Nyquist sign-off (SC2 / SC4 live) | checkpoint:human-verify (blocking-human) | ⏸ AWAITING USER APPROVAL — no code to write; `nyquist_compliant` NOT flipped |
+| 2 — Canonical `claude --rc` packaged human-verify + Nyquist sign-off (SC2 / SC4 live) | checkpoint:human-verify (blocking-human) | ✅ APPROVED 2026-06-10 — SC2 LIVE-CONFIRMED on macOS by the user; `nyquist_compliant: true` flipped on explicit approval |
 
 ## Task 1 — CI Matrix (D-01 / SC1 / drives SC3 on Windows)
 
@@ -74,14 +74,23 @@ Appended a **Continuous Integration** section to `docs/PACKAGING.md`: the matrix
 
 **[Rule 3 — Blocking issue] Reworded two explanatory YAML comments to satisfy the acceptance negative-greps.** The initial workflow header comments used the literal tokens `windowsSign` and `electron-rebuild` while *prohibiting* them ("no `windowsSign` configured", "do NOT add an electron-rebuild step"). The plan's acceptance criteria enforce `! grep -qiE "electron-rebuild|windowsSign"` over the whole file, so the documentation phrasing tripped the negative grep. Reworded to "no Windows signing config" and "do NOT add a standalone native rebuild step here" — same intent, the negative greps now pass. No behavioral change to the workflow.
 
-## Awaiting Human-Verify (Task 2)
+## Task 2 — Canonical Human-Verify (APPROVED 2026-06-10)
 
-Task 2 is a **blocking** `checkpoint:human-verify` (`gate="blocking-human"`). Per the auto-mode rules, blocking-human gates are NOT auto-approved. The executor STOPPED and returned the checkpoint to the orchestrator. On explicit user `approved`:
-- `nyquist_compliant: true` is set in `08-VALIDATION.md` frontmatter,
-- the per-task map Status column + Validation Sign-Off checkboxes are filled,
-- this SUMMARY records which SC items were live-confirmed vs Windows-best-effort vs logic-proven.
+Task 2 was a **blocking** `checkpoint:human-verify` (`gate="blocking-human"`) — NOT auto-approved. The executor STOPPED and returned the checkpoint; the user then **explicitly approved**. The user personally ran `npm run make`, opened the packaged macOS `.app`, created the canonical session (Name "Parlour Claude RC" / Icon 🛋️ / a real project directory / Command `claude --rc`) and confirmed it launches **interactively** like a native terminal. On that approval the executor flipped `nyquist_compliant: true` + `wave_0_complete: true` in `08-VALIDATION.md`, filled the per-task Status column, and ticked the Validation Sign-Off checkboxes.
 
-Until then: `nyquist_compliant` stays `false`; the phase is NOT verified; PKG-01 is NOT marked complete.
+### Honest SC confirmation map (what was actually done vs not)
+
+| SC | Coverage | Confidence | What backs it |
+|----|----------|------------|---------------|
+| **SC2** — canonical `claude --rc` interactive in the packaged app | macOS | **LIVE-CONFIRMED** by the user (2026-06-10) | User ran the exact canonical scenario in the packaged macOS `.app` and confirmed interactive launch. This is the binding gate and it was met live. |
+| **SC1 (mac)** — `npm run make` produces a runnable macOS `.app` | macOS | **AUTOMATED GREEN** | `npm run make` produced the macOS `.app`; the user opened it (implicit in the SC2 run). |
+| **SC3 (mac)** — PTY round-trip inside the packaged ASAR app | macOS | **AUTOMATED GREEN** | Packaged `test:smoke` PTY round-trip GREEN on macOS (Plan 01). |
+| **SC1 (win)** — runnable `.exe`/`Setup.exe` on real Windows | Windows | **CI-PRODUCED / best-effort** | The `windows-latest` matrix leg is the canonical producer of the Windows artifact. Running the downloaded `.exe`/`Setup.exe` on a real Windows host is **best-effort/human-verify** — NOT live-confirmed by the user in this session. |
+| **SC3 (win)** — PTY-in-ASAR on real Windows | Windows | **CI smoke / best-effort** | Proven via the CI `windows-latest` `test:smoke` leg (conpty.node from `app.asar.unpacked`). Confirmation on a real Windows desktop is best-effort. |
+| **SC4** — pre-1809 native error dialog + clean quit | Windows | **LOGIC-PROVEN ONLY** | `os-gate.test.ts` GREEN proves the gate logic (D-05). No pre-1809 Windows host/VM was available, so the **live dialog was NOT observed** — backed by the unit proof only. |
+| **D-02/D-03** — Windows shell dropdown + per-shell auto-run byte-semantics | Windows | **LOGIC-PROVEN / best-effort** | `shell-discovery.test.ts` + `readiness-probe.test.ts` GREEN prove the builders/probe logic. Real-Windows byte-level auto-run semantics are **best-effort/human-verify** on the user's Windows machine — NOT confirmed live here. |
+
+**Explicit honesty note:** the user confirmed the **macOS canonical SC2 scenario only**. No claim of live confirmation is made for any Windows-side behavior (SC1-win / SC3-win / SC4 / D-02 / D-03) — those remain CI-produced + logic-proven + best-effort/human-verify as recorded above. `nyquist_compliant` flipped true on this explicit approval, consistent with every prior phase's end-of-phase human-verify pattern.
 
 ## Known Stubs
 
@@ -95,7 +104,9 @@ None. The workflow introduces no new network endpoint, auth path, or trust-bound
 
 - FOUND: .github/workflows/build.yml
 - FOUND: docs/PACKAGING.md (Continuous Integration section)
+- FOUND: .planning/phases/08-cross-platform-packaging/08-VALIDATION.md (nyquist_compliant: true)
 - FOUND commit: b85b434 (Task 1)
+- FOUND commit: 015fb0d (Task 1 docs)
 
 ---
-*Phase: 08-cross-platform-packaging · Task 1 complete 2026-06-10 · Task 2 awaiting human-verify*
+*Phase: 08-cross-platform-packaging · Task 1 complete 2026-06-10 · Task 2 human-verify APPROVED 2026-06-10 · nyquist_compliant flipped true on explicit user approval*

@@ -1,10 +1,11 @@
 ---
 phase: 8
 slug: cross-platform-packaging
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: signed-off
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-06-10
+signed_off: 2026-06-10
 ---
 
 # Phase 8 — Validation Strategy
@@ -39,14 +40,14 @@ created: 2026-06-10
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 08-01 T1 | 01 | 1 | PKG-01 | T-08-02 | Pre-1809 host detected by a pure gate BEFORE any node-pty spawn (fail-open on unparseable) | unit | `npm run test:unit -- src/main/__tests__/os-gate.test.ts` | ❌ W0 → src/main/os-gate.ts (+test) | ⬜ pending |
-| 08-01 T2 | 01 | 1 | PKG-01 | T-08-01 | Env-gated osxSign/osxNotarize slots; NO committed Apple secret | static/grep | `grep -q appBundleId forge.config.ts && grep -q osxNotarize forge.config.ts && ! grep -RnE "APPLE_[A-Z_]+\s*[:=]\s*['\"][^'\"]+" forge.config.ts` | ❌ W0 → assets/icon.*, docs/PACKAGING.md | ⬜ pending |
-| 08-01 T3 | 01 | 1 | PKG-01 | T-08-03 | Packaged PTY round-trip from inside ASAR (spawn-helper from app.asar.unpacked); proven node-pty mechanics untouched | smoke (packaged) | `npm run make && npm run test:smoke` | ✅ extend pty-roundtrip.smoke.test.ts + ❌ W0 wdio.conf.ts OS-conditional | ⬜ pending |
-| 08-02 T1 | 02 | 1 | PKG-01 | T-08-06 | WindowsShellProvider never-empty (Windows-aware default first); env-expanded paths, no bare hardcode | unit | `npm run test:unit -- src/main/__tests__/shell-discovery.test.ts` | ✅ extend shell-discovery.ts + test | ⬜ pending |
-| 08-02 T2 | 02 | 1 | PKG-01 | T-08-05 | Windows readiness: POSIX reuse (Git Bash/WSL) + degrade-loudly (CMD/PowerShell) — no mis-fire; zero new bridge key | unit | `npm run test:unit -- src/main/__tests__/readiness-probe.test.ts` | ✅ extend readiness-probe.ts + test | ⬜ pending |
-| 08-03 T1 | 03 | 2 | PKG-01 | T-08-09 | 2-OS CI matrix; ZERO secrets; unsigned; no mandatory rebuild | static/CI | `python3 -c "import yaml;yaml.safe_load(open('.github/workflows/build.yml'))"` + CI `make` GREEN both legs | ❌ W0 → .github/workflows/build.yml | ⬜ pending |
-| 08-03 T2 | 03 | 2 | PKG-01 | T-08-12 | Canonical `claude --rc` packaged scenario (SC2) + live SC4 dialog | human-verify (blocking) | manual — macOS primary, Windows best-effort | N/A — human gate | ⬜ pending |
-| invariant | all | — | PKG-01 | T-08-04/08 | contextBridge surface unchanged — exactly 20 EXPECTED_API_KEYS; node-pty in main | unit | `npm run test:unit` (security.guard stays GREEN) | ✅ exists (must stay GREEN) | ⬜ pending |
+| 08-01 T1 | 01 | 1 | PKG-01 | T-08-02 | Pre-1809 host detected by a pure gate BEFORE any node-pty spawn (fail-open on unparseable) | unit | `npm run test:unit -- src/main/__tests__/os-gate.test.ts` | ✅ src/main/os-gate.ts (+test) | ✅ green (logic-proven) |
+| 08-01 T2 | 01 | 1 | PKG-01 | T-08-01 | Env-gated osxSign/osxNotarize slots; NO committed Apple secret | static/grep | `grep -q appBundleId forge.config.ts && grep -q osxNotarize forge.config.ts && ! grep -RnE "APPLE_[A-Z_]+\s*[:=]\s*['\"][^'\"]+" forge.config.ts` | ✅ assets/icon.*, docs/PACKAGING.md | ✅ green |
+| 08-01 T3 | 01 | 1 | PKG-01 | T-08-03 | Packaged PTY round-trip from inside ASAR (spawn-helper from app.asar.unpacked); proven node-pty mechanics untouched | smoke (packaged) | `npm run make && npm run test:smoke` | ✅ pty-roundtrip.smoke.test.ts + wdio.conf.ts OS-conditional | ✅ green (mac live; win via CI) |
+| 08-02 T1 | 02 | 1 | PKG-01 | T-08-06 | WindowsShellProvider never-empty (Windows-aware default first); env-expanded paths, no bare hardcode | unit | `npm run test:unit -- src/main/__tests__/shell-discovery.test.ts` | ✅ shell-discovery.ts + test | ✅ green (logic-proven; win byte-semantics best-effort) |
+| 08-02 T2 | 02 | 1 | PKG-01 | T-08-05 | Windows readiness: POSIX reuse (Git Bash/WSL) + degrade-loudly (CMD/PowerShell) — no mis-fire; zero new bridge key | unit | `npm run test:unit -- src/main/__tests__/readiness-probe.test.ts` | ✅ readiness-probe.ts + test | ✅ green (logic-proven; win byte-semantics best-effort) |
+| 08-03 T1 | 03 | 2 | PKG-01 | T-08-09 | 2-OS CI matrix; ZERO secrets; unsigned; no mandatory rebuild | static/CI | `python3 -c "import yaml;yaml.safe_load(open('.github/workflows/build.yml'))"` + CI `make` GREEN both legs | ✅ .github/workflows/build.yml | ✅ green (YAML valid; CI run is the producer) |
+| 08-03 T2 | 03 | 2 | PKG-01 | T-08-12 | Canonical `claude --rc` packaged scenario (SC2) + live SC4 dialog | human-verify (blocking) | manual — macOS primary, Windows best-effort | N/A — human gate | ✅ approved (SC2 mac LIVE; SC4 logic-proven) |
+| invariant | all | — | PKG-01 | T-08-04/08 | contextBridge surface unchanged — exactly 20 EXPECTED_API_KEYS; node-pty in main | unit | `npm run test:unit` (security.guard stays GREEN) | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -81,11 +82,11 @@ created: 2026-06-10
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 30s
-- [ ] `nyquist_compliant: true` set in frontmatter (Plan 03 Task 2, on explicit user approval)
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 30s
+- [x] `nyquist_compliant: true` set in frontmatter (Plan 03 Task 2, on explicit user approval)
 
-**Approval:** pending
+**Approval:** APPROVED 2026-06-10 — user ran `npm run make`, opened the packaged macOS `.app`, created the canonical session (Name "Parlour Claude RC" / Icon 🛋️ / real project dir / Command `claude --rc`) and confirmed it launches interactively (SC2 LIVE-CONFIRMED on macOS). SC1(mac)/SC3(mac) automated GREEN; SC1(win)/SC3(win) produced by the CI matrix (runnable-on-real-Windows is best-effort/human-verify); SC4 logic-proven via os-gate.test.ts GREEN (no pre-1809 host available); D-02/D-03 Windows byte-semantics best-effort on real Windows. `nyquist_compliant` flipped true ONLY on this explicit approval.
