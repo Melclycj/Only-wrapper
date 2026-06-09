@@ -4,14 +4,14 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Completed 07-03-PLAN.md (TERM-11 scrollback config + Preferences modal slice)
-last_updated: "2026-06-09T10:36:41.400Z"
-last_activity: "2026-06-09 -- Completed 07-03-PLAN.md (TERM-11 scrollback slice: sidebar ⚙ gear → Preferences modal scrollback field → renderer live fan-out (term.options.scrollback) + new-session seed + persist via persistUiState + boot-read via getUiState; 290 unit + tsc + eslint + security.guard(20) clean)"
+last_updated: "2026-06-09T14:45:37.392Z"
+last_activity: 2026-06-09
 progress:
   total_phases: 10
-  completed_phases: 7
-  total_plans: 33
-  completed_plans: 31
-  percent: 73
+  completed_phases: 8
+  total_plans: 34
+  completed_plans: 33
+  percent: 80
 ---
 
 # Project State
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-06-03)
 
 ## Current Position
 
-Phase: 07 (terminal-search-scrollback-config) — EXECUTING
-Plan: 4 of 4
+Phase: 8
+Plan: Not started
 Status: Ready to execute
-Last activity: 2026-06-09 -- Completed 07-03-PLAN.md (TERM-11 scrollback slice: sidebar ⚙ gear → Preferences modal scrollback field → renderer live fan-out (term.options.scrollback) + new-session seed + persist via persistUiState + boot-read via getUiState; 290 unit + tsc + eslint + security.guard(20) clean)
+Last activity: 2026-06-09
 
 Progress: [███████████████████░] 95% (Phase 06.1 plans: 3.5/4 — 04 impl + gap-closure done, 2nd human-verify pending)
 
@@ -36,7 +36,7 @@ Progress: [███████████████████░] 95% (Ph
 
 **Velocity:**
 
-- Total plans completed: 26
+- Total plans completed: 31
 - Average duration: — min
 - Total execution time: 0 hours
 
@@ -51,6 +51,7 @@ Progress: [███████████████████░] 95% (Ph
 | 05 | 4 | - | - |
 | 05.1 | 3 | - | - |
 | 06.1 | 4 | - | - |
+| 07 | 5 | - | - |
 
 **Recent Trend:**
 

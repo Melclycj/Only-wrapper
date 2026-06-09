@@ -20,7 +20,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 5: Persistence + Shell Discovery** - Session profiles saved to disk and restored on reopen (always not_started), platform-aware shell resolver, and sidebar order persistence (completed 2026-06-06)
 - [x] **Phase 5.1: TERM-05 startup-command auto-run** (INSERTED) - Auto-run a session's saved startup command into the PTY once the shell is ready, on start and restart (completed 2026-06-06)
 - [ ] **Phase 6: Robustness + Flow-Control Polish** - HIGH/LOW watermark backpressure, spawn/cwd error handling, waiting-for-input heuristic, alt-screen reset, and session header quick controls
-- [ ] **Phase 7: Terminal Search + Scrollback Config** - Ctrl+F in-session search and configurable scrollback buffer size (global setting with sensible default)
+- [x] **Phase 7: Terminal Search + Scrollback Config** - Ctrl+F in-session search and configurable scrollback buffer size (global setting with sensible default) (completed 2026-06-09)
 - [ ] **Phase 8: Cross-Platform Packaging** - Full production distributables for Windows and macOS: ASAR unpack, @electron/rebuild in CI, Electron Forge makers, ConPTY version check, and notarization stubs
 
 ## Phase Details
@@ -272,7 +272,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. A global settings panel exposes a scrollback buffer size setting; changing it takes effect for new sessions and has a sensible default (e.g., 3000 lines)
   3. Search can be dismissed with Escape and does not interfere with terminal keyboard input when inactive
 
-**Plans:** 4/5 plans complete (07-04 human-verify surfaced 5 search defects → 07-05 gap closure)
+**Plans:** 5/5 plans complete
 **UI hint:** yes
 
 **Wave 1**
@@ -293,7 +293,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 5** *(gap closure — fixes the 5 G1..G5 search defects from 07-04; has checkpoint)*
 
-- [ ] 07-05-PLAN.md — Gap closure G1..G5: WebGL render-flush after every search op (G3 highlight + G2 active-match repaint, plumbed SessionView→SearchBar via term.refresh) + Aa recompute-in-place pure helper (G4, no advance) + robust auto-focus on open (G1) + terminal refocus on close (G5) + blocking macOS-first re-verify → flip nyquist_compliant (TERM-10/TERM-11)
+- [x] 07-05-PLAN.md — Gap closure G1..G5: WebGL render-flush after every search op (G3 highlight + G2 active-match repaint, plumbed SessionView→SearchBar via term.refresh) + Aa recompute-in-place pure helper (G4, no advance) + robust auto-focus on open (G1) + terminal refocus on close (G5) + blocking macOS-first re-verify → flip nyquist_compliant (TERM-10/TERM-11)
 
 ### Phase 8: Cross-Platform Packaging
 
@@ -324,5 +324,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 5.1 → 6 → 7 �
 | 5. Persistence + Shell Discovery | 4/4 | Complete    | 2026-06-06 |
 | 5.1. TERM-05 startup-command auto-run (INSERTED) | 3/3 | Complete    | 2026-06-06 |
 | 6. Robustness + Flow-Control Polish | 3/4 | In Progress|  |
-| 7. Terminal Search + Scrollback Config | 1/4 | In Progress | - |
+| 7. Terminal Search + Scrollback Config | 5/5 | Complete    | 2026-06-09 |
 | 8. Cross-Platform Packaging | 0/TBD | Not started | - |
