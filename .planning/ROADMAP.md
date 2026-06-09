@@ -281,7 +281,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 2** *(blocked on Wave 1)*
 
-- [ ] 07-02-PLAN.md — TERM-10 search slice: SearchBar overlay (input/prev-next/N-of-M/Aa/Esc) + SearchAddon load-once/dispose-once on SessionView + SessionManager 'search' branch + searchOpenId (find chord → bar → navigate → count → dismiss; zero new keys) (TERM-10)
+- [x] 07-02-PLAN.md — TERM-10 search slice: SearchBar overlay (input/prev-next/N-of-M/Aa/Esc) + SearchAddon load-once/dispose-once on SessionView + SessionManager 'search' branch + searchOpenId (find chord → bar → navigate → count → dismiss; zero new keys); 283 unit + tsc + eslint + security.guard(20) clean (`9a7e833`, `41c2f92`, `9f1e1c2`) (TERM-10)
 
 **Wave 3** *(blocked on Wave 2)*
 
