@@ -77,6 +77,10 @@ export function SessionManager(): React.JSX.Element {
   // The session whose EDIT form modal is open (D-04). Non-null → SessionEditModal is
   // open for that id; null → closed. Hosted exactly like `closingId`.
   const [editingId, setEditingId] = useState<LogicalId | null>(null);
+  // The session whose in-terminal search bar is open (07-02 TERM-10). Non-null → that
+  // session's SearchBar is open; null → none. The find chord TOGGLES this for the
+  // active session (it never switches the active session). Hosted like `editingId`.
+  const [searchOpenId, setSearchOpenId] = useState<LogicalId | null>(null);
   // The open right-click context menu (D-03): the target id + viewport coords, or null.
   const [menuState, setMenuState] = useState<{
     id: LogicalId;
@@ -227,6 +231,11 @@ export function SessionManager(): React.JSX.Element {
     };
     w.__sessionTerms?.[id]?.clear();
   }, []);
+
+  // ── Close the in-terminal search bar (07-02 TERM-10). The SearchBar calls this on
+  //    Esc / ✕; clearing searchOpenId unmounts the overlay so a closed bar can never
+  //    intercept a keystroke (SC3). Stable (empty deps) so SessionView's prop is steady. ──
+  const handleCloseSearch = useCallback(() => setSearchOpenId(null), []);
 
   // ── Start control (D-03/D-11, PERS-02): promote a DORMANT (not_started) restored
   //    session to live. We issue window.api.ptyCreate({ id }) for the dormant id —
@@ -481,6 +490,20 @@ export function SessionManager(): React.JSX.Element {
         });
         return;
       }
+      // The find chord (Cmd+F mac / Ctrl+F win — 07-02 TERM-10) rides this SAME channel
+      // as a { kind: 'search' } variant (Plan 01, zero new bridge key). It TOGGLES the
+      // active session's search bar and NEVER changes the active id — read the active id
+      // via the setActiveId functional updater so the effect stays bound once (mirrors
+      // the 'clear' discipline; setSearchOpenId is a stable setter, not a new dep).
+      if (intent.kind === 'search') {
+        setActiveId((cur) => {
+          if (cur !== null) {
+            setSearchOpenId((prev) => (prev === cur ? null : cur));
+          }
+          return cur; // Search never switches the active session.
+        });
+        return;
+      }
       setActiveId((cur) => resolveSwitch(sessionsRef.current, cur, intent));
     });
     return off;
@@ -607,6 +630,11 @@ export function SessionManager(): React.JSX.Element {
                   id={s.logicalId}
                   active={s.logicalId === activeId && !activeIsCard}
                   onAgentState={handleAgentState}
+                  // The bar shows ONLY for the active, search-open session — a
+                  // backgrounded session never shows it even if its id is searchOpenId
+                  // (07-02 TERM-10 / 07-UI-SPEC §1).
+                  searchOpen={s.logicalId === activeId && searchOpenId === s.logicalId}
+                  onCloseSearch={handleCloseSearch}
                 />
               ))}
               {activeIsCard && activeRecord !== null && (
