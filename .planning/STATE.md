@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 8 context gathered
-last_updated: "2026-06-09T16:00:06.214Z"
-last_activity: 2026-06-10 -- Phase 07 COMPLETE (TERM-10 search + TERM-11 scrollback config; 07-05 closed search defects G1..G5; human-verified + verifier 9/9)
+stopped_at: Completed 08-01-PLAN.md
+last_updated: "2026-06-10T02:11:08Z"
+last_activity: 2026-06-10 -- Completed Phase 8 Plan 01 (macOS-buildable packaging slice)
 progress:
   total_phases: 10
   completed_phases: 8
-  total_plans: 34
-  completed_plans: 33
+  total_plans: 37
+  completed_plans: 34
   percent: 80
 ---
 
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-03)
 
 **Core value:** Real terminal fidelity — `claude --rc`, `codex`, `vim`, `ssh`, REPLs all behave exactly like a native terminal inside the wrapper.
-**Current focus:** Phase 08 — cross-platform-packaging (next; Phase 07 complete)
+**Current focus:** Phase 8 — cross-platform-packaging
 
 ## Current Position
 
-Phase: 8 (cross-platform-packaging) — NOT STARTED
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-06-10 -- Phase 07 COMPLETE (TERM-10 search + TERM-11 scrollback config; 07-05 closed search defects G1..G5; human-verified + verifier 9/9)
+Phase: 8 (cross-platform-packaging) — EXECUTING
+Plan: 2 of 3
+Status: Executing Phase 8 (08-01 complete)
+Last activity: 2026-06-10 -- Completed Phase 8 Plan 01 (macOS-buildable packaging slice)
 
-Progress: [████████████████░░░░] 80% (8/10 phases complete, 33/34 plans)
+Progress: [████████████████░░░░] 80% (8/10 phases complete, 34/37 plans)
 
 ## Performance Metrics
 
@@ -89,6 +89,7 @@ Progress: [████████████████░░░░] 80% (8/
 | Phase 07 P01 | ~18min | 3 tasks | 12 files |
 | Phase 07 P02 | ~14min | 3 tasks | 4 files |
 | Phase 07 P03 | ~16min | 3 tasks | 7 files |
+| Phase 08 P01 | ~7min | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -157,6 +158,8 @@ Recent decisions affecting current work:
 - [Phase 07-03]: TERM-11 scrollback slice (renderer-only). Sidebar ⚙ gear in a NEW .sidebar-pinned inline-flex row beside the collapse chevron (reachable expanded + collapsed — inherits the chevron's dual-mode; .sidebar-collapse/.sidebar-prefs merged into shared 28×28 radius-8 + blue focus-ring rules) opens PreferencesModal (clones the ConfirmModal skeleton, NOT a generalization; extensible .prefs-body settings stack — D-08). Scrollback field: number input min 1000 max 50000 step 1000, default 5000, live-apply-on-commit (onChange clamps + applies, onBlur re-snaps) + single neutral "Done" dismiss (no destructive styling). NEW pure renderer src/renderer/scrollback-clamp.ts — a hand-kept verbatim MIRROR of the main clampScrollback (NOT an import — importing src/main would pull electron into the renderer bundle); defense in depth (renderer clamp = input UX, main setUiState clamp = persistence security boundary). SessionManager owns scrollback state (default 5000, boot-read via getUiState seeds it — RESEARCH Open Q1 resolved) + handleSetScrollback (clamp → state → persistUiState, validated/re-clamped in main — T-07-01) + preferencesOpen; fans the value out as a prop to every SessionView. SessionView seeds new Terminal({ scrollback }) (replaces hardcoded 10000) + a guarded live-apply useEffect([scrollback]) (term.options.scrollback, no re-fit, SearchAddon/WebGL untouched; lowering trims off-screen rows — D-06 accepted). ZERO new bridge keys — scrollback rides persistUiState, boot-read uses the existing getUiState; EXPECTED_API_KEYS stays 20 (security.guard GREEN). 290 unit GREEN (36 files, +7 renderer clamp), tsc + eslint clean. Live fan-out (D-05) + decrease-trim (D-06) + restore-on-restart (SC2) sign-off is Plan 04 (manual, macOS-first).
 - [Phase 06.1-04 gap-closure r1]: First human-verify FAILED → 4 fixes + 1 follow-on, each locked. (1) Amber settle-independence: extracted SEAM A per-tick decision into pure src/renderer/agent-tick.ts (decideAgentTick); now runs classify() EVERY tick and emits 'waiting' after WAITING_TICKS(3)≈300ms even while the full-frame hash churns (the real claude footer repaints forever → it never settled → amber never fired). classify() untouched (oracle green); ❯ caret NOT reintroduced. (2) Header Restart ↻ REMOVED (user decision) — live header = Clear + Remove; onRestart prop + SessionManager pass-through gone; restart-in-place + the '— restarted —' divider STAY (still reachable via row/context-menu Restart — assessed not-dead). (3) FIX4b persist policy = IDENTITY/RECIPE (supersedes edit-only D-02): persist if 'configured OR hasIdentity' where identity = startupCommand | custom name (not auto 'Session N') | custom icon | non-default cwd | non-default shell; pure src/main/session-identity.ts gates listConfiguredSessions() + onExit self-exit routing; DEFAULT_SESSION_ICON is the single-source default; 06.1-CONTEXT.md D-02 refined. A bare blank +New stays ephemeral. (4) FIX4a self-exit→Inactive flip: pure src/renderer/session-status.ts (resolveRowStatus/hasRendererIdentity) presents an IDENTITY row's 'exited'/'error' as 'not_started' so it enters the Inactive List mid-session (was only on next boot). (5) Follow-on Rule-1 race guard: child.onExit no-ops when s.pty!==child — the dormant Start (create({id})) re-spawns under the same id while the old child drains SIGTERM, and the stale exit was relabeling the live session (exposed by FIX4a; app-restart-restore smoke was timing out). 234 unit GREEN (30 files), tsc + eslint(src/tests) clean, 14/14 smoke GREEN (packaged). nyquist_compliant NOT flipped — awaiting 2nd human-verify. Pre-existing .planning/spikes/*.cjs lint errors (8) are out of scope → deferred-items.md.
 
+- [Phase 08-01]: macOS-buildable packaging slice complete. (1) Pure electron-free `src/main/os-gate.ts` (mirrors shell-resolver.ts): `MIN_WINDOWS_BUILD=17763`, `parseWindowsBuild` (regex group-3 BUILD, like node-pty's own parser), `isUnsupportedWindows` (win32 + parseable build < floor; **fail-OPEN** on unparseable so a parse quirk never bricks a supported host; non-win32 never gated). Wired at the TOP of `app.whenReady` in index.ts BEFORE store.load() — native `dialog.showErrorBox`→`app.quit()`→`return`, so the gate precedes every node-pty spawn path (D-05/SC4). 9 fixture-string unit tests GREEN. (2) Placeholder `assets/icon.{icns,ico,png}` (icns via iconutil/sips; **real multi-size .ico** 16–256, `file`→"MS Windows icon resource", not a renamed PNG) + `assets/README.md` (swap-by-file later). `forge.config.ts` EXTENDED additively: name/appBundleId/`icon:'assets/icon'` (no ext) + **env-gated** `osxSign: process.env.APPLE_IDENTITY ? {} : undefined` / `osxNotarize: process.env.APPLE_ID ? {...} : undefined` (unsigned default, D-04, **zero secret committed**) + `MakerSquirrel({setupIcon:'assets/icon.ico'})`; `windowsSign` left UNSET. The proven `asar.unpackDir` / `ignore` keep-clause / `rebuildConfig.onlyModules:[]` (D-06) are **byte-for-byte unchanged**. package.json author+appId. `docs/PACKAGING.md` (make overview, `xattr -dr com.apple.quarantine`, env-gated signing flip). (3) `wdio.conf.ts` `appBinaryPath` now a `process.platform==='win32'` ternary on `os.arch()` (darwin .app / win32 .exe for Plan-03 CI); `pty-roundtrip.smoke.test.ts` stale RED banner removed, `echo hello` is the cross-platform SC3 invariant, `$TERM`/Ctrl+C guarded to non-win32 (it.skip). **Real proof on dev box**: `npm run make`→`out/Just-Wrapper-darwin-arm64/Just-Wrapper.app` (icon applied, bundle id com.justwrapper.app, spawn-helper unpacked+executable); `npm run test:smoke`→15/15 spec files, pty-roundtrip 3/3 GREEN (PTY echoes from inside app.asar.unpacked). 301 unit GREEN, EXPECTED_API_KEYS stays exactly **20** (window-config.ts untouched, security.guard GREEN), tsc clean. **Zero new bridge keys, zero new package installs.**
+
 ### Pending Todos
 
 None yet.
@@ -170,6 +173,7 @@ None yet.
 - [resolved-by-Plan-03, fixed in 04] persistence.smoke + reorder.smoke had stale ephemeral-persists expectations after Plan 03's D-02 configured-only persistence — corrected in 06.1-04 (Rule-1 test correctness).
 - node-pty version for Electron 42.x needs verification before Phase 2 starts (see research/SUMMARY.md); consider starting on Electron 36.x if compatibility is unclear
 - macOS notarization (Phase 8) requires Apple Developer Program membership (~$99/year); plan ahead
+- **[08-01 — for human confirmation, NOT auto-changed] Windows ConPTY floor 17763 vs 18309.** `os-gate.ts` `MIN_WINDOWS_BUILD` is locked at **17763** (Windows 10 1809, CLAUDE.md/D-05). node-pty's OWN `_useConpty` gate is `>= 18309` — so builds 17763–18308 LAUNCH under our gate but run winpty internally (which CLAUDE.md "What NOT to Use" excludes). The discrepancy is preserved as a code comment in os-gate.ts and was NOT silently changed (08-RESEARCH Open Q1 / A6). If a "ConPTY guaranteed" floor is wanted, the constant becomes 18309 — but only by an explicit human decision.
 
 ### Quick Tasks Completed
 
@@ -185,6 +189,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-09T15:25:37.603Z
-Stopped at: Phase 8 context gathered
-Resume file: .planning/phases/08-cross-platform-packaging/08-CONTEXT.md
+Last session: 2026-06-10T02:11:08Z
+Stopped at: Completed 08-01-PLAN.md
+Resume file: .planning/phases/08-cross-platform-packaging/08-02-PLAN.md
