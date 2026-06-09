@@ -113,6 +113,13 @@ export interface SidebarProps {
   /** Toggle the collapsed/expanded rail (the pinned chevron control). */
   onToggleCollapse: () => void;
   /**
+   * Open the global Preferences modal (07-03, TERM-11 / D-08). Wired to the ⚙ gear in
+   * the sidebar's pinned-control row (a sibling of the collapse chevron), so it is
+   * reachable in BOTH expanded and collapsed-rail modes. Sets SessionManager's
+   * `preferencesOpen` state. Distinct from the "+ Add session" footer (create affordance).
+   */
+  onOpenPreferences: () => void;
+  /**
    * Drag-to-reorder (NAV-04/SC3/D-08): the user dragged the row `fromId` onto the
    * position of `toId`. SessionManager applies the pure `reorder()` reducer (optimistic
    * local dense-reindex) and persists the new order via `window.api.persistOrder` —
@@ -400,6 +407,7 @@ export function Sidebar({
   collapsed,
   onToggleCollapse,
   onReorder,
+  onOpenPreferences,
 }: SidebarProps): React.JSX.Element {
   // Pointer sensor with an activation DISTANCE so a plain click still switches the
   // session and a click on a nested control still fires (a drag only starts after the
@@ -453,21 +461,43 @@ export function Sidebar({
       className={collapsed ? 'sidebar collapsed' : 'sidebar'}
       aria-label="Sessions"
     >
-      {/* Pinned chevron toggle (D-10): folds the rail to icon-only and back. The state
-          stays where the user leaves it (component-local — persistence is Phase 5). */}
-      <button
-        type="button"
-        className="sidebar-collapse"
-        data-testid="sidebar-collapse"
-        aria-pressed={collapsed}
-        aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        onClick={onToggleCollapse}
-      >
-        <span className="sidebar-collapse-chevron" aria-hidden="true">
-          {collapsed ? '»' : '«'}
-        </span>
-      </button>
+      {/* Pinned-control row (07-03, TERM-11 / D-08): the collapse chevron + the ⚙
+          Preferences gear sit side by side at the TOP of the nav. Both inherit the
+          chevron's proven dual-mode handling — visible and re-centered when the rail
+          collapses — so the gear is reachable in expanded AND collapsed-rail modes
+          without bespoke collapsed handling. The gear opens global Preferences; it is
+          intentionally NOT in the "+ Add session" footer (that footer is the create
+          affordance; keeping the two distinct avoids muddying create vs. settings). */}
+      <div className="sidebar-pinned">
+        {/* Pinned chevron toggle (D-10): folds the rail to icon-only and back. The state
+            stays where the user leaves it (now persisted via persistUiState — D-12). */}
+        <button
+          type="button"
+          className="sidebar-collapse"
+          data-testid="sidebar-collapse"
+          aria-pressed={collapsed}
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          onClick={onToggleCollapse}
+        >
+          <span className="sidebar-collapse-chevron" aria-hidden="true">
+            {collapsed ? '»' : '«'}
+          </span>
+        </button>
+        {/* ⚙ Preferences gear (TERM-11 / D-08): a neutral utility control (no accent at
+            rest) reusing the .sidebar-collapse 28×28 radius-8 footprint. Self-explanatory
+            glyph — no expanded/collapsed text swap needed (works in both modes). */}
+        <button
+          type="button"
+          className="sidebar-prefs"
+          data-testid="open-preferences"
+          aria-label="Preferences"
+          title="Preferences"
+          onClick={onOpenPreferences}
+        >
+          <span aria-hidden="true">⚙</span>
+        </button>
+      </div>
       {/* Drag-to-reorder (NAV-04/SC3/D-08): DndContext owns the pointer/keyboard sensors;
           SortableContext holds the ordered list of session ids (vertical strategy). The
           collapsed rail renders the SAME ordered rows (D-08 — render order = saved order;

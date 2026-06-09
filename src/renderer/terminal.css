@@ -288,14 +288,30 @@ body {
 
 /* ── Sidebar collapse / icon-only rail (D-10/D-11, NAV-01/NAV-02) ────────────── */
 
-/* The pinned chevron toggle (D-10): folds the rail to icon-only and back. Sits at the
- * top of the nav; reads in the muted ink, rounds like a row, warms on hover. */
-.sidebar-collapse {
+/* The pinned-control row (07-03, TERM-11 / D-08): holds the collapse chevron + the
+ * Preferences gear at the top of the nav. Right-aligned in expanded mode (sits with the
+ * chevron at the rail's trailing edge); centered when the rail collapses so both controls
+ * stay legible in the icon-only width. */
+.sidebar-pinned {
   flex: 0 0 auto;
+  display: inline-flex;
   align-self: flex-end;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 2px;
+}
+
+.sidebar.collapsed .sidebar-pinned {
+  align-self: center;
+}
+
+/* The pinned chevron toggle (D-10): folds the rail to icon-only and back. Reads in the
+ * muted ink, rounds like a row, warms on hover. */
+.sidebar-collapse,
+.sidebar-prefs {
+  flex: 0 0 auto;
   width: 28px;
   height: 28px;
-  margin-bottom: 2px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -309,13 +325,16 @@ body {
   cursor: pointer;
 }
 
-.sidebar-collapse:hover {
+.sidebar-collapse:hover,
+.sidebar-prefs:hover {
   background: var(--bg-sunk);
   color: var(--ink);
 }
 
-.sidebar.collapsed .sidebar-collapse {
-  align-self: center;
+.sidebar-collapse:focus-visible,
+.sidebar-prefs:focus-visible {
+  outline: 2px solid oklch(0.62 0.14 248);
+  outline-offset: 1px;
 }
 
 /* Collapsed-rail status dot (NAV-01): hidden by default (the full status badge shows
