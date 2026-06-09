@@ -188,23 +188,22 @@ export function SessionView({
   const onAgentStateRef = useRef(onAgentState);
   onAgentStateRef.current = onAgentState;
 
-  // ── GAP-07-G2/G3 render-flush handle (07-05). The SearchAddon registers match
-  //    decorations + sets the selection on findNext/findPrevious, but the WebGL renderer
-  //    (@xterm/addon-webgl) does NOT repaint on its own after a programmatic search —
-  //    so matches did not paint and the active match was not visible until a manual
-  //    scroll forced a redraw. term.refresh(0, rows-1) forces the active renderer (WebGL
-  //    when attached, else canvas/DOM) to repaint the whole viewport, painting the fresh
-  //    decorations AND the scrolled-to active match. Stable (no deps) so SearchBar's
-  //    onRequestRefresh prop identity is steady; null-safe (no-op before the term mounts).
+  // ── GAP-07-G4 reset handle (07-05 re-verify). Clears THIS term's search-start
+  //    selection so a case-mode toggle in the SearchBar re-highlights from the TOP and
+  //    lands on the first match of the new mode (no forward drift — see SearchBar
+  //    handleToggleCase). Stable (no deps) so the prop identity is steady; null-safe
+  //    (no-op before the term mounts).
   //
-  //    ESCALATION (left OUT by default): if the live macOS canvas still shows STALE
-  //    glyphs at the match after refresh, add `webglRef.current?.clearTextureAtlas()`
-  //    BEFORE the refresh (the heavier WebGL glyph-cache reset). Kept out to avoid
-  //    needless atlas churn unless the 07-05 human-verify (Task 3) proves it is needed.
-  const requestSearchRefresh = useCallback((): void => {
-    const term = termRef.current;
-    if (!term) return;
-    term.refresh(0, term.rows - 1);
+  //    NOTE: 07-05's first attempt instead added a term.refresh(0, rows-1) "render-flush"
+  //    here, on the theory the WebGL renderer wasn't repainting after a search. That was
+  //    the WRONG root cause AND it caused a scroll-FREEZE — forcing a full-viewport repaint
+  //    re-hit the unparseable oklch decoration colour every frame (xterm css.toColor throws
+  //    on translucent non-rgba formats). The real G2/G3 cause was those oklch colours,
+  //    fixed in SearchBar MATCH_DECORATIONS; once they parse, the native decoration render +
+  //    the addon's scroll-into-view paint the match with no manual flush, so the render-
+  //    flush was removed.
+  const resetSearchPosition = useCallback((): void => {
+    termRef.current?.clearSelection();
   }, []);
 
   // ── Mount effect: create the xterm once, bind to the prop `id`, keep alive. ──
@@ -644,7 +643,7 @@ export function SessionView({
         open={searchOpen}
         searchAddon={searchReady ? searchRef.current : null}
         onClose={onCloseSearch}
-        onRequestRefresh={requestSearchRefresh}
+        onResetSearchPosition={resetSearchPosition}
       />
     </div>
   );

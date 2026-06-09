@@ -27,13 +27,12 @@ export interface SearchBarProps {
   searchAddon: SearchAddon | null;
   onClose: () => void;
   /**
-   * GAP-07-G2/G3: flush the active xterm renderer (SessionView's requestSearchRefresh —
-   * term.refresh(0, rows-1)) after every search op so the freshly-registered match
-   * decorations AND the scrolled-to active match repaint on the WebGL canvas without a
-   * user-initiated scroll. Called after runSearch's findNext, handleNext, handlePrev, and
-   * the Aa recompute. Optional + null-safe so the bar still works before the term mounts.
+   * GAP-07-G4: reset the terminal's search-start position (SessionView clears the xterm
+   * selection) so a case-mode toggle RE-HIGHLIGHTS from the top — landing deterministically
+   * on the first match of the new mode instead of stepping +1 forward each click. Optional +
+   * null-safe so the bar still works before the term mounts.
    */
-  onRequestRefresh?: () => void;
+  onResetSearchPosition?: () => void;
 }
 
 // Search-match decorations (07-UI-SPEC §Color, D-01). decorations MUST always be
@@ -71,7 +70,7 @@ export function SearchBar({
   open,
   searchAddon,
   onClose,
-  onRequestRefresh,
+  onResetSearchPosition,
 }: SearchBarProps): React.JSX.Element | null {
   const [query, setQuery] = useState('');
   const [caseSensitive, setCaseSensitive] = useState(false);
@@ -79,11 +78,11 @@ export function SearchBar({
   const inputRef = useRef<HTMLInputElement>(null);
   const countId = useId();
 
-  // Latest-value ref for the refresh callback so the search/recompute callbacks can
-  // call it WITHOUT listing it in their dep arrays (it is a fresh closure on every
-  // SessionView render — depending on it would needlessly re-create runSearch etc.).
-  const onRequestRefreshRef = useRef(onRequestRefresh);
-  onRequestRefreshRef.current = onRequestRefresh;
+  // Latest-value ref for the reset callback so the toggle handler can call it WITHOUT
+  // listing it in its dep array (it is a fresh closure on every SessionView render —
+  // depending on it would needlessly re-create the callbacks).
+  const onResetSearchPositionRef = useRef(onResetSearchPosition);
+  onResetSearchPositionRef.current = onResetSearchPosition;
 
   // The always-decorations search options (Pitfall 1). Memoized on caseSensitive so a
   // toggle produces a fresh opts object that re-runs the query.
@@ -105,9 +104,6 @@ export function SearchBar({
         return;
       }
       addon.findNext(term, searchOpts);
-      // GAP-07-G2/G3: flush the renderer so the new decorations + active match paint on
-      // the WebGL canvas immediately (no manual scroll). No-op-safe when undefined.
-      onRequestRefreshRef.current?.();
     },
     [searchAddon],
   );
@@ -134,26 +130,20 @@ export function SearchBar({
   const optsRef = useRef(opts);
   optsRef.current = opts;
 
-  // On open: focus the input and select any prior query so re-typing replaces it
-  // (07-UI-SPEC §1). Re-run the prior query so its highlights/count come back.
+  // On open: select any prior query so re-typing replaces it (07-UI-SPEC §1) and re-run
+  // the prior query so its highlights/count come back.
   //
-  // GAP-07-G1: the bare synchronous focus() did not STICK — it ran before the overlay
-  // was fully laid out / focusable, and SessionView's activate effect could re-steal
-  // focus to the term. Schedule the focus on the NEXT animation frame so it runs after
-  // xterm settles and the input is paintable; SessionView separately guards its
-  // term.focus() on !searchOpen so it no longer races this. select() keeps a prior query
-  // selected for replace.
+  // GAP-07-G1 (07-05 re-verify): the rAF-scheduled focus() still did not STICK. The bar
+  // returns null when closed, so the <input> is a FRESH mount on every open — the
+  // reliable way to focus a fresh mount is the DOM's own `autoFocus` (applied at commit,
+  // immune to the effect-timing / rAF-cleanup races that defeated the imperative focus).
+  // The <input> now carries autoFocus; SessionView still guards its term.focus() on
+  // !searchOpen so nothing re-steals it. This effect only restores the prior query
+  // (select for replace) + re-highlights — focus is owned by autoFocus.
   useEffect(() => {
     if (!open) return;
-    const raf = requestAnimationFrame(() => {
-      const el = inputRef.current;
-      if (el) {
-        el.focus();
-        el.select();
-      }
-    });
+    inputRef.current?.select();
     runSearch(queryRef.current, optsRef.current);
-    return () => cancelAnimationFrame(raf);
   }, [open, runSearch]);
 
   // On close (open → false): clear decorations so a re-open starts clean and the
@@ -174,23 +164,27 @@ export function SearchBar({
   const handleToggleCase = useCallback(() => {
     setCaseSensitive((prev) => {
       const next = !prev;
-      // GAP-07-G4: recompute the count + highlights for the FLIPPED case mode WITHOUT
-      // advancing the active match. The old path called runSearch → addon.findNext,
-      // which steps to the NEXT match (the +1 jump per click). decideCaseToggle gates
-      // the recompute (empty bar = no-op, mirroring runSearch's empty-query clear), and
-      // we re-issue findNext with `incremental: true` — per @xterm/addon-search this
-      // "expands the selection if it still matches the term" instead of stepping forward,
-      // so the active match holds while the decorations/count refresh for the new mode.
-      // Build a fresh opts here since `opts` (memo) has not recomputed yet in this updater.
+      // GAP-07-G4 (07-05 re-verify): recompute the count + highlights for the FLIPPED case
+      // mode WITHOUT drifting forward. The first attempt re-issued findNext with
+      // `incremental: true` on the theory it would "expand the selection in place" — but
+      // findNext ALWAYS advances via the addon's _findNextAndSelect, and on a case flip the
+      // current selection no longer matches under the new mode, so incremental falls through
+      // to the advancing branch anyway (verified against the 0.15.0 addon source) → the +1
+      // jump persisted. Instead we CLEAR the term's search-start selection (SessionView's
+      // onResetSearchPosition → term.clearSelection()) so the re-issued findNext searches
+      // from the TOP and lands deterministically on the FIRST match of the new mode: no
+      // unbounded forward drift, and toggling twice returns to the same (first) match.
+      // _highlightAllMatches still re-fires because the options changed, so the count +
+      // all-match decorations recompute for the flipped mode. decideCaseToggle gates this
+      // (empty bar = no-op, mirroring runSearch's empty-query clear). Fresh opts built here
+      // since `opts` (memo) has not recomputed yet in this updater.
       const addon = searchAddon;
       if (addon && decideCaseToggle(query).shouldRecompute) {
+        onResetSearchPositionRef.current?.();
         addon.findNext(query, {
           caseSensitive: next,
-          incremental: true,
           decorations: { ...MATCH_DECORATIONS },
         });
-        // GAP-07-G2/G3: repaint so the re-highlighted matches for the new case mode show.
-        onRequestRefreshRef.current?.();
       }
       return next;
     });
@@ -199,13 +193,11 @@ export function SearchBar({
   const handleNext = useCallback(() => {
     if (query.length === 0) return;
     searchAddon?.findNext(query, opts);
-    onRequestRefreshRef.current?.();
   }, [searchAddon, query, opts]);
 
   const handlePrev = useCallback(() => {
     if (query.length === 0) return;
     searchAddon?.findPrevious(query, opts);
-    onRequestRefreshRef.current?.();
   }, [searchAddon, query, opts]);
 
   // Input keydown: Enter → next, Shift+Enter → prev, Esc → close. ALWAYS
@@ -249,6 +241,10 @@ export function SearchBar({
 
   return (
     <div className="search-bar" data-testid="search-bar" role="search">
+      {/* GAP-07-G1: autoFocus is the reliable focus path here — the bar returns null when
+          closed, so this <input> is a fresh mount on every open, and the user reached it by
+          an explicit Cmd+F (so grabbing focus is the expected, requested behavior, not a
+          surprise focus-steal). */}
       <input
         ref={inputRef}
         type="text"
@@ -260,6 +256,7 @@ export function SearchBar({
         value={query}
         spellCheck={false}
         autoComplete="off"
+        autoFocus
         onChange={(e) => handleQueryChange(e.target.value)}
         onKeyDown={handleKeyDown}
       />
