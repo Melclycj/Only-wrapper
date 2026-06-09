@@ -83,6 +83,19 @@ export function buildWebPreferences(preloadPath: string): WebPreferencesConfig {
  *     EXACT 19-key set so no unreviewed key (e.g. raw ipcRenderer) can leak. NOTE: the
  *     Clear chord (matchClearKey) rides the EXISTING 'session:switch' channel and adds
  *     NO bridge key — pickDirectory is the ONLY new key this phase.
+ *
+ * Phase 7 (07-01) REVIEWED EXPANSION (threat_model T-07-02): ONE new key joins the
+ * surface — a 20-key set:
+ *   - `getUiState` (invoke, mirrors pickDirectory/discoverShells): a READ-ONLY
+ *     main→renderer request-response that returns main's already-validated UI prefs
+ *     (collapse + bounds + the clamped scrollback) for the renderer's boot-read seed
+ *     of `new Terminal({ scrollback })`. It carries no fs handle and never widens the
+ *     renderer's WRITE surface. The lockstep (api-types + this array + preload +
+ *     pty-manager registerIpc + security.guard.test.ts) is done in ONE atomic task and
+ *     the guard asserts the EXACT 20-key set so no unreviewed key (e.g. raw ipcRenderer)
+ *     can leak. NOTE: the Find chord (matchSearchKey) rides the EXISTING 'session:switch'
+ *     channel and adds NO bridge key; the scrollback persist rides the EXISTING
+ *     persistUiState (widened payload) — getUiState is the ONLY new key this phase.
  */
 export const EXPECTED_API_KEYS = [
   'getVersion',
@@ -104,4 +117,5 @@ export const EXPECTED_API_KEYS = [
   'persistOrder',
   'persistUiState',
   'pickDirectory',
+  'getUiState',
 ] as const;

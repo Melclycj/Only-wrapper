@@ -166,10 +166,12 @@ const api: ElectronAPI = {
   },
 
   // persistUiState mirrors ptyUpdateProfile: fire-and-forget send (the 18th key).
-  // Main VALIDATES collapse/bounds before any write (T-05-01).
+  // Main VALIDATES collapse/bounds/scrollback before any write (T-05-01/T-07-01).
+  // 07-01: the payload is WIDENED with scrollback — SAME key, no new bridge key.
   persistUiState: (ui: {
     collapsed?: boolean;
     bounds?: { x: number; y: number; width: number; height: number };
+    scrollback?: number;
   }): void => {
     ipcRenderer.send('store:persist-ui', ui);
   },
@@ -182,6 +184,18 @@ const api: ElectronAPI = {
   // must NEVER reach raw ipcRenderer (the header no-raw-ipcRenderer contract holds).
   pickDirectory: (): Promise<string | null> =>
     ipcRenderer.invoke('dialog:pick-directory'),
+
+  // ─── UI-state boot read (07-01) ───────────────────────────────────────────────
+
+  // getUiState mirrors pickDirectory: request-response invoke (the 20th key). main is
+  // the source of truth and returns ONLY the already-validated UI prefs (collapse +
+  // bounds + clamped scrollback) for the renderer's boot-read seed of the terminal
+  // scrollback. READ-ONLY — it carries no fs handle and never reaches raw ipcRenderer.
+  getUiState: (): Promise<{
+    collapsed?: boolean;
+    bounds?: { x: number; y: number; width: number; height: number };
+    scrollback?: number;
+  }> => ipcRenderer.invoke('pty:get-ui-state'),
 };
 
 contextBridge.exposeInMainWorld('api', api);

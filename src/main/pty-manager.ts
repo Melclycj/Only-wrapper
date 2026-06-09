@@ -62,6 +62,10 @@ export const PTY_CHANNELS = {
   discover: 'shell:discover',
   persistOrder: 'store:persist-order',
   persistUi: 'store:persist-ui',
+  // 07-01 boot read: request-response (invoke) returning main's validated UI prefs
+  // (collapse + bounds + clamped scrollback) so the renderer can seed the terminal
+  // scrollback on first mount. READ-ONLY main→renderer (T-07-02).
+  getUi: 'pty:get-ui-state',
 } as const;
 
 /**
@@ -1223,6 +1227,11 @@ export class PtyManager {
     ipcMain.on(PTY_CHANNELS.persistUi, (_event: IpcMainEvent, ui: unknown) =>
       this.setUiState(ui),
     );
+
+    // 07-01 boot read — request-response (.handle), inside the idempotency guard
+    // (T-03-02). Returns main's validated UI prefs (the renderer never reaches the
+    // store except through this narrow READ-ONLY method — T-07-02).
+    ipcMain.handle(PTY_CHANNELS.getUi, () => this.getUiState());
   }
 
   /**
@@ -1246,6 +1255,7 @@ export class PtyManager {
     ipcMain.removeHandler(PTY_CHANNELS.discover);
     ipcMain.removeAllListeners(PTY_CHANNELS.persistOrder);
     ipcMain.removeAllListeners(PTY_CHANNELS.persistUi);
+    ipcMain.removeHandler(PTY_CHANNELS.getUi); // 07-01 boot read (T-03-02)
     this.ipcRegistered = false;
     this.win = null;
   }

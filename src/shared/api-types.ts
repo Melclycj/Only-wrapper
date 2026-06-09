@@ -179,9 +179,13 @@ export type ElectronAPI = {
   persistUiState: (ui: {
     collapsed?: boolean;
     bounds?: { x: number; y: number; width: number; height: number };
+    // 07-01 (TERM-11, D-04): the scrollback line cap rides this EXISTING persistUiState
+    // key as a WIDER payload — NOT a new bridge key. main validates + clamps it
+    // (clampScrollback, T-07-01) before any disk write.
+    scrollback?: number;
   }) => void;
 
-  // ─── Folder picker (06-01) — the ONE new key this phase in EXPECTED_API_KEYS ───
+  // ─── Folder picker (06-01) — a new key this phase in EXPECTED_API_KEYS ──────────
 
   /**
    * Open the native open-directory dialog and resolve the chosen absolute path, or
@@ -191,6 +195,24 @@ export type ElectronAPI = {
    * edit form's cwd field (the "folder picker" UX surfaced in the 05.1 human-verify).
    */
   pickDirectory: () => Promise<string | null>;
+
+  // ─── UI-state boot read (07-01) — the ONE new key this phase in EXPECTED_API_KEYS ─
+
+  /**
+   * Read main's validated UI preferences for the renderer's boot-read (the 20th key,
+   * mirrors discoverShells's / pickDirectory's request-response invoke). main is the
+   * source of truth; it returns ONLY the already-validated prefs (collapse + bounds +
+   * the clamped scrollback) so the renderer can seed `new Terminal({ scrollback })` on
+   * first mount without inventing a default. READ-ONLY main→renderer — it carries no
+   * fs handle and never widens the renderer's write surface (T-07-02). The find chord
+   * adds ZERO keys (rides 'session:switch'); scrollback persist rides the existing
+   * `persistUiState` (widened payload) — getUiState is the ONLY new key this phase.
+   */
+  getUiState: () => Promise<{
+    collapsed?: boolean;
+    bounds?: { x: number; y: number; width: number; height: number };
+    scrollback?: number;
+  }>;
 };
 
 // Window augmentation — import this in renderer entry point
