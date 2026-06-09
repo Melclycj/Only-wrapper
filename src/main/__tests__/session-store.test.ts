@@ -204,6 +204,66 @@ describe('SessionStore (PERS-01 / PERS-02 / D-13)', () => {
     expect(onDisk.sessions[0].name).toBe('flush-me');
   });
 
+  // ── R2 regression guard (2026-06-09) — DURABILITY contract for the RESTORED,
+  //    user-approved-good flush(). A reverted code-review "coalesce" optimization
+  //    cleared the dirty flag and dropped a mutation that arrived WHILE a write was
+  //    in flight, so the on-disk data could end up STALE (mutation B lost). This test
+  //    locks the contract against the restored flush(): mutate A → begin a flush whose
+  //    underlying write is HELD open → mutate B mid-write → release → the on-disk data
+  //    MUST be B and the store MUST have issued TWO writes (every dirty flush writes;
+  //    no mid-write mutation is ever silently dropped). A future "coalesce" optimization
+  //    that drops B will fail here. ──
+  it('R2: a mutation arriving WHILE a write is in flight is NOT dropped (final on-disk === B, writeCount === 2)', async () => {
+    const store = new SessionStore(storeFile);
+    await store.load();
+
+    // Wrap the REAL lowdb write so we can (a) count writes and (b) hold the FIRST one
+    // open until we have applied mutation B mid-write — reproducing the in-flight race.
+    const db = (store as unknown as { db: { write(): Promise<void> } }).db;
+    const realWrite = db.write.bind(db);
+    let writeCount = 0;
+    let releaseFirstWrite!: () => void;
+    const firstWriteHeld = new Promise<void>((resolve) => {
+      releaseFirstWrite = resolve;
+    });
+    const writeSpy = vi
+      .spyOn(db, 'write')
+      .mockImplementation(async () => {
+        writeCount += 1;
+        // Hold ONLY the first write open until the test releases it (after mutating B).
+        if (writeCount === 1) await firstWriteHeld;
+        await realWrite();
+      });
+
+    // Mutation A → begin the flush (do NOT await yet — its write is now held open).
+    store.setSessions([makeRecord({ name: 'A' })]);
+    const firstFlush = store.flush();
+
+    // While the first write is in flight, mutation B lands. The restored flush() set
+    // dirty=false at the START of the in-flight write, so B re-marks the store dirty
+    // and arms the trailing debounce — B must NOT be lost.
+    store.setSessions([makeRecord({ name: 'B' })]);
+    expect(store.isDirty()).toBe(true); // B re-dirtied the store mid-write
+
+    // Release the held first write and let it settle (A lands on disk first).
+    releaseFirstWrite();
+    await firstFlush;
+
+    // Now drive B's pending write to completion (the trailing flush for B).
+    await store.flush();
+
+    // The store issued TWO writes (A, then B) — B was not coalesced away.
+    expect(writeCount).toBe(2);
+    expect(store.isDirty()).toBe(false);
+
+    // The FINAL on-disk state is B — the in-flight mutation won, nothing was dropped.
+    const onDisk = JSON.parse(fs.readFileSync(storeFile, 'utf8'));
+    expect(onDisk.sessions).toHaveLength(1);
+    expect(onDisk.sessions[0].name).toBe('B');
+
+    writeSpy.mockRestore();
+  });
+
   it('flush() is a no-op when not dirty', async () => {
     const store = new SessionStore(storeFile);
     await store.load();
