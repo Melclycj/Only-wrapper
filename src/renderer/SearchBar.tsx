@@ -51,16 +51,16 @@ export interface SearchBarProps {
 // (oklch(0.66 0.15 60) → rgb(211,120,18) / #d37812; oklch(0.62 0.14 248) → #328bd6).
 // The COLOUR is unchanged — only the unparseable string FORMAT is corrected.
 const MATCH_DECORATIONS = {
-  matchBackground: 'rgba(211, 120, 18, 0.32)',
-  // 07-05 re-verify: the spec's intent is "the current match STANDS OUT from the rest"
-  // (the exact alpha was Claude's discretion). On the live dark canvas 0.32 vs 0.7 amber
-  // read as the same wash — the active match was indistinguishable. Raised to a near-solid
-  // 0.95 so the current match is unmistakably stronger than the 0.32 all-match wash while
-  // staying in the SAME amber hue the design reserves for "matched text" (blue stays the
-  // active overview-ruler tick only). Honors the design GOAL, tunes the discretionary value.
-  activeMatchBackground: 'rgba(211, 120, 18, 0.95)',
-  matchOverviewRuler: '#d37812',
-  activeMatchColorOverviewRuler: '#328bd6',
+  // 07-05 re-verify (round 3): the spec's intent is "the current match STANDS OUT from the
+  // rest" (the exact colours were Claude's discretion). Two alphas of the SAME amber
+  // (0.32 vs 0.7→0.95) read as indistinguishable on the live dark canvas — the human could
+  // not tell the active match apart. Switched to TWO DISTINCT HUES per the user's call:
+  // a faint YELLOW wash for all matches, a strong AMBER/orange for the current match. A hue
+  // difference is far more separable than an alpha difference and removes any ambiguity.
+  matchBackground: 'rgba(232, 220, 100, 0.32)', // faint yellow — every match
+  activeMatchBackground: 'rgba(211, 120, 18, 0.92)', // strong amber — the current match
+  matchOverviewRuler: '#e8dc64', // yellow tick for all matches
+  activeMatchColorOverviewRuler: '#d37812', // amber tick for the active match (matches the wash)
 } as const;
 
 interface MatchState {
