@@ -69,3 +69,36 @@ rebuild when online and `chmod +x`'s the macOS `spawn-helper`. The
 helpers in `app.asar.unpacked/` so they load from outside the ASAR archive.
 **Do not reintroduce a mandatory packaging rebuild** (it makes the build more
 fragile, not less).
+
+## Continuous Integration
+
+The `.github/workflows/build.yml` matrix is the **canonical producer and
+verifier** of the cross-platform distributables. Dev/test is macOS-only, so CI
+is how the real Windows `.exe`/`Setup.exe` gets built and smoke-tested at all.
+
+On every `push` and `pull_request` it runs a 2-OS matrix:
+
+| Leg | Runner | Produces |
+|-----|--------|----------|
+| `macos-latest` | macOS desktop session | the macOS `.app` (maker-zip) |
+| `windows-latest` | Windows desktop session | the Windows `.exe` + `Setup.exe` (maker-squirrel) |
+
+Each leg runs `npm ci` → `npm run make` → `npm run test:smoke`, then uploads the
+`out/make/**` output as an artifact named `just-wrapper-<os>`. The canonical
+**Windows installer is downloaded from the `just-wrapper-windows-latest`** run
+artifact (the Actions run → Artifacts section).
+
+**Gate policy:**
+- `npm run make` is the **hard gate** — the artifact must build on both legs.
+- `npm run test:smoke` (the packaged-binary PTY round-trip) is the
+  **strong-preferred** gate; if it proves flaky for lack of a stable display on
+  a runner it is treated as best-effort, with the canonical `claude --rc`
+  human-verify as the binding SC2 gate (CI runners lack `claude`).
+- `fail-fast: false` isolates a Windows-only flake from the macOS leg.
+
+**No secrets.** The matrix needs **zero** credentials this phase — the build is
+**unsigned** (maker-squirrel is unsigned by default; `osxSign`/`osxNotarize` are
+env-gated off). Signing is the later env-gated flip described above (set the
+`APPLE_*` env vars in the build environment, no code change). Until then,
+download the unsigned artifact and use the local-open path
+(`xattr -dr com.apple.quarantine` on macOS) above.
