@@ -47,27 +47,40 @@ Manual-Only Verifications. Run during the Plan 07-04 human-verify checkpoint.
 - **Check 2.** Matches are NOT visually highlighted (no amber/active highlight) even though the
   "N of M" count is correct, so `onDidChangeResults` fires but `decorations` do not paint.
 - **Requirement:** TERM-10 / D-01 ("`decorations` — highlight all matches").
-- **Likely root cause:** search `ISearchOptions.decorations` missing explicit colors
-  (`matchBackground` / `matchBorder` / `matchOverviewRuler` / `activeMatchBackground` /
-  `activeMatchColorOverviewRuler`) and/or WebGL decoration rendering needs the overview-ruler
-  width / a refresh. Pull the highlight colors from `.planning/DESIGN.md`. Likely shares the
-  GAP-07-G2 root area (WebGL not painting search output).
+- **Likely root cause (CORRECTED after source read):** the decoration colors ARE already
+  configured correctly — `SearchBar.tsx` `MATCH_DECORATIONS` passes `matchBackground` /
+  `activeMatchBackground` / `matchOverviewRuler` / `activeMatchColorOverviewRuler` verbatim from
+  07-UI-SPEC §Color, and `onDidChangeResults` fires (the count works). So this is NOT a missing-
+  config bug. The decorations are configured but do not PAINT → strongly points to the
+  `@xterm/addon-webgl` renderer not rendering inline search-match decorations (a known xterm
+  WebGL/decoration interaction). Shares the GAP-07-G2 root area (WebGL not painting search
+  output). REQUIRES research into xterm WebGL + SearchAddon decoration rendering, then verify on
+  the live canvas — do NOT just re-add colors that are already present.
 
 ### GAP-07-G4 — "Aa" toggle navigates instead of recomputing  [HIGH]
 - **Check 4.** Clicking "Aa" advances to the next matched target instead of re-running the search
   with the toggled `caseSensitive` option and recomputing the count + highlights.
 - **Requirement:** TERM-10 / D-01 ("case-sensitive (Aa) toggle ... using its `caseSensitive`
   option").
-- **Likely root cause:** the Aa handler calls `findNext` (advance) rather than re-issuing the
-  search from the current query with the new `caseSensitive` flag (reset to first match +
-  recompute results/decorations).
+- **Likely root cause (CORRECTED after source read):** the Aa handler DOES re-issue the search
+  with the new `caseSensitive` flag (`SearchBar.tsx` toggle → `runSearch(query, { caseSensitive:
+  next, ... })`), but `runSearch` calls `addon.findNext(...)`, which ADVANCES to the next match
+  instead of re-evaluating in place. The fix is to make the toggle recompute the result set +
+  count without advancing the active match (e.g. reset/`noScroll`-style re-search, or restore the
+  prior active index after the recompute), so the count + highlights reflect the new case mode
+  without jumping forward.
 
 ### GAP-07-G1 — search input does not auto-focus on open  [MEDIUM]
 - **Check 1.** When the search bar opens, the `<input>` is not focused — the user must click it
   before typing.
 - **Requirement:** TERM-10 / SC1 (the bar should be immediately usable).
-- **Likely root cause:** missing `inputRef.current?.focus()` on open (mount/`open` effect),
-  possibly racing the post-mount `searchReady` flip.
+- **Likely root cause (CORRECTED after source read):** a focus effect already exists
+  (`SearchBar.tsx` on-open `useEffect` → `inputRef.current.focus()` + select), so this is NOT a
+  missing-call bug — the effect runs but the input is not ending up focused. Likely a timing/race:
+  the effect fires before the input is actually mounted/visible, or the terminal's focus
+  management (xterm `term.focus()` / `attachCustomKeyEventHandler`) steals focus back after the
+  bar opens, or the `searchReady` post-mount flip re-renders past the focus. Investigate the
+  open→mount→focus ordering against the live DOM.
 
 ### GAP-07-G5 — terminal not auto-refocused after close  [LOW]
 - **Check 7.** After closing the search bar, focus does not return to the terminal — the user must
