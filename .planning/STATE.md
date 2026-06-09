@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 08-01-PLAN.md
-last_updated: "2026-06-09T16:20:47.592Z"
-last_activity: 2026-06-10 -- Completed Phase 8 Plan 01 (macOS-buildable packaging slice)
+stopped_at: 08-03 Task 1 (CI matrix) done — Task 2 awaiting blocking human-verify
+last_updated: "2026-06-10T00:00:00.000Z"
+last_activity: 2026-06-10 -- 08-03 CI matrix committed (b85b434); canonical claude --rc human-verify AWAITING approval
 progress:
   total_phases: 10
   completed_phases: 8
@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-06-03)
 
 Phase: 8 (cross-platform-packaging) — EXECUTING
 Plan: 3 of 3
-Status: Ready to execute
-Last activity: 2026-06-10 -- Completed Phase 8 Plan 01 (macOS-buildable packaging slice)
+Status: 08-03 Task 1 (CI matrix) committed; Task 2 = blocking canonical claude --rc human-verify AWAITING approval (nyquist_compliant NOT flipped)
+Last activity: 2026-06-10 -- 08-03 CI matrix committed (b85b434); awaiting canonical claude --rc human-verify (SC2) + live SC4 dialog
 
 Progress: [████████████████░░░░] 80% (8/10 phases complete, 34/37 plans)
 

@@ -320,6 +320,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Wave 2** *(blocked on Wave 1 — has checkpoint)*
 
 - [ ] 08-03-PLAN.md — GitHub Actions 2-OS matrix (windows-latest + macos-latest, npm ci → make → test:smoke → artifact, no secrets, D-01) + blocking canonical claude --rc human-verify (SC2) + Nyquist sign-off — PKG-01
+  - [x] Task 1: CI matrix `.github/workflows/build.yml` committed (b85b434), YAML valid, zero secrets, unsigned
+  - [ ] Task 2: blocking canonical `claude --rc` packaged human-verify (SC2) + live SC4 dialog — AWAITING user approval; `nyquist_compliant` NOT flipped
 
 ## Progress
 
