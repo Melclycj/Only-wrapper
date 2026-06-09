@@ -272,8 +272,24 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. A global settings panel exposes a scrollback buffer size setting; changing it takes effect for new sessions and has a sensible default (e.g., 3000 lines)
   3. Search can be dismissed with Escape and does not interfere with terminal keyboard input when inactive
 
-**Plans:** TBD
+**Plans:** 4 plans
 **UI hint:** yes
+
+**Wave 1**
+
+- [ ] 07-01-PLAN.md — Foundation: install @xterm/addon-search + pure matchSearchKey ({kind:'search'} variant, macOS-Ctrl+F→null) + clampScrollback + setUiState scrollback validate + atomic 19→20 bridge lockstep (getUiState read key; persistUiState payload widened) + all Wave 0 RED unit tests (TERM-10/TERM-11)
+
+**Wave 2** *(blocked on Wave 1)*
+
+- [ ] 07-02-PLAN.md — TERM-10 search slice: SearchBar overlay (input/prev-next/N-of-M/Aa/Esc) + SearchAddon load-once/dispose-once on SessionView + SessionManager 'search' branch + searchOpenId (find chord → bar → navigate → count → dismiss; zero new keys) (TERM-10)
+
+**Wave 3** *(blocked on Wave 2)*
+
+- [ ] 07-03-PLAN.md — TERM-11 scrollback slice: Preferences modal + sidebar gear + renderer clampScrollback + SessionManager scrollback state (boot-read via getUiState, fan-out, persist via persistUiState) + SessionView scrollback prop seed + live-apply effect (gear → set → live-apply → persist → restore) (TERM-11)
+
+**Wave 4** *(blocked on Wave 3 — has checkpoint)*
+
+- [ ] 07-04-PLAN.md — Nyquist sign-off: best-effort search-bar smoke + full suite green + blocking macOS-first human-verify (search/scrollback checklist) → flip nyquist_compliant (TERM-10/TERM-11)
 
 ### Phase 8: Cross-Platform Packaging
 
@@ -304,5 +320,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 5.1 → 6 → 7 �
 | 5. Persistence + Shell Discovery | 4/4 | Complete    | 2026-06-06 |
 | 5.1. TERM-05 startup-command auto-run (INSERTED) | 3/3 | Complete    | 2026-06-06 |
 | 6. Robustness + Flow-Control Polish | 3/4 | In Progress|  |
-| 7. Terminal Search + Scrollback Config | 0/TBD | Not started | - |
+| 7. Terminal Search + Scrollback Config | 0/4 | Planned | - |
 | 8. Cross-Platform Packaging | 0/TBD | Not started | - |
