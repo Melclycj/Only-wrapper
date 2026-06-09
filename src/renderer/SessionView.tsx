@@ -26,7 +26,7 @@
 // The ONLY bridge to main is window.api (contextBridge). xterm runs here; the PTY
 // lives in main.
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { LogicalId } from '../shared/types';
 import { createWatermark } from '../shared/flow-control';
 import { type AgentState } from '../shared/agent-state';
@@ -187,6 +187,25 @@ export function SessionView({
   // through this ref. (Pattern 1, Pitfall 6.)
   const onAgentStateRef = useRef(onAgentState);
   onAgentStateRef.current = onAgentState;
+
+  // ── GAP-07-G2/G3 render-flush handle (07-05). The SearchAddon registers match
+  //    decorations + sets the selection on findNext/findPrevious, but the WebGL renderer
+  //    (@xterm/addon-webgl) does NOT repaint on its own after a programmatic search —
+  //    so matches did not paint and the active match was not visible until a manual
+  //    scroll forced a redraw. term.refresh(0, rows-1) forces the active renderer (WebGL
+  //    when attached, else canvas/DOM) to repaint the whole viewport, painting the fresh
+  //    decorations AND the scrolled-to active match. Stable (no deps) so SearchBar's
+  //    onRequestRefresh prop identity is steady; null-safe (no-op before the term mounts).
+  //
+  //    ESCALATION (left OUT by default): if the live macOS canvas still shows STALE
+  //    glyphs at the match after refresh, add `webglRef.current?.clearTextureAtlas()`
+  //    BEFORE the refresh (the heavier WebGL glyph-cache reset). Kept out to avoid
+  //    needless atlas churn unless the 07-05 human-verify (Task 3) proves it is needed.
+  const requestSearchRefresh = useCallback((): void => {
+    const term = termRef.current;
+    if (!term) return;
+    term.refresh(0, term.rows - 1);
+  }, []);
 
   // ── Mount effect: create the xterm once, bind to the prop `id`, keep alive. ──
   // Keyed on `id` only (NOT `active`) so switching tabs never disposes the term.
@@ -558,12 +577,36 @@ export function SessionView({
         fit.fit();
         window.api.ptyResize(id, term.cols, term.rows);
       }
-      term.focus();
+      // GAP-07-G1: do NOT steal focus to the term while the search bar is open — that
+      // race was yanking focus back out of the search <input> right after it opened, so
+      // the user could not type without clicking. When the bar is open the input owns
+      // focus (SearchBar focuses it on the next animation frame); when it is closed the
+      // term takes focus as before.
+      if (!searchOpen) {
+        term.focus();
+      }
     } else {
       detachWebgl(webglRef.current);
       webglRef.current = null;
     }
-  }, [active, id]);
+  }, [active, id, searchOpen]);
+
+  // ── GAP-07-G5 refocus-on-close (07-05). When this active view's search bar closes
+  //    (searchOpen true → false), return focus to the terminal so typing reaches the
+  //    shell WITHOUT a re-click (07-UI-SPEC §1: "Close ... returns focus to the
+  //    terminal"). We track the previous searchOpen with a ref so this fires ONLY on the
+  //    falling edge — not on mount and not while the bar is open (so it never fights the
+  //    G1 input-focus above). Gated on `active` so a backgrounded view never grabs focus.
+  //    SC3 (closed bar does not interfere with PTY input) already PASSED; this is purely
+  //    the missing refocus convenience. ──
+  const prevSearchOpenRef = useRef(searchOpen);
+  useEffect(() => {
+    const wasOpen = prevSearchOpenRef.current;
+    prevSearchOpenRef.current = searchOpen;
+    if (wasOpen && !searchOpen && active) {
+      termRef.current?.focus();
+    }
+  }, [searchOpen, active]);
 
   // ── Scrollback live-apply effect (07-03 TERM-11 / D-05). When the global scrollback
   //    prop changes (the user committed a new value in Preferences), assign it to THIS
@@ -601,6 +644,7 @@ export function SessionView({
         open={searchOpen}
         searchAddon={searchReady ? searchRef.current : null}
         onClose={onCloseSearch}
+        onRequestRefresh={requestSearchRefresh}
       />
     </div>
   );

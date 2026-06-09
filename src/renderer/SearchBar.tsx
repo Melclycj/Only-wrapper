@@ -26,6 +26,14 @@ export interface SearchBarProps {
   // Null until the term mounts; the bar tolerates a null addon (renders, no-op search).
   searchAddon: SearchAddon | null;
   onClose: () => void;
+  /**
+   * GAP-07-G2/G3: flush the active xterm renderer (SessionView's requestSearchRefresh —
+   * term.refresh(0, rows-1)) after every search op so the freshly-registered match
+   * decorations AND the scrolled-to active match repaint on the WebGL canvas without a
+   * user-initiated scroll. Called after runSearch's findNext, handleNext, handlePrev, and
+   * the Aa recompute. Optional + null-safe so the bar still works before the term mounts.
+   */
+  onRequestRefresh?: () => void;
 }
 
 // Search-match decorations (07-UI-SPEC §Color, D-01). decorations MUST always be
@@ -52,12 +60,19 @@ export function SearchBar({
   open,
   searchAddon,
   onClose,
+  onRequestRefresh,
 }: SearchBarProps): React.JSX.Element | null {
   const [query, setQuery] = useState('');
   const [caseSensitive, setCaseSensitive] = useState(false);
   const [matchState, setMatchState] = useState<MatchState>(NO_MATCHES);
   const inputRef = useRef<HTMLInputElement>(null);
   const countId = useId();
+
+  // Latest-value ref for the refresh callback so the search/recompute callbacks can
+  // call it WITHOUT listing it in their dep arrays (it is a fresh closure on every
+  // SessionView render — depending on it would needlessly re-create runSearch etc.).
+  const onRequestRefreshRef = useRef(onRequestRefresh);
+  onRequestRefreshRef.current = onRequestRefresh;
 
   // The always-decorations search options (Pitfall 1). Memoized on caseSensitive so a
   // toggle produces a fresh opts object that re-runs the query.
@@ -79,6 +94,9 @@ export function SearchBar({
         return;
       }
       addon.findNext(term, searchOpts);
+      // GAP-07-G2/G3: flush the renderer so the new decorations + active match paint on
+      // the WebGL canvas immediately (no manual scroll). No-op-safe when undefined.
+      onRequestRefreshRef.current?.();
     },
     [searchAddon],
   );
@@ -107,14 +125,24 @@ export function SearchBar({
 
   // On open: focus the input and select any prior query so re-typing replaces it
   // (07-UI-SPEC §1). Re-run the prior query so its highlights/count come back.
+  //
+  // GAP-07-G1: the bare synchronous focus() did not STICK — it ran before the overlay
+  // was fully laid out / focusable, and SessionView's activate effect could re-steal
+  // focus to the term. Schedule the focus on the NEXT animation frame so it runs after
+  // xterm settles and the input is paintable; SessionView separately guards its
+  // term.focus() on !searchOpen so it no longer races this. select() keeps a prior query
+  // selected for replace.
   useEffect(() => {
     if (!open) return;
-    const el = inputRef.current;
-    if (el) {
-      el.focus();
-      el.select();
-    }
+    const raf = requestAnimationFrame(() => {
+      const el = inputRef.current;
+      if (el) {
+        el.focus();
+        el.select();
+      }
+    });
     runSearch(queryRef.current, optsRef.current);
+    return () => cancelAnimationFrame(raf);
   }, [open, runSearch]);
 
   // On close (open → false): clear decorations so a re-open starts clean and the
@@ -150,6 +178,8 @@ export function SearchBar({
           incremental: true,
           decorations: { ...MATCH_DECORATIONS },
         });
+        // GAP-07-G2/G3: repaint so the re-highlighted matches for the new case mode show.
+        onRequestRefreshRef.current?.();
       }
       return next;
     });
@@ -158,11 +188,13 @@ export function SearchBar({
   const handleNext = useCallback(() => {
     if (query.length === 0) return;
     searchAddon?.findNext(query, opts);
+    onRequestRefreshRef.current?.();
   }, [searchAddon, query, opts]);
 
   const handlePrev = useCallback(() => {
     if (query.length === 0) return;
     searchAddon?.findPrevious(query, opts);
+    onRequestRefreshRef.current?.();
   }, [searchAddon, query, opts]);
 
   // Input keydown: Enter → next, Shift+Enter → prev, Esc → close. ALWAYS
