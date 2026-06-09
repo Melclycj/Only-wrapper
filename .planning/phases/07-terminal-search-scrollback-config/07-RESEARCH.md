@@ -449,7 +449,7 @@ The existing path: renderer `window.api.persistUiState(ui)` → preload `ipcRend
 | TERM-11 / D-07 | scrollback survives reopen (persist → load round-trip) | unit | `npm run test:unit` → extend `src/main/__tests__/session-store.test.ts` / `store-schema.test.ts` | ❌ Wave 0 (extend) |
 | TERM-11 / SC2 + D-05 | Changing the setting applies to new sessions AND live terms (`term.options.scrollback = N`) | manual (macOS-first) — needs live xterm | macOS manual | ❌ Wave 0 manual checklist |
 | TERM-11 / D-06 | Lowering trims existing scrollback (accepted behavior) | manual | macOS manual | ❌ Wave 0 manual checklist |
-| security invariant | `EXPECTED_API_KEYS` unchanged (19) and preload surface exact | unit | `npm run test:unit` → existing `src/shared/__tests__/security.guard.test.ts` (must stay GREEN) | ✅ exists — must remain passing |
+| security invariant | `EXPECTED_API_KEYS` 19→20 (`getUiState` boot-read key added; search chord adds zero) and preload surface exact | unit | `npm run test:unit` → existing `src/shared/__tests__/security.guard.test.ts` (must stay GREEN at 20 keys) | ✅ exists — must remain passing |
 
 ### Sampling Rate
 - **Per task commit:** `npm run test:unit` (fast; covers the pure matchers, clamp, validators, schema, security guard).
@@ -475,7 +475,7 @@ The existing path: renderer `window.api.persistUiState(ui)` → preload `ipcRend
 |---------------|---------|-----------------|
 | V5 Input Validation | yes | `setUiState` validates `scrollback` is a finite number and clamps to 1000–50000 before any disk write (T-05-01 validate-in-main). A forged/out-of-range `persistUiState` payload clamps or no-ops — never writes arbitrary data. The `clampScrollback` helper is the single chokepoint. |
 | V12 File/Resource | yes | Renderer-never-touches-disk preserved — the scrollback pref persists ONLY through the existing validated main-side IPC; no new fs access in the renderer. |
-| V1/V14 Architecture (bridge discipline) | yes | `EXPECTED_API_KEYS` stays 19 (search adds zero; scrollback rides `persistUiState`). The `security.guard` test (asserts the exact contextBridge surface) MUST stay green — any new key requires the full atomic lockstep (api-types + window-config array + preload + guard). |
+| V1/V14 Architecture (bridge discipline) | yes | `EXPECTED_API_KEYS` 19→20 — search adds zero (rides `'session:switch'`); scrollback write rides `persistUiState` (no new key); the boot-read adds `getUiState` as the one new validated key (planner decision, see Open Questions Q1 RESOLVED). The `security.guard` test (asserts the exact contextBridge surface) MUST stay green at 20 — the new key went through the full atomic lockstep (api-types + window-config array + preload + guard). |
 | V2/V3/V4 Auth/Session/Access | no | Local single-user desktop app; no auth surface introduced. |
 | V6 Cryptography | no | No crypto introduced. |
 

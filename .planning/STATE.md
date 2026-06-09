@@ -4,8 +4,8 @@ milestone: v1.0
 milestone_name: milestone
 status: paused
 stopped_at: Phase 7 UI-SPEC approved
-last_updated: "2026-06-09T06:12:03.753Z"
-last_activity: 2026-06-09
+last_updated: "2026-06-09T06:52:50.305Z"
+last_activity: 2026-06-09 -- Phase 7 planning complete
 progress:
   total_phases: 10
   completed_phases: 7
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-06-03)
 Phase: 7
 Plan: Not started
 Status: Paused at the FOURTH end-of-phase human-verify (06.1-04 Task 3). Rounds 1-2 fixed earlier defects; the THIRD human-verify left three defects — A (Remove of a live session reverts Inactive→Working), B (dev window close loses an unsaved session on macOS), C (two Start buttons on the active dormant entry). Round 3 RED-reproduced and fixed all three: A → new PtyManager.removeLive() routes the configured-live Remove to dormant not_started AND broadcasts 'not_started' (stop() unchanged for restart-in-place; 'stopped' kept passing through renderer-side so a restart's transient stopped→running does not unmount the kept SessionView — SC3 safe); B → src/main/lifecycle.ts flush-on-window-close (+ store version bump to SCHEMA_VERSION); C → src/renderer/start-affordances.ts renders exactly one primary Start per dormant entry (active → IdleCard owns it, sidebar ▶ suppressed). Each locked with a RED→GREEN test. tsc clean, eslint src/ tests/ clean, 256 unit tests GREEN, 14/14 smoke spec files GREEN. nyquist_compliant stays false in 06-VALIDATION.md + 06.1-VALIDATION.md until the user re-verifies.
-Last activity: 2026-06-09
+Last activity: 2026-06-09 -- Phase 7 planning complete
 
 Progress: [███████████████████░] 95% (Phase 06.1 plans: 3.5/4 — 04 impl + gap-closure done, 2nd human-verify pending)
 
