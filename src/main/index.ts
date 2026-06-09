@@ -42,27 +42,6 @@ function syncStore(): void {
   // a dumb setter). listConfiguredSessions() filters listSessions() to
   // configured===true. The renderer still sees every session via the pty:list
   // (listSessions) path — this filter only governs what the store snapshot holds.
-  // TEMP STORE-DEBUG (2026-06-09, remove after R2 diagnosis): show the full snapshot
-  // vs the persist-filtered subset so we can see WHY a named/recipe session is/ isn't kept.
-  try {
-    const all = ptyManager.listSessions();
-    const kept = ptyManager.listConfiguredSessions();
-    // eslint-disable-next-line no-console
-    console.error(
-      '[STORE-DEBUG] syncStore: listSessions=%d %o | persisted=%d',
-      all.length,
-      all.map((s) => ({
-        name: s.name,
-        status: s.status,
-        configured: s.configured,
-        cmd: s.startupCommand,
-      })),
-      kept.length,
-    );
-  } catch (e) {
-    // eslint-disable-next-line no-console
-    console.error('[STORE-DEBUG] syncStore log failed:', e);
-  }
   store.setSessions(ptyManager.listConfiguredSessions());
   store.setUi(ptyManager.getUiState());
 }

@@ -962,16 +962,6 @@ export class PtyManager {
     // sets it back to false. A bare `+ New` session (built by create(), which never
     // sets configured) stays ephemeral until it is first edited here.
     target.configured = true;
-    // TEMP STORE-DEBUG (2026-06-09, remove after R2 diagnosis):
-    // eslint-disable-next-line no-console
-    console.error(
-      '[STORE-DEBUG] updateProfile: id=%s bucket=%s name=%s configured=%s cmd=%s',
-      id,
-      live ? 'live' : 'dormant',
-      target.name,
-      target.configured,
-      target.startupCommand,
-    );
     this.signalStore(); // edited profile fields changed → debounce-write (D-13)
   }
 
