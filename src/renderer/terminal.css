@@ -431,12 +431,121 @@ body {
   z-index: 1;
 }
 
-/* xterm fills its session-view container; the fit addon computes cols/rows here. */
+/* The xterm mount is an inner div that fills the .session-view wrapper, so the
+ * SearchBar overlay can be a DOM SIBLING of the terminal (NOT inside `.xterm`) and
+ * its keystrokes never leak to the PTY (07-02 SC3 / Pitfall 3). */
+.session-view .term-mount {
+  position: absolute;
+  inset: 0;
+}
+
+/* xterm fills its mount container; the fit addon computes cols/rows here. */
 .session-view .xterm,
 .session-view .xterm-viewport,
 .session-view .xterm-screen {
   width: 100%;
   height: 100%;
+}
+
+/* ── In-terminal search bar overlay (07-02 TERM-10 / SC1 / SC3 — 07-UI-SPEC §1) ──
+ * A small floating --surface card pinned top-right over the active session's
+ * terminal gutter. Statically positioned (top/right fixed) — it NEVER animates
+ * width/height/top/left (compositor-friendly rule). A sibling of .term-mount so its
+ * <input> events never reach the PTY. */
+.search-bar {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 5;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 6px 18px oklch(0.32 0.012 70 / 0.14);
+  font-family: 'Nunito', system-ui, sans-serif;
+}
+
+/* The query input renders in JetBrains Mono so the term reads as a terminal literal
+ * (it is matched against terminal content). Blue 2px focus ring (shipped affordance). */
+.search-input {
+  min-width: 200px;
+  padding: 6px 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  line-height: 1.4;
+  font-weight: 400;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-sizing: border-box;
+}
+
+.search-input:focus-visible {
+  outline: 2px solid oklch(0.62 0.14 248);
+  outline-offset: 1px;
+  border-color: oklch(0.62 0.14 248);
+}
+
+/* "N of M" count label — Nunito 12px/700, muted ink; the no-match variant is calm
+ * --ink-faint at regular weight (NOT red — an empty result is not an error). */
+.search-count {
+  min-width: 1ch;
+  padding: 0 2px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+.search-count-empty {
+  font-weight: 400;
+  color: var(--ink-faint);
+}
+
+/* Nav (‹ ›) / Aa / close (✕) — the shipped .row-control 24×24 radius-7 footprint
+ * verbatim so the cluster matches every other icon-button in the app. */
+.search-control {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ink-soft);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.search-control:hover {
+  background: var(--bg-sunk);
+  color: var(--ink);
+}
+
+.search-control:focus-visible {
+  outline: 2px solid oklch(0.62 0.14 248);
+  outline-offset: 1px;
+}
+
+/* Aa case-sensitivity ACTIVE state — the one new accent-on-chrome usage this phase
+ * (07-UI-SPEC §Color): blue engaged treatment mirroring .row-control-start. OFF is
+ * the neutral --ink-soft above. */
+.search-case-active,
+.search-case-active:hover {
+  border-color: oklch(0.62 0.14 248);
+  background: oklch(0.62 0.14 248 / 0.08);
+  color: oklch(0.62 0.14 248);
 }
 
 /* ── Confirm modal (D-03a destructive Close) — DESIGN.md tokens ──────────────── */
