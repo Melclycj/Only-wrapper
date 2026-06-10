@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
+status: Awaiting next milestone
 stopped_at: Completed 08-03-PLAN.md (Task 2 human-verify APPROVED; nyquist_compliant flipped true)
-last_updated: "2026-06-10T00:48:43.365Z"
-last_activity: 2026-06-10
+last_updated: "2026-06-10T05:10:29.841Z"
+last_activity: 2026-06-10 — Milestone v1.0 completed and archived
 progress:
   total_phases: 10
   completed_phases: 9
@@ -18,19 +18,17 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-06-03)
+See: .planning/PROJECT.md (updated 2026-06-10 — v1.0 milestone closed)
 
 **Core value:** Real terminal fidelity — `claude --rc`, `codex`, `vim`, `ssh`, REPLs all behave exactly like a native terminal inside the wrapper.
-**Current focus:** Phase 8 — cross-platform-packaging
+**Current focus:** Planning next milestone (v1.0 shipped 2026-06-10; run `/gsd-new-milestone` to scope v1.1). Carried debt in `## Deferred Items` below.
 
 ## Current Position
 
-Phase: 8
-Plan: Not started
-Status: 08-03 COMPLETE — Task 1 CI matrix (b85b434/015fb0d) + Task 2 canonical claude --rc human-verify APPROVED 2026-06-10 (SC2 LIVE-CONFIRMED on macOS); nyquist_compliant flipped true in 08-VALIDATION.md
-Last activity: 2026-06-10
-
-Progress: [████████████████░░░░] 80% (8/10 phases complete, 36/37 plans)
+Phase: Milestone v1.0 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-06-10 — Milestone v1.0 completed and archived
 
 ## Performance Metrics
 
@@ -188,12 +186,31 @@ None yet.
 
 ## Deferred Items
 
+Acknowledged and deferred at v1.0 milestone close on 2026-06-10 (option B — carry debt into v1.1). Full analysis in `.planning/v1.0-MILESTONE-AUDIT.md`. No critical blockers; all 27 requirements satisfied + 20/20 integration wired.
+
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
-| *(none)* | | | |
+| verification_gap | Phase 08 VERIFICATION.md — Windows real-hardware (installer run, shell dropdown, pre-1809 dialog) | REAL — needs Windows host | 2026-06-10 |
+| uat_gap | Phase 08 HUMAN-UAT.md — 3 pending Windows scenarios + port 5 POSIX smoke specs to Windows-shell-aware | REAL — needs Windows host | 2026-06-10 |
+| verification_gap | Phase 02 VERIFICATION.md [human_needed] | STALE — fidelity human-confirmed at Phase-3 03-03 checkpoint (PROJECT.md Validated); frontmatter not flipped | 2026-06-10 |
+| uat_gap | Phase 02 HUMAN-UAT.md [partial] — 5 scenarios | STALE — covered by Phase-3 fidelity sign-off | 2026-06-10 |
+| verification_gap | Phase 05 VERIFICATION.md [human_needed] | STALE — quit/reopen + reorder + shell dropdown confirmed (05-VALIDATION complete) | 2026-06-10 |
+| uat_gap | Phase 05 HUMAN-UAT.md [partial] — 3 scenarios | STALE — covered by Phase-5 sign-off | 2026-06-10 |
+| nyquist | Phases 01 / 02 / 03 — nyquist_compliant: false (draft) | Formal Nyquist flag never flipped; functional verification passed | 2026-06-10 |
+| todo | edit-modal does not prefill saved cwd + startup command (ui) | open | 2026-06-10 |
+| todo | add folder picker for working-directory selection (ui) | open | 2026-06-10 |
+| todo | improve Start control discoverability for live sessions (ui) | open | 2026-06-10 |
+| todo | address deferred code-review findings — Phase 05.1 (general) | open | 2026-06-10 |
+| todo | redo Phase 06.1 code-review criticals — re-hand-verify CR-01..04/WR-02 (general) | open (test-covered: 267 unit + 14/14 smoke) | 2026-06-10 |
+| integration_warn | TERM-05 Windows CMD/PowerShell: probe.unsupported notice not consumed by create() — generic timeout msg instead of "auto-run unsupported" | WARNING (safe; Windows-only UX) | 2026-06-10 |
+| quick_task | 260605-ki7 phase-4 sidebar polish [status: unknown] | FALSE-POSITIVE — completed 2026-06-05 (commit 0ea3d68, see Quick Tasks Completed) | 2026-06-10 |
 
 ## Session Continuity
 
 Last session: 2026-06-10T00:00:00.000Z
 Stopped at: Completed 08-03-PLAN.md (Task 2 human-verify APPROVED; nyquist_compliant flipped true)
 Resume file: None — Phase 8 plans all complete; next is the orchestrator's phase-verifier + phase.complete step
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone
