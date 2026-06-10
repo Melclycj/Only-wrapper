@@ -21,7 +21,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 5.1: TERM-05 startup-command auto-run** (INSERTED) - Auto-run a session's saved startup command into the PTY once the shell is ready, on start and restart (completed 2026-06-06)
 - [ ] **Phase 6: Robustness + Flow-Control Polish** - HIGH/LOW watermark backpressure, spawn/cwd error handling, waiting-for-input heuristic, alt-screen reset, and session header quick controls
 - [x] **Phase 7: Terminal Search + Scrollback Config** - Ctrl+F in-session search and configurable scrollback buffer size (global setting with sensible default) (completed 2026-06-09)
-- [ ] **Phase 8: Cross-Platform Packaging** - Full production distributables for Windows and macOS: ASAR unpack, @electron/rebuild in CI, Electron Forge makers, ConPTY version check, and notarization stubs
+- [x] **Phase 8: Cross-Platform Packaging** - Full production distributables for Windows and macOS: ASAR unpack, @electron/rebuild in CI, Electron Forge makers, ConPTY version check, and notarization stubs (completed 2026-06-10)
 
 ## Phase Details
 
@@ -308,7 +308,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. PTY spawn works correctly inside the ASAR-packaged app on both platforms — `spawn-helper` (macOS) and `conpty.node` (Windows) are found outside the ASAR archive
   4. On a Windows machine below build 1809, the app displays a clear "Windows 10 build 1809 or later required" error at startup instead of crashing silently
 
-**Plans:** 3/3 plans executed
+**Plans:** 3/3 plans complete
 **Mode:** mvp
 **UI hint:** no
 
@@ -338,4 +338,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 5.1 → 6 → 7 �
 | 5.1. TERM-05 startup-command auto-run (INSERTED) | 3/3 | Complete    | 2026-06-06 |
 | 6. Robustness + Flow-Control Polish | 3/4 | In Progress|  |
 | 7. Terminal Search + Scrollback Config | 5/5 | Complete    | 2026-06-09 |
-| 8. Cross-Platform Packaging | 2/3 | In Progress|  |
+| 8. Cross-Platform Packaging | 3/3 | Complete    | 2026-06-10 |

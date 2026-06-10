@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: 08-03 complete — canonical claude --rc human-verify APPROVED, nyquist_compliant flipped true (awaiting phase-verifier)
-last_updated: "2026-06-10T00:00:00.000Z"
-last_activity: 2026-06-10 -- 08-03 Task 2 human-verify APPROVED (SC2 LIVE-CONFIRMED on macOS); nyquist_compliant flipped true in 08-VALIDATION.md
+status: verifying
+stopped_at: Completed 08-03-PLAN.md (Task 2 human-verify APPROVED; nyquist_compliant flipped true)
+last_updated: "2026-06-10T00:48:43.365Z"
+last_activity: 2026-06-10
 progress:
   total_phases: 10
-  completed_phases: 8
+  completed_phases: 9
   total_plans: 37
   completed_plans: 36
-  percent: 80
+  percent: 90
 ---
 
 # Project State
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-06-03)
 
 ## Current Position
 
-Phase: 8 (cross-platform-packaging) — EXECUTING (all 3 plans complete; awaiting phase-verifier + phase.complete)
-Plan: 3 of 3
+Phase: 8
+Plan: Not started
 Status: 08-03 COMPLETE — Task 1 CI matrix (b85b434/015fb0d) + Task 2 canonical claude --rc human-verify APPROVED 2026-06-10 (SC2 LIVE-CONFIRMED on macOS); nyquist_compliant flipped true in 08-VALIDATION.md
-Last activity: 2026-06-10 -- 08-03 Task 2 human-verify APPROVED; PKG-01 satisfied; phase NOT yet marked verified (orchestrator owns that)
+Last activity: 2026-06-10
 
 Progress: [████████████████░░░░] 80% (8/10 phases complete, 36/37 plans)
 
@@ -36,7 +36,7 @@ Progress: [████████████████░░░░] 80% (8/
 
 **Velocity:**
 
-- Total plans completed: 31
+- Total plans completed: 34
 - Average duration: — min
 - Total execution time: 0 hours
 
@@ -52,6 +52,7 @@ Progress: [████████████████░░░░] 80% (8/
 | 05.1 | 3 | - | - |
 | 06.1 | 4 | - | - |
 | 07 | 5 | - | - |
+| 8 | 3 | - | - |
 
 **Recent Trend:**
 
