@@ -1,0 +1,1252 @@
+/* IDE layout (03-02): a left sidebar of sessions + a viewport stack of kept-alive
+ * terminal panes (DESIGN.md §"IdeLayout" — sidebar + terminal, basic tier). The
+ * gutter behind the terminal uses DESIGN.md --term-bg (oklch(0.255 0.018 264) →
+ * #1e232c) so it matches the xterm theme before the first frame paints. */
+
+:root {
+  /* DESIGN.md §"Design tokens" — the subset the basic sidebar consumes. */
+  --surface: #ffffff;
+  --bg-sunk: oklch(0.955 0.01 85);
+  --ink: oklch(0.32 0.012 70);
+  --ink-soft: oklch(0.5 0.012 70);
+  --ink-faint: oklch(0.66 0.01 75);
+  --line: oklch(0.91 0.008 80);
+  --line-soft: oklch(0.94 0.006 80);
+  --radius: 18px;
+  --term-bg: #1e232c;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--term-bg);
+  overflow: hidden;
+}
+
+/* ── IDE layout: sidebar (left rail) + viewport stack (terminals) ───────────── */
+
+.ide-layout {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  height: 100%;
+}
+
+/* Left rail of sessions — DESIGN.md tokens, Nunito UI font, rounded rows. */
+.sidebar {
+  flex: 0 0 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px;
+  box-sizing: border-box;
+  background: var(--surface);
+  border-right: 1px solid var(--line);
+  font-family: 'Nunito', system-ui, sans-serif;
+  color: var(--ink);
+  overflow-y: auto;
+}
+
+/* D-01 two-bucket sections: a labeled Working Area + Inactive List. Each is a thin
+ * vertical group; the label is a small uppercase caption above the group's rows. */
+.sidebar-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sidebar-section + .sidebar-section {
+  margin-top: 10px;
+}
+
+.sidebar-section-label {
+  padding: 2px 10px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-faint, var(--ink-soft));
+  user-select: none;
+}
+
+/* Collapsed icon-only rail (D-10): the section labels hide along with row names/badges. */
+.sidebar.collapsed .sidebar-section-label {
+  display: none;
+}
+
+.sidebar.collapsed .sidebar-section + .sidebar-section {
+  margin-top: 6px;
+}
+
+.sidebar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ink);
+  font-size: 14px;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sidebar-row:hover {
+  background: var(--bg-sunk);
+}
+
+.sidebar-row.active {
+  background: var(--bg-sunk);
+  border-color: var(--line);
+}
+
+.sidebar-row .row-icon {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  border-radius: 6px;
+}
+
+.sidebar-row .row-name {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Status badge — dot + label colored from STATUS_STYLE (status-colors.ts). The
+ * accent is supplied inline as a CSS custom prop (--accent) per row. */
+.status-badge {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--ink-soft);
+}
+
+.status-badge .status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+/* Per-row quick controls (D-03a): a destructive Close on every row, plus a Restart
+ * control once a session is no longer running. Revealed on row hover/active to keep
+ * the basic list calm (DESIGN.md §"Session header / quick controls"); always present
+ * in the DOM so the E2E driver can address data-testid="close-session"/"restart-session". */
+.sidebar-row .row-controls {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 4px;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.sidebar-row:hover .row-controls,
+.sidebar-row.active .row-controls {
+  opacity: 1;
+}
+
+/* Compact square monochrome icon buttons (Restart ↻ · Edit ✎ · Delete ✕): the glyph
+ * reads as an icon (transparent border, no chip), inheriting currentColor from the
+ * muted --ink-soft so the cluster stays calm until hovered. */
+.sidebar-row .row-control {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ink-soft);
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.sidebar-row .row-control:hover {
+  background: var(--bg-sunk);
+  color: var(--ink);
+}
+
+/* The destructive Close control reads in the derived error-red on hover so its
+ * intent is unmistakable (consistent with the status-colors error ramp). */
+.sidebar-row .row-control-close:hover {
+  border-color: oklch(0.58 0.16 25);
+  background: oklch(0.58 0.16 25 / 0.08);
+  color: oklch(0.58 0.16 25);
+}
+
+/* The Start (▶) control reads in the running-blue on hover/focus so it telegraphs
+ * "this starts the session" — the primary go affordance, distinct from the neutral
+ * Edit and the red Close (UI-SPEC §2). Mirrors the .row-control-close pattern. */
+.sidebar-row .row-control-start:hover {
+  border-color: oklch(0.62 0.14 248);
+  background: oklch(0.62 0.14 248 / 0.08);
+  color: oklch(0.62 0.14 248);
+}
+
+.sidebar-row .row-control-start:focus-visible {
+  outline: 2px solid oklch(0.62 0.14 248);
+  outline-offset: 1px;
+}
+
+/* Dormant-vs-live language (D-11 / UI-SPEC §5): a dormant (not_started) row dims its
+ * icon + name slightly so it reads as present-but-asleep — NOT disabled, NOT a
+ * different layout/border. The slate "Idle" badge (via STATUS_STYLE) carries the rest. */
+.sidebar-row[data-dormant] .row-icon,
+.sidebar-row[data-dormant] .row-name {
+  opacity: 0.85;
+}
+
+/* Drag-to-reorder (UI-SPEC §5 / D-08): a ⠿ handle glyph telegraphs draggability. It is
+ * hidden by default and fades in on row hover (like .row-controls) in --ink-faint so the
+ * resting list stays calm. The WHOLE row is the drag surface (dnd-kit listeners are on
+ * the row container with a pointer activation distance) so cursor: grab reads across the
+ * row; the handle is the visual cue. */
+.sidebar-row .row-drag-handle {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 12px;
+  margin-left: -2px;
+  color: var(--ink-faint);
+  font-size: 13px;
+  line-height: 1;
+  cursor: grab;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+  user-select: none;
+}
+
+.sidebar-row:hover .row-drag-handle,
+.sidebar-row.active .row-drag-handle {
+  opacity: 1;
+}
+
+.sidebar-row.dragging .row-drag-handle,
+.sidebar-row.dragging {
+  cursor: grabbing;
+}
+
+/* Dragging state (UI-SPEC §5): the lifted row gets a soft opacity, the blue focus-ring
+ * outline (the consistent focus affordance color), and a soft shadow matching the
+ * rail-tooltip. dnd-kit drives the transform/transition inline; this only styles the
+ * lifted appearance. */
+.sidebar-row.dragging {
+  opacity: 0.9;
+  outline: 2px solid oklch(0.62 0.14 248);
+  outline-offset: -1px;
+  box-shadow: 0 6px 18px oklch(0.32 0.012 70 / 0.14);
+  background: var(--bg-sunk);
+  z-index: 1;
+}
+
+/* The drag handle is hidden in the collapsed rail along with the rest of the row chrome
+ * (the collapsed rail still reflects saved order — D-08 — but expanded-mode dragging is
+ * the required path; full collapsed-rail DnD is optional). */
+.sidebar.collapsed .row-drag-handle {
+  display: none;
+}
+
+.add-session {
+  margin-top: 6px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px dashed var(--line);
+  background: transparent;
+  color: var(--ink-soft);
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.add-session:hover {
+  background: var(--bg-sunk);
+  color: var(--ink);
+}
+
+/* ── Sidebar collapse / icon-only rail (D-10/D-11, NAV-01/NAV-02) ────────────── */
+
+/* The pinned-control row (07-03, TERM-11 / D-08): holds the collapse chevron + the
+ * Preferences gear at the top of the nav. Right-aligned in expanded mode (sits with the
+ * chevron at the rail's trailing edge); centered when the rail collapses so both controls
+ * stay legible in the icon-only width. */
+.sidebar-pinned {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-self: flex-end;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 2px;
+}
+
+.sidebar.collapsed .sidebar-pinned {
+  align-self: center;
+}
+
+/* The pinned chevron toggle (D-10): folds the rail to icon-only and back. Reads in the
+ * muted ink, rounds like a row, warms on hover. */
+.sidebar-collapse,
+.sidebar-prefs {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ink-soft);
+  font-family: inherit;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.sidebar-collapse:hover,
+.sidebar-prefs:hover {
+  background: var(--bg-sunk);
+  color: var(--ink);
+}
+
+.sidebar-collapse:focus-visible,
+.sidebar-prefs:focus-visible {
+  outline: 2px solid oklch(0.62 0.14 248);
+  outline-offset: 1px;
+}
+
+/* Collapsed-rail status dot (NAV-01): hidden by default (the full status badge shows
+ * in expanded mode); revealed only when collapsed so running/stopped stays legible in
+ * the icon-only rail. Positioned at the bottom-right of the centered icon. */
+.collapsed-status-dot {
+  display: none;
+}
+
+/* The custom rail tooltip (D-11 / RESEARCH Pattern 6): hidden by default; shown on
+ * row hover/focus only when collapsed. Warm --surface card, --line border, Nunito. */
+.rail-tooltip {
+  display: none;
+}
+
+/* ── Collapsed state: fold to a ~52px icon-only rail ─────────────────────────── */
+
+/* Anti-Pattern guard: collapse touches ONLY `.sidebar` — `.session-view` /
+ * `.viewport-stack` visibility is untouched so the keep-alive panes stay measurable. */
+.sidebar.collapsed {
+  flex-basis: 52px;
+  align-items: center;
+}
+
+/* Hide the per-row text + badge + controls in the rail — the icon (emoji or the
+ * color-badge-with-initial) + the status dot + the tooltip carry identity instead. */
+.sidebar.collapsed .row-name,
+.sidebar.collapsed .status-badge,
+.sidebar.collapsed .row-controls {
+  display: none;
+}
+
+/* Center the icon in the narrow rail; position:relative anchors the dot + tooltip. */
+.sidebar.collapsed .sidebar-row {
+  justify-content: center;
+  position: relative;
+  padding: 8px;
+}
+
+/* Reveal the status dot at the icon's bottom-right corner when collapsed. */
+.sidebar.collapsed .collapsed-status-dot {
+  display: block;
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--accent);
+  /* A soft ring against the icon so the dot stays distinct on any swatch color. */
+  box-shadow: 0 0 0 2px var(--surface);
+}
+
+/* Reveal the tooltip on row hover/focus when collapsed (instant, on-brand). */
+.sidebar.collapsed .sidebar-row:hover .rail-tooltip,
+.sidebar.collapsed .sidebar-row:focus-visible .rail-tooltip,
+.sidebar.collapsed .sidebar-row:focus-within .rail-tooltip {
+  display: block;
+  position: absolute;
+  left: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 30;
+  white-space: nowrap;
+  padding: 5px 10px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: 'Nunito', system-ui, sans-serif;
+  font-size: 12px;
+  box-shadow: 0 6px 18px oklch(0.32 0.012 70 / 0.14);
+  pointer-events: none;
+}
+
+/* The terminal area — fills the rest of the IDE row as a flex COLUMN so the slim
+ * identity header (D-05 / IDENT-03) sits above the viewport stack (RESEARCH Q2). */
+.terminal-area {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* The viewport stack — fills the remaining column height below the identity header;
+ * position:relative so the absolute SessionView panes (inset:0) stack inside it. */
+.viewport-stack {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  background: var(--term-bg);
+}
+
+/* Hidden-pane rule (RESEARCH Pattern 8): hide with visibility/off-screen, never
+ * with the display property set to none — fit()/proposeDimensions() read
+ * non-numeric geometry on a non-rendered element and silently no-op. All panes
+ * stay geometrically measurable so a hidden session's buffer + fit() keep
+ * working (SC1/SC2). */
+.session-view {
+  position: absolute;
+  inset: 0;
+  background: var(--term-bg);
+}
+
+.session-view[hidden-pane] {
+  visibility: hidden;
+  z-index: 0;
+}
+
+.session-view.active {
+  visibility: visible;
+  z-index: 1;
+}
+
+/* The xterm mount is an inner div that fills the .session-view wrapper, so the
+ * SearchBar overlay can be a DOM SIBLING of the terminal (NOT inside `.xterm`) and
+ * its keystrokes never leak to the PTY (07-02 SC3 / Pitfall 3). */
+.session-view .term-mount {
+  position: absolute;
+  inset: 0;
+}
+
+/* xterm fills its mount container; the fit addon computes cols/rows here. */
+.session-view .xterm,
+.session-view .xterm-viewport,
+.session-view .xterm-screen {
+  width: 100%;
+  height: 100%;
+}
+
+/* ── In-terminal search bar overlay (07-02 TERM-10 / SC1 / SC3 — 07-UI-SPEC §1) ──
+ * A small floating --surface card pinned top-right over the active session's
+ * terminal gutter. Statically positioned (top/right fixed) — it NEVER animates
+ * width/height/top/left (compositor-friendly rule). A sibling of .term-mount so its
+ * <input> events never reach the PTY. */
+.search-bar {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 5;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 6px 18px oklch(0.32 0.012 70 / 0.14);
+  font-family: 'Nunito', system-ui, sans-serif;
+}
+
+/* The query input renders in JetBrains Mono so the term reads as a terminal literal
+ * (it is matched against terminal content). Blue 2px focus ring (shipped affordance). */
+.search-input {
+  min-width: 200px;
+  padding: 6px 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  line-height: 1.4;
+  font-weight: 400;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-sizing: border-box;
+}
+
+.search-input:focus-visible {
+  outline: 2px solid oklch(0.62 0.14 248);
+  outline-offset: 1px;
+  border-color: oklch(0.62 0.14 248);
+}
+
+/* "N of M" count label — Nunito 12px/700, muted ink; the no-match variant is calm
+ * --ink-faint at regular weight (NOT red — an empty result is not an error). */
+.search-count {
+  min-width: 1ch;
+  padding: 0 2px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+.search-count-empty {
+  font-weight: 400;
+  color: var(--ink-faint);
+}
+
+/* Nav (‹ ›) / Aa / close (✕) — the shipped .row-control 24×24 radius-7 footprint
+ * verbatim so the cluster matches every other icon-button in the app. */
+.search-control {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ink-soft);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.search-control:hover {
+  background: var(--bg-sunk);
+  color: var(--ink);
+}
+
+.search-control:focus-visible {
+  outline: 2px solid oklch(0.62 0.14 248);
+  outline-offset: 1px;
+}
+
+/* Aa case-sensitivity ACTIVE state — the one new accent-on-chrome usage this phase
+ * (07-UI-SPEC §Color): blue engaged treatment mirroring .row-control-start. OFF is
+ * the neutral --ink-soft above. */
+.search-case-active,
+.search-case-active:hover {
+  border-color: oklch(0.62 0.14 248);
+  background: oklch(0.62 0.14 248 / 0.08);
+  color: oklch(0.62 0.14 248);
+}
+
+/* ── Confirm modal (D-03a destructive Close) — DESIGN.md tokens ──────────────── */
+
+/* Scrim: dims the whole app; click = cancel (ConfirmModal wires the handler). */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Warm-dark scrim — not pure black, in keeping with the cozy aesthetic. */
+  background: oklch(0.255 0.018 264 / 0.45);
+}
+
+/* The card: warm --surface, generous --radius (18px), --line border, Nunito. */
+.modal-dialog {
+  width: min(420px, calc(100vw - 48px));
+  box-sizing: border-box;
+  padding: 22px 24px 18px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: 0 18px 48px oklch(0.255 0.018 264 / 0.28);
+  font-family: 'Nunito', system-ui, sans-serif;
+  color: var(--ink);
+}
+
+.modal-title {
+  margin: 0 0 8px;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.modal-body {
+  margin: 0 0 20px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.modal-btn {
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--line);
+}
+
+/* Cancel — neutral. */
+.modal-btn-cancel {
+  background: transparent;
+  color: var(--ink-soft);
+}
+
+.modal-btn-cancel:hover {
+  background: var(--bg-sunk);
+  color: var(--ink);
+}
+
+/* Confirm — the destructive derived red ramp (oklch(0.58 0.16 25), error language). */
+.modal-btn-confirm {
+  background: oklch(0.58 0.16 25);
+  border-color: oklch(0.58 0.16 25);
+  color: #ffffff;
+}
+
+.modal-btn-confirm:hover {
+  background: oklch(0.54 0.16 25);
+  border-color: oklch(0.54 0.16 25);
+}
+
+.modal-btn-confirm:focus-visible {
+  outline: 2px solid oklch(0.58 0.16 25);
+  outline-offset: 2px;
+}
+
+/* ── Color-badge icon (D-09) — a filled tile with the session-name initial ────── */
+
+/* The color kind renders the colored box WITH a centered uppercased initial so it
+ * identifies the session in the collapsed rail (not a blank swatch). Keep the 20x20
+ * row-icon footprint + line-height:1 + centering to avoid emoji jitter (Pitfall 6). */
+.row-icon-color {
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  text-shadow: 0 1px 1px oklch(0.255 0.018 264 / 0.35);
+}
+
+/* ── Right-click context menu (D-03) — DESIGN.md tokens ───────────────────────── */
+
+/* Positioned absolutely at the cursor (left/top set inline from clientX/clientY).
+ * Warm --surface card, --line border, soft shadow, Nunito — matches the modal card. */
+.context-menu {
+  position: fixed;
+  z-index: 200;
+  min-width: 140px;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px oklch(0.255 0.018 264 / 0.22);
+  font-family: 'Nunito', system-ui, sans-serif;
+}
+
+.context-menu-item {
+  display: block;
+  width: 100%;
+  padding: 7px 12px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.context-menu-item:hover,
+.context-menu-item:focus-visible {
+  background: var(--bg-sunk);
+  outline: none;
+}
+
+/* ── Icon picker (D-07/D-08/D-09) — curated grid + free-text + color swatches ──── */
+
+.icon-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.icon-picker-preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.icon-picker-preview .row-icon {
+  width: 28px;
+  height: 28px;
+  font-size: 18px;
+}
+
+.emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 4px;
+}
+
+.emoji-cell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.emoji-cell:hover {
+  background: var(--bg-sunk);
+}
+
+.emoji-cell.selected {
+  border-color: var(--line);
+  background: var(--bg-sunk);
+}
+
+.emoji-input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.color-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.color-swatch {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.color-swatch.selected {
+  border-color: var(--ink);
+}
+
+/* ── Identity header (D-05 / IDENT-03) — slim active-session bar, identity only ── */
+
+/* Sits above the .viewport-stack inside the flex-column .terminal-area. Reuses the
+ * .row-icon / .row-name / .status-badge markup so identity reads consistently. */
+.identity-header {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  box-sizing: border-box;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  font-family: 'Nunito', system-ui, sans-serif;
+  color: var(--ink);
+}
+
+.identity-header .row-name {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+/* ── Header control cluster (SC5 / TERM-12 — D-11) ──────────────────────────────
+ * Right-aligned cluster after the badge: Clear (always) · Restart (running) /
+ * Start ▶ (not running). margin-left:auto pins it to the far edge; gap 4px matches
+ * the Sidebar .row-controls cluster. Unlike the sidebar cluster these controls are
+ * ALWAYS visible (the header is the always-present active-session control surface,
+ * not a hover-reveal row). */
+.identity-header .header-controls {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+/* Clear is a text-labelled button (discoverable in the header where space allows —
+ * UI-SPEC §Interaction 3): 8px 16px pad, radius 10px, 13px/700, neutral --ink-soft
+ * warming to --ink/--bg-sunk on hover. Matches the .modal-btn footprint. */
+.identity-header .header-control-clear {
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ink-soft);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.identity-header .header-control-clear:hover {
+  background: var(--bg-sunk);
+  color: var(--ink);
+}
+
+.identity-header .header-control-clear:focus-visible {
+  outline: 2px solid oklch(0.62 0.14 248);
+  outline-offset: 1px;
+}
+
+/* The Restart (↻) / Start (▶) glyph buttons reuse the Sidebar .row-control footprint
+ * (24×24, radius 7px, neutral --ink-soft). The Sidebar rules are scoped to
+ * .sidebar-row, so the header re-states the same shape here. */
+.identity-header .row-control {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ink-soft);
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.identity-header .row-control:hover {
+  background: var(--bg-sunk);
+  color: var(--ink);
+}
+
+.identity-header .row-control:focus-visible {
+  outline: 2px solid oklch(0.62 0.14 248);
+  outline-offset: 1px;
+}
+
+/* Start (▶) reads in the running-blue on hover/focus — the primary "go" affordance
+ * (UI-SPEC §Color), mirroring the Sidebar .row-control-start treatment. */
+.identity-header .row-control-start:hover {
+  border-color: oklch(0.62 0.14 248);
+  background: oklch(0.62 0.14 248 / 0.08);
+  color: oklch(0.62 0.14 248);
+}
+
+.identity-header .row-control-start:focus-visible {
+  outline: 2px solid oklch(0.62 0.14 248);
+  outline-offset: 1px;
+}
+
+/* ── Preferences modal (07-03, TERM-11 / D-08) — extensible settings stack ─────── */
+
+/* The Preferences body: a vertical list of .edit-field setting groups (one now —
+ * scrollback). Reuses the shipped .edit-field gap/margins verbatim; adding a future
+ * setting = appending another .edit-field group, no layout rewrite (D-08). No new
+ * modal-shell CSS — the dialog reuses the shipped .modal-* classes. The helper line
+ * (.idle-card-helper) sits below the input in --ink-faint; a slim top margin keeps it
+ * from crowding the modal-actions row when it wraps to two lines. */
+.prefs-body {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 8px;
+}
+
+/* ── Session edit form (D-04) — fields + the "Applies on restart" group ───────── */
+
+.modal-dialog-edit {
+  width: min(460px, calc(100vw - 48px));
+  max-height: calc(100vh - 64px);
+  overflow-y: auto;
+}
+
+.edit-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.edit-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.edit-input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.edit-input:focus-visible {
+  outline: 2px solid oklch(0.62 0.14 248);
+  outline-offset: 1px;
+}
+
+/* cwd field + Browse… button on one row (UI-SPEC §Interaction 4). The input flexes;
+ * the button sits inline-end at the same height. */
+.edit-cwd-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.edit-cwd-row .edit-input {
+  flex: 1 1 auto;
+  width: auto;
+}
+
+/* Browse… — neutral secondary button matching the .edit-input height/treatment. */
+.edit-browse-button {
+  flex: 0 0 auto;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink-soft);
+  font-family: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.edit-browse-button:hover {
+  background: var(--bg-sunk);
+  color: var(--ink);
+}
+
+.edit-browse-button:focus-visible {
+  outline: 2px solid oklch(0.62 0.14 248);
+  outline-offset: 1px;
+}
+
+/* The shell dropdown (D-05/SC4) — a native <select> styled to match .edit-input
+ * exactly (the field replaced the old free-text shell input; no arbitrary path can
+ * be typed). Same box-sizing/padding/border/radius/surface/ink/Nunito + the SAME
+ * blue :focus-visible outline. */
+.edit-select {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.edit-select:focus-visible {
+  outline: 2px solid oklch(0.62 0.14 248);
+  outline-offset: 1px;
+}
+
+/* The restart-applied fields are visually grouped under their hint so the user knows
+ * cwd/shell/startup take effect on the next restart (D-02). */
+.edit-restart-group {
+  margin-top: 4px;
+  padding: 12px 12px 2px;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  background: var(--bg-sunk);
+}
+
+.applies-on-restart-hint {
+  margin: 0 0 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* ── Idle card (D-04) — the dormant-session placeholder shown in .terminal-area when
+ * the active session is not_started. Floats on the dark --term-bg gutter so the
+ * terminal "lives here, but it's asleep". Tokens only — no new colors. ──────────── */
+
+/* The stage fills the viewport-stack region and centers the card on the gutter. */
+.idle-card-stage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  box-sizing: border-box;
+  background: var(--term-bg);
+}
+
+.idle-card {
+  width: min(440px, calc(100% - 48px));
+  box-sizing: border-box;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: 0 18px 48px oklch(0.255 0.018 264 / 0.28);
+  font-family: 'Nunito', system-ui, sans-serif;
+  color: var(--ink);
+}
+
+/* Identity region: icon tile → name → "Idle" status badge (reuses .status-badge). */
+.idle-card-identity {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.idle-card-identity .row-icon {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.idle-card-name {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--ink);
+}
+
+/* Config region: a recessed inset block of read-only label+value pairs. */
+.idle-card-config {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 12px;
+  background: var(--bg-sunk);
+}
+
+.idle-card-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.idle-card-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+.idle-card-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--ink);
+  word-break: break-all;
+}
+
+/* The startup-command "prompt" glyph — visually inert, a TERM-05 boundary cue. */
+.idle-card-prompt {
+  color: var(--ink-faint);
+}
+
+/* "Saved for reference — not run automatically…" helper under the startup command. */
+.idle-card-helper {
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--ink-faint);
+}
+
+/* Empty-startup placeholder. */
+.idle-card-empty {
+  font-style: italic;
+  color: var(--ink-faint);
+}
+
+/* Error-after-start inline line (red ramp — matches the error status accent). */
+.idle-card-error {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: oklch(0.58 0.16 25);
+}
+
+/* In-card Start button: blue outline/text → fills blue on hover ("go live"). */
+.idle-start-button {
+  align-self: stretch;
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: 1px solid oklch(0.62 0.14 248);
+  background: var(--surface);
+  color: oklch(0.62 0.14 248);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.idle-start-button:hover {
+  background: oklch(0.62 0.14 248);
+  color: #ffffff;
+}
+
+.idle-start-button:focus-visible {
+  outline: 2px solid oklch(0.62 0.14 248);
+  outline-offset: 2px;
+}
+
+/* SC2 error-card action row (D-04): Edit (neutral) + Retry (primary blue), gap 8px. */
+.idle-card-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.idle-card-actions .idle-start-button {
+  flex: 1 1 0;
+  align-self: auto;
+}
+
+/* Error-card Edit: neutral secondary button (matches the .edit-input neutral treatment),
+ * warms toward --bg-sunk on hover. Not the primary "go" affordance (that is Retry). */
+.idle-card-edit-button {
+  flex: 1 1 0;
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-soft);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.idle-card-edit-button:hover {
+  background: var(--bg-sunk);
+  color: var(--ink);
+}
+
+.idle-card-edit-button:focus-visible {
+  outline: 2px solid oklch(0.62 0.14 248);
+  outline-offset: 2px;
+}
+
+/* ── Welcome / empty state (D-10) — shown when there are zero sessions. Centered on
+ * the warm --bg-sunk (a "no terminal yet" state, NOT the dark gutter). ─────────── */
+.welcome-state {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 32px;
+  padding: 48px;
+  box-sizing: border-box;
+  background: var(--bg-sunk);
+  font-family: 'Nunito', system-ui, sans-serif;
+  text-align: center;
+}
+
+.welcome-glyph {
+  font-size: 48px;
+  line-height: 1;
+}
+
+.welcome-heading {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--ink);
+}
+
+.welcome-body {
+  margin: 0;
+  max-width: 360px;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+/* The single high-emphasis action in this state: a filled blue primary CTA. */
+.welcome-cta {
+  padding: 10px 20px;
+  border-radius: 10px;
+  border: none;
+  background: oklch(0.62 0.14 248);
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.welcome-cta:hover {
+  background: oklch(0.58 0.14 248);
+}
+
+.welcome-cta:focus-visible {
+  outline: 2px solid oklch(0.62 0.14 248);
+  outline-offset: 2px;
+}

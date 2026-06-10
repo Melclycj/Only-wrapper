@@ -1,0 +1,71 @@
+{"ms":6,"ev":"spawn","cmd":["bash","/Users/jerry/Project/Just-wrapper/.planning/spikes/001-frame-stability-mechanism/synthetic.sh"],"cols":80,"rows":30,"interactive":false}
+{"ms":108,"ev":"tick","hash":"25e9a32f","changed":true}
+{"ms":108,"ev":"state","state":"WORKING"}
+{"ms":209,"ev":"tick","hash":"d63e745d","changed":true}
+{"ms":309,"ev":"tick","hash":"38c67580","changed":true}
+{"ms":410,"ev":"tick","hash":"779940a0","changed":true}
+{"ms":512,"ev":"tick","hash":"25e9a32f","changed":true}
+{"ms":613,"ev":"tick","hash":"d63e745d","changed":true}
+{"ms":714,"ev":"tick","hash":"38c67580","changed":true}
+{"ms":814,"ev":"tick","hash":"779940a0","changed":true}
+{"ms":915,"ev":"tick","hash":"25e9a32f","changed":true}
+{"ms":1015,"ev":"tick","hash":"d09b2988","changed":true}
+{"ms":1117,"ev":"tick","hash":"87d944c5","changed":true}
+{"ms":1224,"ev":"tick","hash":"490679a5","changed":true}
+{"ms":1325,"ev":"tick","hash":"490679a5","changed":false}
+{"ms":1425,"ev":"tick","hash":"a6d855f2","changed":true}
+{"ms":1527,"ev":"tick","hash":"d09b2988","changed":true}
+{"ms":1628,"ev":"tick","hash":"87d944c5","changed":true}
+{"ms":1729,"ev":"tick","hash":"490679a5","changed":true}
+{"ms":1830,"ev":"tick","hash":"a6d855f2","changed":true}
+{"ms":1931,"ev":"tick","hash":"d09b2988","changed":true}
+{"ms":2032,"ev":"tick","hash":"87d944c5","changed":true}
+{"ms":2133,"ev":"tick","hash":"212c9e6e","changed":true}
+{"ms":2234,"ev":"tick","hash":"e3f867c1","changed":true}
+{"ms":2334,"ev":"tick","hash":"33a39693","changed":true}
+{"ms":2435,"ev":"tick","hash":"5fff698e","changed":true}
+{"ms":2535,"ev":"tick","hash":"212c9e6e","changed":true}
+{"ms":2635,"ev":"tick","hash":"212c9e6e","changed":false}
+{"ms":2736,"ev":"tick","hash":"e3f867c1","changed":true}
+{"ms":2836,"ev":"tick","hash":"f06f5475","changed":true}
+{"ms":2937,"ev":"tick","hash":"f06f5475","changed":false}
+{"ms":3037,"ev":"tick","hash":"f06f5475","changed":false}
+{"ms":3139,"ev":"tick","hash":"f06f5475","changed":false}
+{"ms":3239,"ev":"tick","hash":"f06f5475","changed":false}
+{"ms":3240,"ev":"settle","threshold":400,"stableMs":403,"last":"Esc to cancel · Tab to amend · ctrl+e to explain","verdict":"WAITING","sig":{"trailing_question":false,"yn_bracket":false,"arrow_marker":true,"numbered_menu":true,"claude_footer":true,"shell_prompt":false,"password_prompt":false}}
+{"ms":3340,"ev":"tick","hash":"f06f5475","changed":false}
+{"ms":3441,"ev":"tick","hash":"f06f5475","changed":false}
+{"ms":3442,"ev":"settle","threshold":600,"stableMs":605,"last":"Esc to cancel · Tab to amend · ctrl+e to explain","verdict":"WAITING","sig":{"trailing_question":false,"yn_bracket":false,"arrow_marker":true,"numbered_menu":true,"claude_footer":true,"shell_prompt":false,"password_prompt":false}}
+{"ms":3542,"ev":"tick","hash":"f06f5475","changed":false}
+{"ms":3644,"ev":"tick","hash":"f06f5475","changed":false}
+{"ms":3644,"ev":"settle","threshold":800,"stableMs":808,"last":"Esc to cancel · Tab to amend · ctrl+e to explain","verdict":"WAITING","sig":{"trailing_question":false,"yn_bracket":false,"arrow_marker":true,"numbered_menu":true,"claude_footer":true,"shell_prompt":false,"password_prompt":false}}
+{"ms":3744,"ev":"tick","hash":"f06f5475","changed":false}
+{"ms":3846,"ev":"tick","hash":"f06f5475","changed":false}
+{"ms":3846,"ev":"settle","threshold":1000,"stableMs":1010,"last":"Esc to cancel · Tab to amend · ctrl+e to explain","verdict":"WAITING","sig":{"trailing_question":false,"yn_bracket":false,"arrow_marker":true,"numbered_menu":true,"claude_footer":true,"shell_prompt":false,"password_prompt":false}}
+{"ms":3946,"ev":"tick","hash":"f06f5475","changed":false}
+{"ms":4048,"ev":"tick","hash":"f06f5475","changed":false}
+{"ms":4149,"ev":"tick","hash":"f06f5475","changed":false}
+{"ms":4249,"ev":"tick","hash":"f06f5475","changed":false}
+{"ms":4351,"ev":"tick","hash":"f06f5475","changed":false}
+{"ms":4451,"ev":"tick","hash":"f06f5475","changed":false}
+{"ms":4552,"ev":"tick","hash":"f06f5475","changed":false}
+{"ms":4652,"ev":"tick","hash":"180ccdc7","changed":true}
+{"ms":4652,"ev":"state","state":"WORKING"}
+{"ms":4754,"ev":"tick","hash":"180ccdc7","changed":false}
+{"ms":4855,"ev":"tick","hash":"180ccdc7","changed":false}
+{"ms":4956,"ev":"tick","hash":"180ccdc7","changed":false}
+{"ms":5057,"ev":"tick","hash":"180ccdc7","changed":false}
+{"ms":5057,"ev":"settle","threshold":400,"stableMs":405,"last":"(base) user@host ~/project % ","verdict":"FREE(shell)","sig":{"trailing_question":false,"yn_bracket":false,"arrow_marker":true,"numbered_menu":true,"claude_footer":true,"shell_prompt":true,"password_prompt":false}}
+{"ms":5157,"ev":"tick","hash":"180ccdc7","changed":false}
+{"ms":5259,"ev":"tick","hash":"180ccdc7","changed":false}
+{"ms":5259,"ev":"settle","threshold":600,"stableMs":607,"last":"(base) user@host ~/project % ","verdict":"FREE(shell)","sig":{"trailing_question":false,"yn_bracket":false,"arrow_marker":true,"numbered_menu":true,"claude_footer":true,"shell_prompt":true,"password_prompt":false}}
+{"ms":5360,"ev":"tick","hash":"180ccdc7","changed":false}
+{"ms":5461,"ev":"tick","hash":"180ccdc7","changed":false}
+{"ms":5461,"ev":"settle","threshold":800,"stableMs":809,"last":"(base) user@host ~/project % ","verdict":"FREE(shell)","sig":{"trailing_question":false,"yn_bracket":false,"arrow_marker":true,"numbered_menu":true,"claude_footer":true,"shell_prompt":true,"password_prompt":false}}
+{"ms":5563,"ev":"tick","hash":"180ccdc7","changed":false}
+{"ms":5663,"ev":"tick","hash":"180ccdc7","changed":false}
+{"ms":5663,"ev":"settle","threshold":1000,"stableMs":1011,"last":"(base) user@host ~/project % ","verdict":"FREE(shell)","sig":{"trailing_question":false,"yn_bracket":false,"arrow_marker":true,"numbered_menu":true,"claude_footer":true,"shell_prompt":true,"password_prompt":false}}
+{"ms":5765,"ev":"tick","hash":"180ccdc7","changed":false}
+{"ms":5865,"ev":"tick","hash":"180ccdc7","changed":false}
+{"ms":5967,"ev":"tick","hash":"180ccdc7","changed":false}
+{"ms":6062,"ev":"exit","code":0}

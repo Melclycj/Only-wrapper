@@ -1,0 +1,121 @@
+// Pure factory — NO import from 'electron'.
+// Keeping this file electron-free lets Vitest (Node env) import it directly
+// without an Electron process, so the security guard test can run standalone.
+// RESEARCH Pitfall 4 / D-07 invariant.
+
+export interface WebPreferencesConfig {
+  contextIsolation: boolean;
+  nodeIntegration: boolean;
+  sandbox: boolean;
+  preload: string;
+}
+
+/**
+ * Returns the secure webPreferences object for BrowserWindow creation.
+ * D-07 invariant: contextIsolation:true, nodeIntegration:false, sandbox:true.
+ * The preload path is injected as a parameter so the factory stays pure and testable.
+ */
+export function buildWebPreferences(preloadPath: string): WebPreferencesConfig {
+  return {
+    contextIsolation: true,   // REQUIRED — isolates renderer from main context
+    nodeIntegration: false,   // REQUIRED — no Node.js in renderer
+    sandbox: true,            // REQUIRED — restricts preload to whitelisted modules
+    preload: preloadPath,
+  };
+}
+
+/**
+ * The exhaustive list of method keys exposed via contextBridge.exposeInMainWorld('api', ...).
+ * The security guard test asserts the actual preload surface matches this contract (SC3).
+ *
+ * Phase 2 (02-02) REVIEWED EXPANSION (threat_model T-02-07): the 7 PTY methods are
+ * added to the Phase-1 'getVersion'-only surface. This DELIBERATELY loosens the
+ * Phase-1 invariant, but the security guard test still enforces the EXACT new set —
+ * so no UNREVIEWED key (e.g. raw ipcRenderer) can leak through. The locked
+ * webPreferences (contextIsolation/sandbox/nodeIntegration) are NOT touched.
+ *
+ * Phase 3 (03-01) REVIEWED EXPANSION (threat_model T-03-06): the 4 lifecycle methods
+ * (ptyStop, ptyRestart, onPtyStatus, listSessions) join the surface — a 12-key set.
+ * The contextBridge is the dominant new threat surface this phase; the guard is the
+ * reviewed tripwire that fails if any unreviewed key (e.g. raw ipcRenderer) leaks.
+ * NOTE: this plan (03-01) updates the EXPECTED contract + the type surface only; the
+ * actual preload wiring lands in 03-02, at which point security.guard.test.ts goes
+ * GREEN again (it asserts preload-keys === EXPECTED_API_KEYS exactly).
+ *
+ * Phase 3 (03-03 gap-closure) REVIEWED EXPANSION (D-03a): the destructive `ptyClose`
+ * method (kill PTY + remove the SessionRecord) joins the surface — a 13-key set. It
+ * mirrors ptyStop's fire-and-forget shape; the guard test enforces the EXACT 13-key
+ * set so no unreviewed key leaks. ptyStop is RETAINED ("keep the function, disable
+ * the button") so both remain in the contract.
+ *
+ * Phase 4 (04-01) REVIEWED EXPANSION (threat_model T-04-03): two identity methods
+ * join the surface — a 15-key set:
+ *   - `ptyUpdateProfile` (fire-and-forget, mirrors ptyClose): persists edited
+ *     name/icon/cwd/shell/startupCommand into main's record (id-validated +
+ *     type-guarded main-side, T-04-01/02; startupCommand stored-only, T-04-04).
+ *   - `onSwitchSession` (subscribe, mirrors onPtyStatus): a read-only inbound
+ *     main→renderer switch-intent event from before-input-event (NAV-05, D-13).
+ * The lockstep (api-types + this array + preload + pty-manager channel triple) is
+ * done in ONE atomic task; the guard asserts the EXACT 15-key set so no unreviewed
+ * key (e.g. raw ipcRenderer) can leak (T-04-03).
+ *
+ * Phase 5 (05-01) REVIEWED EXPANSION (threat_model T-05-01): three persistence +
+ * discovery methods join the surface — an 18-key set:
+ *   - `discoverShells` (invoke, mirrors listSessions): main-only filesystem read of
+ *     the platform shell list for the edit-form dropdown (no renderer fs access).
+ *   - `persistOrder` (fire-and-forget send, mirrors ptyUpdateProfile): the renderer
+ *     sends the new sidebar order. SECURITY V5 / T-05-01 — main MUST validate-in-main
+ *     BEFORE any disk write: each `id` is a known LogicalId AND `order` is a finite
+ *     number. A forged payload is a silent no-op, never writing arbitrary data.
+ *   - `persistUiState` (fire-and-forget send, mirrors ptyUpdateProfile): the renderer
+ *     sends collapse + window-bounds prefs. SECURITY V5 / T-05-01 — main validates
+ *     each of x/y/width/height is finite and collapsed is boolean before writing.
+ * The lockstep is done in ONE atomic task; the guard asserts the EXACT 18-key set so
+ * no unreviewed key (e.g. raw ipcRenderer) can leak.
+ *
+ * Phase 6 (06-01) REVIEWED EXPANSION (threat_model T-06-01): ONE new key joins the
+ * surface — a 19-key set:
+ *   - `pickDirectory` (invoke, mirrors discoverShells): main owns the native
+ *     open-directory dialog and returns ONLY a string path (or null on cancel), never
+ *     an fs handle (V12) — the renderer never touches the filesystem. It widens the
+ *     renderer→main surface, so the lockstep (api-types + this array + preload +
+ *     security.guard.test.ts) is done in ONE atomic task and the guard asserts the
+ *     EXACT 19-key set so no unreviewed key (e.g. raw ipcRenderer) can leak. NOTE: the
+ *     Clear chord (matchClearKey) rides the EXISTING 'session:switch' channel and adds
+ *     NO bridge key — pickDirectory is the ONLY new key this phase.
+ *
+ * Phase 7 (07-01) REVIEWED EXPANSION (threat_model T-07-02): ONE new key joins the
+ * surface — a 20-key set:
+ *   - `getUiState` (invoke, mirrors pickDirectory/discoverShells): a READ-ONLY
+ *     main→renderer request-response that returns main's already-validated UI prefs
+ *     (collapse + bounds + the clamped scrollback) for the renderer's boot-read seed
+ *     of `new Terminal({ scrollback })`. It carries no fs handle and never widens the
+ *     renderer's WRITE surface. The lockstep (api-types + this array + preload +
+ *     pty-manager registerIpc + security.guard.test.ts) is done in ONE atomic task and
+ *     the guard asserts the EXACT 20-key set so no unreviewed key (e.g. raw ipcRenderer)
+ *     can leak. NOTE: the Find chord (matchSearchKey) rides the EXISTING 'session:switch'
+ *     channel and adds NO bridge key; the scrollback persist rides the EXISTING
+ *     persistUiState (widened payload) — getUiState is the ONLY new key this phase.
+ */
+export const EXPECTED_API_KEYS = [
+  'getVersion',
+  'ptyCreate',
+  'ptyWrite',
+  'ptyResize',
+  'ptyPause',
+  'ptyResume',
+  'onPtyData',
+  'onPtyExit',
+  'ptyStop',
+  'ptyClose',
+  'ptyRestart',
+  'onPtyStatus',
+  'listSessions',
+  'ptyUpdateProfile',
+  'onSwitchSession',
+  'discoverShells',
+  'persistOrder',
+  'persistUiState',
+  'pickDirectory',
+  'getUiState',
+] as const;

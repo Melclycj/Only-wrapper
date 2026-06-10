@@ -9,48 +9,48 @@ Requirements for the initial release. Derived from the user's FR-01–FR-21 spec
 
 ### Session Identity
 
-- [ ] **IDENT-01**: Each session has a stable internal session ID that does not change on rename, icon change, process restart, tab switch, startup-command change, or future browser-metadata linking (FR-01)
-- [ ] **IDENT-02**: The logical session ID (stable, app-level) is stored and tracked separately from the terminal process/PID (temporary, per-spawn) (FR-02)
-- [ ] **IDENT-03**: Each session has a user-visible identity (name + icon + status) shown in both the sidebar and the session header (FR-03)
+- [x] **IDENT-01**: Each session has a stable internal session ID that does not change on rename, icon change, process restart, tab switch, startup-command change, or future browser-metadata linking (FR-01)
+- [x] **IDENT-02**: The logical session ID (stable, app-level) is stored and tracked separately from the terminal process/PID (temporary, per-spawn) (FR-02)
+- [x] **IDENT-03**: Each session has a user-visible identity (name + icon + status) shown in both the sidebar and the session header (FR-03)
 
 ### Session Management
 
-- [ ] **SESS-01**: User can create a new session specifying custom name, custom icon, initial working directory, shell, and optional startup command (FR-04)
-- [ ] **SESS-02**: User can set a custom name per session, shown in the sidebar tab, session header, and session settings (FR-05)
-- [ ] **SESS-03**: User can assign an icon per session from emoji / a built-in icon list / a color badge; the icon stays visible when the sidebar is collapsed (FR-06)
-- [ ] **SESS-04**: User can rename a session and change its icon after creation without creating a new session ID (FR-07)
+- [x] **SESS-01**: User can create a new session specifying custom name, custom icon, initial working directory, shell, and optional startup command (FR-04)
+- [x] **SESS-02**: User can set a custom name per session, shown in the sidebar tab, session header, and session settings (FR-05)
+- [x] **SESS-03**: User can assign an icon per session from emoji / a built-in icon list / a color badge; the icon stays visible when the sidebar is collapsed (FR-06)
+- [x] **SESS-04**: User can rename a session and change its icon after creation without creating a new session ID (FR-07)
 
 ### Sidebar & Navigation
 
-- [ ] **NAV-01**: App displays sessions in a sidebar list, each item showing icon + session name + running/stopped status (FR-08)
-- [ ] **NAV-02**: Sidebar supports expanded and collapsed modes; in collapsed mode the icon still identifies the session (FR-09)
-- [ ] **NAV-03**: Clicking a session tab switches the main view to that session without stopping or restarting its terminal process (FR-10)
-- [ ] **NAV-04**: App remembers and persists the user's session order in the sidebar (FR-11)
-- [ ] **NAV-05**: User can switch sessions via keyboard shortcuts (e.g. Ctrl/Cmd+1–9 and next/previous) without using the mouse (research addition)
+- [x] **NAV-01**: App displays sessions in a sidebar list, each item showing icon + session name + running/stopped status (FR-08)
+- [x] **NAV-02**: Sidebar supports expanded and collapsed modes; in collapsed mode the icon still identifies the session (FR-09)
+- [x] **NAV-03**: Clicking a session tab switches the main view to that session without stopping or restarting its terminal process (FR-10)
+- [x] **NAV-04**: App remembers and persists the user's session order in the sidebar (FR-11)
+- [x] **NAV-05**: User can switch sessions via keyboard shortcuts (e.g. Ctrl/Cmd+1–9 and next/previous) without using the mouse (research addition)
 
 ### Terminal Session
 
-- [ ] **TERM-01**: Session provides a real interactive terminal surface supporting keyboard input, stdout/stderr rendering, Ctrl+C, Ctrl+D, arrow keys, copy/paste, terminal resize, ANSI colors/control sequences, long-running processes, and interactive programs (FR-12)
-- [ ] **TERM-02**: Sessions run through a real PTY/pseudo-terminal layer (input → PTY → output → render), not one-shot run→capture→return command execution (FR-13)
-- [ ] **TERM-03**: User can open a normal shell session with no automatic startup command, then manually `cd` into any accessible folder and launch tools (e.g. `codex`, `claude --rc`) from the current working directory (FR-14)
-- [ ] **TERM-04**: Each session starts in its configured initial working directory (FR-15)
-- [ ] **TERM-05**: A session can optionally run a configured startup command after opening, separate from normal shell mode (FR-16)
-- [ ] **TERM-06**: A running session remains alive when the user switches to another tab; switching only changes the visible view (FR-17)
-- [ ] **TERM-07**: User can stop and restart a session; restart may create a new process ID but keeps the same logical session ID (FR-18)
-- [ ] **TERM-08**: Each session shows a status: not started / running / stopped / exited / error (FR-19)
-- [ ] **TERM-09**: Sidebar surfaces a best-effort "waiting for input" / needs-attention indicator when a backgrounded session appears blocked awaiting user input (research addition; heuristic, best-effort)
-- [ ] **TERM-10**: User can search a session's scrollback (e.g. Ctrl+F) (research addition)
-- [ ] **TERM-11**: Scrollback buffer size is configurable via a global setting with a sensible default (research addition)
-- [ ] **TERM-12**: Session header provides quick clear-terminal and restart-session controls (research addition)
+- [x] **TERM-01**: Session provides a real interactive terminal surface supporting keyboard input, stdout/stderr rendering, Ctrl+C, Ctrl+D, arrow keys, copy/paste, terminal resize, ANSI colors/control sequences, long-running processes, and interactive programs (FR-12)
+- [x] **TERM-02**: Sessions run through a real PTY/pseudo-terminal layer (input → PTY → output → render), not one-shot run→capture→return command execution (FR-13)
+- [x] **TERM-03**: User can open a normal shell session with no automatic startup command, then manually `cd` into any accessible folder and launch tools (e.g. `codex`, `claude --rc`) from the current working directory (FR-14)
+- [x] **TERM-04**: Each session starts in its configured initial working directory (FR-15)
+- [x] **TERM-05**: A session can optionally run a configured startup command after opening, separate from normal shell mode (FR-16) — **Phase 5.1** (un-deferred; descoped from Phase 3, re-homed to its own phase after Phase 5 persistence — runs the saved command into the PTY once the shell is ready, on start/restart)
+- [x] **TERM-06**: A running session remains alive when the user switches to another tab; switching only changes the visible view (FR-17)
+- [x] **TERM-07**: User can stop and restart a session; restart may create a new process ID but keeps the same logical session ID (FR-18)
+- [x] **TERM-08**: Each session shows a status: not started / running / stopped / exited / error (FR-19)
+- [x] **TERM-09**: Sidebar surfaces a best-effort "waiting for input" / needs-attention indicator when a backgrounded session appears blocked awaiting user input (research addition; heuristic, best-effort)
+- [x] **TERM-10**: User can search a session's scrollback (e.g. Ctrl+F) (research addition)
+- [x] **TERM-11**: Scrollback buffer size is configurable via a global setting with a sensible default (research addition)
+- [x] **TERM-12**: Session header provides quick clear-terminal and restart-session controls (research addition)
 
 ### Local Persistence
 
-- [ ] **PERS-01**: App saves session metadata locally — session ID, name, icon, working directory, shell, startup command, display order, last active time (FR-20)
-- [ ] **PERS-02**: On reopen, app restores saved session profiles (metadata only, not live processes) and lets the user start them again (FR-21)
+- [x] **PERS-01**: App saves session metadata locally — session ID, name, icon, working directory, shell, startup command, display order, last active time (FR-20)
+- [x] **PERS-02**: On reopen, app restores saved session profiles (metadata only, not live processes) and lets the user start them again (FR-21)
 
 ### Packaging
 
-- [ ] **PKG-01**: App packages as a runnable/installable local desktop app for both Windows and macOS from a single codebase (MVP feature set)
+- [x] **PKG-01**: App packages as a runnable/installable local desktop app for both Windows and macOS from a single codebase (MVP feature set)
 
 ## v2 Requirements
 
@@ -101,35 +101,36 @@ Populated during roadmap creation. Each v1 requirement maps to exactly one phase
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| IDENT-01 | Phase 1: Project Scaffold + Dev Infrastructure | Pending |
-| IDENT-02 | Phase 1: Project Scaffold + Dev Infrastructure | Pending |
-| IDENT-03 | Phase 4: Session Identity + Sidebar UI | Pending |
-| SESS-01 | Phase 4: Session Identity + Sidebar UI | Pending |
-| SESS-02 | Phase 4: Session Identity + Sidebar UI | Pending |
-| SESS-03 | Phase 4: Session Identity + Sidebar UI | Pending |
-| SESS-04 | Phase 4: Session Identity + Sidebar UI | Pending |
-| NAV-01 | Phase 4: Session Identity + Sidebar UI | Pending |
-| NAV-02 | Phase 4: Session Identity + Sidebar UI | Pending |
-| NAV-03 | Phase 4: Session Identity + Sidebar UI | Pending |
-| NAV-04 | Phase 5: Persistence + Shell Discovery | Pending |
-| NAV-05 | Phase 4: Session Identity + Sidebar UI | Pending |
-| TERM-01 | Phase 2: PTY Core + Terminal Fidelity | Pending |
-| TERM-02 | Phase 2: PTY Core + Terminal Fidelity | Pending |
-| TERM-03 | Phase 2: PTY Core + Terminal Fidelity | Pending |
-| TERM-04 | Phase 2: PTY Core + Terminal Fidelity | Pending |
-| TERM-05 | Phase 3: Multi-Session + Session Lifecycle | Pending |
-| TERM-06 | Phase 3: Multi-Session + Session Lifecycle | Pending |
-| TERM-07 | Phase 3: Multi-Session + Session Lifecycle | Pending |
-| TERM-08 | Phase 3: Multi-Session + Session Lifecycle | Pending |
-| TERM-09 | Phase 6: Robustness + Flow-Control Polish | Pending |
-| TERM-10 | Phase 7: Terminal Search + Scrollback Config | Pending |
-| TERM-11 | Phase 7: Terminal Search + Scrollback Config | Pending |
-| TERM-12 | Phase 6: Robustness + Flow-Control Polish | Pending |
-| PERS-01 | Phase 5: Persistence + Shell Discovery | Pending |
-| PERS-02 | Phase 5: Persistence + Shell Discovery | Pending |
-| PKG-01 | Phase 8: Cross-Platform Packaging | Pending |
+| IDENT-01 | Phase 1: Project Scaffold + Dev Infrastructure | Complete |
+| IDENT-02 | Phase 1: Project Scaffold + Dev Infrastructure | Complete |
+| IDENT-03 | Phase 4: Session Identity + Sidebar UI | Complete |
+| SESS-01 | Phase 4: Session Identity + Sidebar UI | Complete |
+| SESS-02 | Phase 4: Session Identity + Sidebar UI | Complete |
+| SESS-03 | Phase 4: Session Identity + Sidebar UI | Complete |
+| SESS-04 | Phase 4: Session Identity + Sidebar UI | Complete |
+| NAV-01 | Phase 4: Session Identity + Sidebar UI | Complete |
+| NAV-02 | Phase 4: Session Identity + Sidebar UI | Complete |
+| NAV-03 | Phase 4: Session Identity + Sidebar UI | Complete |
+| NAV-04 | Phase 5: Persistence + Shell Discovery | Complete |
+| NAV-05 | Phase 4: Session Identity + Sidebar UI | Complete |
+| TERM-01 | Phase 2: PTY Core + Terminal Fidelity | Complete |
+| TERM-02 | Phase 2: PTY Core + Terminal Fidelity | Complete |
+| TERM-03 | Phase 2: PTY Core + Terminal Fidelity | Complete |
+| TERM-04 | Phase 2: PTY Core + Terminal Fidelity | Complete |
+| TERM-05 | Phase 5.1: TERM-05 startup-command auto-run (INSERTED) | Complete |
+| TERM-06 | Phase 3: Multi-Session + Session Lifecycle | Complete |
+| TERM-07 | Phase 3: Multi-Session + Session Lifecycle | Complete |
+| TERM-08 | Phase 3: Multi-Session + Session Lifecycle | Complete |
+| TERM-09 | Phase 6: Robustness + Flow-Control Polish | Complete |
+| TERM-10 | Phase 7: Terminal Search + Scrollback Config | Complete |
+| TERM-11 | Phase 7: Terminal Search + Scrollback Config | Complete |
+| TERM-12 | Phase 6: Robustness + Flow-Control Polish | Complete |
+| PERS-01 | Phase 5: Persistence + Shell Discovery | Complete |
+| PERS-02 | Phase 5: Persistence + Shell Discovery | Complete |
+| PKG-01 | Phase 8: Cross-Platform Packaging | Complete |
 
 **Coverage:**
+
 - v1 requirements: 27 total
 - Mapped to phases: 27 ✓
 - Unmapped: 0 ✓
