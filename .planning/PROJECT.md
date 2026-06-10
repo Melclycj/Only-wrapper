@@ -10,6 +10,18 @@ It is **not** a new shell and **not** a full terminal replacement. It is a sessi
 
 **Real terminal fidelity.** A session inside the wrapper must behave *exactly* like a native local terminal — `claude --rc`, `codex`, `vim`, `ssh`, `python`, and `npm run dev` all work flawlessly. If this fails, nothing else matters. Stable session identity and instant non-destructive switching are the strong second priority.
 
+## Current Milestone: v1.1 — UI Polish & Debt Cleanup
+
+**Goal:** Clear the v1.0 carried debt and give the whole app one cohesive visual-polish pass — from "works" to "looks intentionally designed."
+
+**Target features:**
+- Whole-app visual polish (sidebar, terminal chrome, create/edit form, spacing rhythm, empty/loading/error + hover/focus/active states) + session-edit UX (prefill, folder picker, Start discoverability)
+- Close Phase 05.1 deferred + Phase 06.1 reverted code-review debt
+- Flip Nyquist validation flags for phases 01/02/03
+- Prepare the Windows real-hardware verification kit (the real-hardware run is a deferred human-UAT gate)
+
+No major new features this milestone — APPR appearance + BROW browser companion stay in v2.
+
 ## Requirements
 
 ### Validated
@@ -38,13 +50,13 @@ It is **not** a new shell and **not** a full terminal replacement. It is a sessi
 
 <!-- Current scope. Building toward these. All are hypotheses until shipped. -->
 
-**v1.0 MVP shipped 2026-06-10 — all 27 v1 requirements satisfied, 20/20 cross-phase integration wired.** No active in-scope build work remains. Next-milestone scope is defined via `/gsd-new-milestone`.
+**Milestone v1.1 — UI Polish & Debt Cleanup (started 2026-06-10).** A debt-cleanup + whole-app visual-polish milestone. No major new features — APPR appearance + BROW browser companion stay in v2. Active scope:
 
-v1.1 candidates (carried debt — see `v1.0-MILESTONE-AUDIT.md` + STATE.md Deferred Items):
-- [ ] Windows real-hardware verification — installer run, shell dropdown + per-shell auto-run, pre-1809 dialog (the only substantive v1.0 tail; dev is macOS-only, Windows is CI-built)
-- [ ] Session-edit UX polish — edit-modal prefill of cwd/startup-command, working-directory folder picker, Start-control discoverability
-- [ ] Close deferred code-review findings (Phase 05.1) + re-hand-verify Phase 06.1 CR-01..04/WR-02 (currently test-covered: 267 unit + 14/14 smoke)
-- [ ] Flip Nyquist validation flags for phases 01/02/03 (formal only — functional verification already passed)
+- [ ] **Whole-app visual polish** — one cohesive look & feel pass across sidebar, terminal chrome, create/edit form, spacing rhythm, empty/loading/error states, and hover/focus/active states; a design direction + tokens are locked at plan time, then applied across surfaces (not piecemeal)
+- [ ] **Session-edit UX** — edit-modal prefill of saved cwd/startup-command, working-directory folder picker, Start-control discoverability (3 pending todos)
+- [ ] **Close code-review debt** — Phase 05.1 deferred WARNING/INFO findings + carefully redo Phase 06.1 CR-01..04/WR-02 with real-path tests and mandatory user re-verify (was reverted 2026-06-09 — green is not proof)
+- [ ] **Flip Nyquist validation flags** for phases 01/02/03 (formal only — functional verification already passed)
+- [ ] **Windows real-hardware verification** — prepare the verification kit (checklist + build artifacts + instructions) in-milestone; the real-hardware run stays a deferred human-UAT gate the user executes when a Windows machine is available
 
 v2 candidates (PROJECT spec, deferred): APPR-01/02 (terminal font + theme selection), BROW-01/02/03 (browser companion).
 
@@ -109,7 +121,10 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-10 — **v1.0 MILESTONE CLOSED** (audit verdict `tech_debt`: 27/27 requirements satisfied, 20/20 integration wired, no critical blockers; Windows real-hardware UAT + Nyquist 01-03 + 4 todos carried to v1.1 — see `v1.0-MILESTONE-AUDIT.md`). **Phase 8 complete — v1.0 milestone done (8/8 phases, all 27 v1 requirements).** Cross-platform packaging: `npm run make` produces a runnable, icon-bearing macOS `.app` (`com.justwrapper.app`, node-pty ASAR-unpacked, native ConPTY pre-1809 dialog gate, env-gated/unsigned osxSign/osxNotarize slots), the Windows seams were filled (`WindowsShellProvider` enumeration + `WindowsReadinessProbe` POSIX-reuse/degrade-loudly, zero new bridge keys — EXPECTED_API_KEYS stays 20), and a GitHub Actions windows+macos matrix (unsigned, zero secrets, no mandatory rebuild — node-pty's N-API prebuild ships as-is) produces the Windows `.exe`/installer. macOS canonical `claude --rc` packaged scenario user-verified 2026-06-10 (SC2); packaged PTY round-trip smoke 15/15 (SC3 mac); 315 unit GREEN; code-review clean (4 findings closed inline). Windows real-hardware items (installer run, shell dropdown, pre-1809 dialog) tracked in 08-HUMAN-UAT.md per the locked D-01 macOS-dev/CI-Windows design. Roadmap's "@electron/rebuild in CI" wording was retired as stale (N-API prebuild verified since Phase 2). Next: v2 (APPR-* appearance, BROW-* browser companion) or ship v1.0.*
+*Last updated: 2026-06-10 — **Milestone v1.1 started — UI Polish & Debt Cleanup** (debt-cleanup + whole-app visual polish: one cohesive look & feel pass + session-edit UX [prefill / folder picker / Start discoverability] + close Phase 05.1 deferred findings + carefully redo Phase 06.1 CR-01..04/WR-02 [real-path tests + mandatory re-verify; was reverted 2026-06-09] + flip Nyquist 01-03 flags + prepare Windows real-hardware verification kit [real-hardware run is a deferred human-UAT gate]. No major new features — APPR appearance + BROW companion stay v2. Phase numbering continues from v1.0 — next is Phase 9).*
+
+<!-- prior: 2026-06-10 — **v1.0 MILESTONE CLOSED** (audit verdict `tech_debt`: 27/27 requirements satisfied, 20/20 integration wired, no critical blockers; Windows real-hardware UAT + Nyquist 01-03 + 4 todos carried to v1.1 — see `v1.0-MILESTONE-AUDIT.md`). **Phase 8 complete — v1.0 milestone done (8/8 phases, all 27 v1 requirements).** Cross-platform packaging: `npm run make` produces a runnable, icon-bearing macOS `.app` (`com.justwrapper.app`, node-pty ASAR-unpacked, native ConPTY pre-1809 dialog gate, env-gated/unsigned osxSign/osxNotarize slots), the Windows seams were filled (`WindowsShellProvider` enumeration + `WindowsReadinessProbe` POSIX-reuse/degrade-loudly, zero new bridge keys — EXPECTED_API_KEYS stays 20), and a GitHub Actions windows+macos matrix (unsigned, zero secrets, no mandatory rebuild — node-pty's N-API prebuild ships as-is) produces the Windows `.exe`/installer. macOS canonical `claude --rc` packaged scenario user-verified 2026-06-10 (SC2); packaged PTY round-trip smoke 15/15 (SC3 mac); 315 unit GREEN; code-review clean (4 findings closed inline). Windows real-hardware items (installer run, shell dropdown, pre-1809 dialog) tracked in 08-HUMAN-UAT.md per the locked D-01 macOS-dev/CI-Windows design. Roadmap's "@electron/rebuild in CI" wording was retired as stale (N-API prebuild verified since Phase 2). Next: v2 (APPR-* appearance, BROW-* browser companion) or ship v1.0. -->
+
 
 <!-- prior: 2026-06-10 — Phase 7 complete (TERM-10 in-terminal search + TERM-11 configurable scrollback). Delivered the VS Code-style find overlay (Cmd/Ctrl+F over the existing session:switch channel, live "N of M" count, Aa case toggle, Esc dismiss, SC3 closed-bar isolation, macOS Ctrl+F readline survival) and a global scrollback Preferences setting (gear → 1000–50000 default 5000, live fan-out to open + new terminals, persisted via the existing getUiState/persistUiState round-trip, zero new bridge keys — EXPECTED_API_KEYS stays 20). Interface-first across 4 plans; the end-of-phase macOS human-verify (07-04) surfaced 5 search-display defects (G1..G5), closed in gap-closure plan 07-05 over 2 verify rounds. Headline fix: the missing match highlights were NOT a WebGL/decoration-config bug but a colour-FORMAT bug — the decoration colours were `oklch()`, which xterm's `css.toColor` cannot parse (it throws on translucent non-rgba formats), so they never painted while the colour-agnostic count still worked; fixed to regex-safe `rgba()`/hex (found by reading the xterm bundle, not guessing). Also: G4 case-toggle reset-to-first (incremental couldn't hold across a case flip), G1 input autoFocus, G5 refocus-on-close, and an active-match colour-contrast tune (dark-amber matches keep white text readable + a bright-orange active beacon). 292 unit GREEN, tsc + eslint clean, security.guard 20 keys; verifier 9/9; user-signed macOS 2026-06-10. Next: Phase 8 — cross-platform packaging (Windows shell discovery + installable Win/macOS builds).* -->
 
