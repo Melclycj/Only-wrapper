@@ -81,17 +81,30 @@ Core Value (terminal fidelity) must not regress at any point — the polish and 
 
 ## Traceability
 
-Populated during roadmap creation. Each v1.1 requirement maps to exactly one phase.
+Each v1.1 requirement maps to exactly one phase. Phase numbering continues from v1.0 (Phases 1–8); v1.1 phases are 9–15.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| _pending roadmap_ | — | — |
+| UI-01 | Phase 9 — Design Token Foundation | Pending |
+| UI-02 | Phase 10 — Sidebar Visual Polish | Pending |
+| UI-03 | Phase 11 — Terminal Area Polish + Live Start/Restart | Pending |
+| SESS-07 | Phase 11 — Terminal Area Polish + Live Start/Restart | Pending |
+| UI-04 | Phase 12 — Session Form: Polish + Edit UX | Pending |
+| SESS-05 | Phase 12 — Session Form: Polish + Edit UX | Pending |
+| SESS-06 | Phase 12 — Session Form: Polish + Edit UX | Pending |
+| UI-05 | Phase 13 — State & Interaction Design | Pending |
+| UI-06 | Phase 13 — State & Interaction Design | Pending |
+| DEBT-01 | Phase 14 — Code-Review Debt Closure | Pending |
+| DEBT-02 | Phase 14 — Code-Review Debt Closure | Pending |
+| VAL-01 | Phase 15 — Formal Validation + Windows Verification Kit | Pending |
+| WIN-01 | Phase 15 — Formal Validation + Windows Verification Kit | Pending |
+| WIN-02 | Phase 15 — Formal Validation + Windows Verification Kit (deferred human-UAT gate) | Pending |
 
 **Coverage:**
 
 - v1.1 requirements: 14 total
-- Mapped to phases: pending roadmapper
-- Unmapped: pending roadmapper
+- Mapped to phases: 14 / 14 ✓
+- Unmapped: 0
 
 ---
-*Requirements defined: 2026-06-10 — milestone v1.1 UI Polish & Debt Cleanup*
+*Requirements defined: 2026-06-10 — milestone v1.1 UI Polish & Debt Cleanup. Traceability populated by roadmapper 2026-06-10 (14/14 mapped, 0 orphans).*

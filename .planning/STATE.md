@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: UI Polish & Debt Cleanup
 status: planning
-last_updated: "2026-06-10T06:35:57.300Z"
+last_updated: "2026-06-10T18:00:00.000Z"
 last_activity: 2026-06-10
 progress:
-  total_phases: 0
+  total_phases: 7
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -17,17 +17,31 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-06-10 — v1.0 milestone closed)
+See: .planning/PROJECT.md (updated 2026-06-10 — v1.1 milestone started)
 
-**Core value:** Real terminal fidelity — `claude --rc`, `codex`, `vim`, `ssh`, REPLs all behave exactly like a native terminal inside the wrapper.
-**Current focus:** Planning next milestone (v1.0 shipped 2026-06-10; run `/gsd-new-milestone` to scope v1.1). Carried debt in `## Deferred Items` below.
+**Core value:** Real terminal fidelity — `claude --rc`, `codex`, `vim`, `ssh`, REPLs all behave exactly like a native terminal inside the wrapper. v1.1 polish + debt work must not regress it at any point.
+**Current focus:** v1.1 — UI Polish & Debt Cleanup roadmapped (Phases 9–15, 14/14 requirements mapped). Next: plan Phase 9 (Design Token Foundation) via `/gsd-plan-phase 9`. Carried debt tracked in `## Deferred Items` below; Phases 14–15 close it.
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 9 — Design Token Foundation (not started)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-06-10 — Milestone v1.1 started
+Status: Roadmap created — ready to plan Phase 9
+Last activity: 2026-06-10 — v1.1 roadmap created (Phases 9–15; 14 requirements mapped, 0 orphans)
+
+### v1.1 Milestone Phases (9–15)
+
+| Phase | Name | Requirements | Status |
+|-------|------|--------------|--------|
+| 9 | Design Token Foundation | UI-01 | Not started |
+| 10 | Sidebar Visual Polish | UI-02 | Not started |
+| 11 | Terminal Area Polish + Live Start/Restart | UI-03, SESS-07 | Not started |
+| 12 | Session Form — Polish + Edit UX | UI-04, SESS-05, SESS-06 | Not started |
+| 13 | State & Interaction Design | UI-05, UI-06 | Not started |
+| 14 | Code-Review Debt Closure | DEBT-01, DEBT-02 | Not started |
+| 15 | Formal Validation + Windows Verification Kit | VAL-01, WIN-01, WIN-02 | Not started |
+
+Phase 9 (UI-01 design tokens) gates the per-surface polish phases (10–13). Phases 14 and 15 are independent of the UI phases (they read v1.0 phase artifacts) and may be scheduled flexibly. WIN-02 is a deferred human-UAT sign-off gate executed on real Windows hardware — it does not block any earlier phase.
 
 ## Performance Metrics
 
@@ -146,9 +160,8 @@ Recent decisions affecting current work:
 - [Phase 06-01]: Interface-first foundation wave — pure shared/agent-state.ts classifier (AgentState overlay, NOT a 6th SessionStatus — D-06; IDLE_MS=800 D-08; conservative anchored PROMPT_RE: trailing ?, [y/n] variants, (y/n)/(yes/no), ❯ — naked $/% and trailing ':' are FREE not WAITING; ReDoS-safe linear+anchored V7/T-06-03), the {kind:'clear'} matchClearKey riding the EXISTING session:switch channel (Cmd+K mac / Ctrl+Shift+K win; plain Ctrl+K → null to keep readline kill-line — D-13), and the 19-key pickDirectory bridge lockstep define the Phase-6 contracts Plans 02/03/04 build against. pickDirectory is the ONLY new bridge key (the Clear chord adds none)
 - [Phase 06.1-01]: Wave-0 interface-first foundation SUPERSEDING 06-01's classifier. agent-state.ts rewritten to the spike-validated frame-stability classify(lines: string[]): AgentState (D-09/D-10) — output-silence IDLE_MS/PROMPT_RE/classifyIdle DELETED, standalone ❯ caret DROPPED from the waiting decision (002 kill-finding: it false-fired 10/11 settles as Claude's ambient input caret; survives only as a non-decisive numbered-menu prefix, encoded ❯ so the literal glyph is absent). Exports TICK_MS=100/SETTLE_MS=500 (Nyquist tick ≤250ms, settle 400–600ms). New agent-state-replay.test.ts is the offline @xterm/headless@5.5.0 oracle reproducing the spike ground truth "11 settles → exactly 1 WAITING" (the capture is a FORENSIC log with no raw PTY bytes, so the oracle reconstructs each settle frame from recorded last+sig and runs it through headless + classify(), deterministic via the write callback). SessionRecord gains one-way configured?:boolean (D-02 ephemeral-vs-configured gate); SCHEMA_VERSION 1→2 with coerceOnLoad absent→true migration. Three honest-RED pty-lifecycle scaffolds pin the Plan-03 D-05/D-02 transitions (configured self-exit→Inactive not_started, ephemeral→gone, listConfiguredSessions()). TEMPORARY SessionView.tsx IDLE_MS/classifyIdle bridge (Rule 3) delegates to classify() so tsc stays clean until Plan 02 rewrites SEAM A. window-config.ts (19 keys) + status-colors.ts (D-14) untouched.
 - [Phase 06-01]: Folded the 05.1 review fixes — WR-02: readiness matcher (buildPosixProbe re) now fires ONLY when the nonce appears AFTER a newline boundary (a produced line, never the bare echo line: `\n[^\n]*<nonce>`); WR-03: matches() bounds the scan to the last 8 KB tail before testing; IN-02: Phase-8 per-shell comment on void shellPath; IN-03: startup-command smoke restart assertion anchored on the full '— restarted ' separator literal (not a bare indexOf). 3 Wave 0 RED scaffolds (pty-spawn-error describe.todo → Plan 02; alt-screen-reset + header-controls describe.skip → Plan 04) resolve cleanly. TerminalPane.tsx deleted (D-16, no live import; tsc + electron-forge package GREEN). npm test 171 GREEN
-- [Phase 05.1-03 HUMAN-VERIFY]: Canonical 🛋️ Parlour Claude RC scenario APPROVED 2026-06-06 — all 4 CONFIRMs passed (clean auto-run no garble/visible-nonce, ArrowUp history recall, restart re-runs after separator, empty command → bare shell). 3 session edit/lifecycle UX items surfaced but are OUT OF SCOPE for TERM-05 (Phase 03/04 concerns) — captured as todos in .planning/todos/pending/ (edit-modal cwd/startup prefill, folder picker, ▶ Start discoverability)
+- [Phase 05.1-03 HUMAN-VERIFY]: Canonical 🛋️ Parlour Claude RC scenario APPROVED 2026-06-06 — all 4 CONFIRMs passed (clean auto-run no garble/visible-nonce, ArrowUp history recall, restart re-runs after separator, empty command → bare shell). 3 session edit/lifecycle UX items surfaced but are OUT OF SCOPE for TERM-05 (Phase 03/04 concerns) — captured as todos in .planning/todos/pending/ (edit-modal cwd/startup prefill, folder picker, ▶ Start discoverability) → these become SESS-05/06/07 in v1.1 Phases 11–12
 - [Phase ?]: [Phase 06-02]: SC2 spawn-error vertical slice — create() pre-validates the RESOLVED cwd with isValidCwd verbatim (D-01); an explicit-but-missing cwd (opts OR stored record) errors 'Working directory not found: <path>' and NEVER silently spawns in ~ (D-02), node-pty untouched. try/catch covers the rare sync EACCES; the async fork-then-die abnormal exit (Pitfall 1, macOS) gets a generic 'shell exited immediately' notice (D-05). notice sanitized of control chars (WR-04); updateProfile trims startupCommand at persist (WR-05); dead stripProbeEcho/scrub removed (WR-01/IN-01). Renderer: IdleCard error branch (specific msg + Edit/Retry, error-card-edit/retry testids), per-row errorMessage from the notice (renderer-only SessionRow, no bridge change — Open Q2), error sessions render the IdleCard not a SessionView, failed spawn (pid -1) skips the optimistic running flip, handleStartNoCmd threads skipStartupCommand (D-14, no new key), Browse… → pickDirectory, edit-prefill via listSessions re-read after add/save (Open Q3). 181 unit tests GREEN, tsc clean, package builds
-
 - [Phase 06-03]: SC4/TERM-09 agent-state presentation OVERLAY — AGENT_STYLE ramp + presentation(status, agent?) resolver applies the overlay ONLY when status==='running' (D-06/D-07); amber oklch(0.66 0.15 60) reserved for 'waiting' in EXACTLY one place. Renderer-side idle-timer detector in SessionView off the EXISTING onPtyData stream (zero IPC): bounded ~4 KB rolling tail (slice(-4096), T-06-09 ReDoS bound), single-slot timer cleared-before-re-arm AND in effect cleanup (Pitfall 6/T-06-10), gated on running (agentRunning flipped by the status handler), change-only emission via onAgentStateRef (so the id-keyed mount effect never re-binds/tears down the xterm). SessionManager: renderer-only per-row agentState beside errorMessage (never persisted, never IPC — D-06), set only while running, cleared on transition away (D-10). Sidebar row badge/dot + collapsed-rail dot + tooltip and IdentityHeader badge all route through presentation() — no direct STATUS_STYLE[] badge lookups. 190 unit tests GREEN, tsc clean, package builds, eslint clean
 - [Phase ?]: 06.1-02: MOUSE_RESET fires on onPtyExit (the reliable death signal) + unconditionally on the running transition (idempotent), NOT gated on hasRunBeforeRef — the initial/first-restart running broadcast races ahead of the status subscription, so gating would skip the user's first restart and leave the scroll-wheel hot (D-13).
 - [Phase ?]: 06.1-02: abnormal-exit is scrollback-preserving (MOUSE_RESET + ALT_SCREEN_EXIT, no term.reset()/RIS) per RESEARCH Open Q1 — flagged for human-verify (blank-vs-preserve crash frame).
@@ -157,25 +170,27 @@ Recent decisions affecting current work:
 - [Phase 07-02]: TERM-10 search slice (renderer-only). New SearchBar overlay (sibling of .term-mount, never inside .xterm) + SearchAddon mounted once per SessionView term (disposed before term.dispose() — Pitfall 4). SessionManager searchOpenId + 'search' branch on the EXISTING 'session:switch' channel (toggles the active session's bar, never switches active). SessionView render restructured: outer .session-view wrapper → inner .term-mount (xterm opens here) + SearchBar sibling, so the input's stopPropagation keeps chars/Esc off the PTY (SC3). searchReady flag hands the live addon (null on first paint). Decorations always passed so onDidChangeResults fires; resultIndex===-1 over-threshold sentinel handled. Zero new bridge key — EXPECTED_API_KEYS stays 20. 283 unit GREEN, tsc + eslint clean. Live N-of-M / find-chord / SC3 sign-off is Plan 04 (manual, macOS-first).
 - [Phase 07-03]: TERM-11 scrollback slice (renderer-only). Sidebar ⚙ gear in a NEW .sidebar-pinned inline-flex row beside the collapse chevron (reachable expanded + collapsed — inherits the chevron's dual-mode; .sidebar-collapse/.sidebar-prefs merged into shared 28×28 radius-8 + blue focus-ring rules) opens PreferencesModal (clones the ConfirmModal skeleton, NOT a generalization; extensible .prefs-body settings stack — D-08). Scrollback field: number input min 1000 max 50000 step 1000, default 5000, live-apply-on-commit (onChange clamps + applies, onBlur re-snaps) + single neutral "Done" dismiss (no destructive styling). NEW pure renderer src/renderer/scrollback-clamp.ts — a hand-kept verbatim MIRROR of the main clampScrollback (NOT an import — importing src/main would pull electron into the renderer bundle); defense in depth (renderer clamp = input UX, main setUiState clamp = persistence security boundary). SessionManager owns scrollback state (default 5000, boot-read via getUiState seeds it — RESEARCH Open Q1 resolved) + handleSetScrollback (clamp → state → persistUiState, validated/re-clamped in main — T-07-01) + preferencesOpen; fans the value out as a prop to every SessionView. SessionView seeds new Terminal({ scrollback }) (replaces hardcoded 10000) + a guarded live-apply useEffect([scrollback]) (term.options.scrollback, no re-fit, SearchAddon/WebGL untouched; lowering trims off-screen rows — D-06 accepted). ZERO new bridge keys — scrollback rides persistUiState, boot-read uses the existing getUiState; EXPECTED_API_KEYS stays 20 (security.guard GREEN). 290 unit GREEN (36 files, +7 renderer clamp), tsc + eslint clean. Live fan-out (D-05) + decrease-trim (D-06) + restore-on-restart (SC2) sign-off is Plan 04 (manual, macOS-first).
 - [Phase 06.1-04 gap-closure r1]: First human-verify FAILED → 4 fixes + 1 follow-on, each locked. (1) Amber settle-independence: extracted SEAM A per-tick decision into pure src/renderer/agent-tick.ts (decideAgentTick); now runs classify() EVERY tick and emits 'waiting' after WAITING_TICKS(3)≈300ms even while the full-frame hash churns (the real claude footer repaints forever → it never settled → amber never fired). classify() untouched (oracle green); ❯ caret NOT reintroduced. (2) Header Restart ↻ REMOVED (user decision) — live header = Clear + Remove; onRestart prop + SessionManager pass-through gone; restart-in-place + the '— restarted —' divider STAY (still reachable via row/context-menu Restart — assessed not-dead). (3) FIX4b persist policy = IDENTITY/RECIPE (supersedes edit-only D-02): persist if 'configured OR hasIdentity' where identity = startupCommand | custom name (not auto 'Session N') | custom icon | non-default cwd | non-default shell; pure src/main/session-identity.ts gates listConfiguredSessions() + onExit self-exit routing; DEFAULT_SESSION_ICON is the single-source default; 06.1-CONTEXT.md D-02 refined. A bare blank +New stays ephemeral. (4) FIX4a self-exit→Inactive flip: pure src/renderer/session-status.ts (resolveRowStatus/hasRendererIdentity) presents an IDENTITY row's 'exited'/'error' as 'not_started' so it enters the Inactive List mid-session (was only on next boot). (5) Follow-on Rule-1 race guard: child.onExit no-ops when s.pty!==child — the dormant Start (create({id})) re-spawns under the same id while the old child drains SIGTERM, and the stale exit was relabeling the live session (exposed by FIX4a; app-restart-restore smoke was timing out). 234 unit GREEN (30 files), tsc + eslint(src/tests) clean, 14/14 smoke GREEN (packaged). nyquist_compliant NOT flipped — awaiting 2nd human-verify. Pre-existing .planning/spikes/*.cjs lint errors (8) are out of scope → deferred-items.md.
-
 - [Phase 08-01]: macOS-buildable packaging slice complete. (1) Pure electron-free `src/main/os-gate.ts` (mirrors shell-resolver.ts): `MIN_WINDOWS_BUILD=17763`, `parseWindowsBuild` (regex group-3 BUILD, like node-pty's own parser), `isUnsupportedWindows` (win32 + parseable build < floor; **fail-OPEN** on unparseable so a parse quirk never bricks a supported host; non-win32 never gated). Wired at the TOP of `app.whenReady` in index.ts BEFORE store.load() — native `dialog.showErrorBox`→`app.quit()`→`return`, so the gate precedes every node-pty spawn path (D-05/SC4). 9 fixture-string unit tests GREEN. (2) Placeholder `assets/icon.{icns,ico,png}` (icns via iconutil/sips; **real multi-size .ico** 16–256, `file`→"MS Windows icon resource", not a renamed PNG) + `assets/README.md` (swap-by-file later). `forge.config.ts` EXTENDED additively: name/appBundleId/`icon:'assets/icon'` (no ext) + **env-gated** `osxSign: process.env.APPLE_IDENTITY ? {} : undefined` / `osxNotarize: process.env.APPLE_ID ? {...} : undefined` (unsigned default, D-04, **zero secret committed**) + `MakerSquirrel({setupIcon:'assets/icon.ico'})`; `windowsSign` left UNSET. The proven `asar.unpackDir` / `ignore` keep-clause / `rebuildConfig.onlyModules:[]` (D-06) are **byte-for-byte unchanged**. package.json author+appId. `docs/PACKAGING.md` (make overview, `xattr -dr com.apple.quarantine`, env-gated signing flip). (3) `wdio.conf.ts` `appBinaryPath` now a `process.platform==='win32'` ternary on `os.arch()` (darwin .app / win32 .exe for Plan-03 CI); `pty-roundtrip.smoke.test.ts` stale RED banner removed, `echo hello` is the cross-platform SC3 invariant, `$TERM`/Ctrl+C guarded to non-win32 (it.skip). **Real proof on dev box**: `npm run make`→`out/Just-Wrapper-darwin-arm64/Just-Wrapper.app` (icon applied, bundle id com.justwrapper.app, spawn-helper unpacked+executable); `npm run test:smoke`→15/15 spec files, pty-roundtrip 3/3 GREEN (PTY echoes from inside app.asar.unpacked). 301 unit GREEN, EXPECTED_API_KEYS stays exactly **20** (window-config.ts untouched, security.guard GREEN), tsc clean. **Zero new bridge keys, zero new package installs.**
 - [Phase ?]: 08-02: CMD/PowerShell readiness degrades-loudly; Windows shell default from ComSpec unconditional (D-05); zero new bridge keys (EXPECTED_API_KEYS=20)
 - [Phase 08-03]: 2-OS GitHub Actions matrix (windows-latest + macos-latest) is the canonical producer + verifier — `.github/workflows/build.yml`: npm ci → npm run make (HARD gate) → npm run test:smoke (strong-preferred) → upload-artifact out/make; ZERO secrets, unsigned (D-04, maker-squirrel unsigned + osxSign/osxNotarize env-gated off), NO mandatory native rebuild (D-06 — postinstall fix-node-pty does the opportunistic non-fatal rebuild). docs/PACKAGING.md gained a Continuous Integration section. Task 2 canonical `claude --rc` packaged human-verify APPROVED 2026-06-10: the user ran `npm run make`, opened the packaged macOS `.app`, created the canonical session (Parlour Claude RC / 🛋️ / real project dir / `claude --rc`) and confirmed LIVE interactive launch — **SC2 LIVE-CONFIRMED on macOS ONLY**. Honest SC map: SC1(mac)/SC3(mac) automated GREEN; SC1(win)/SC3(win) CI-produced (runnable-on-real-Windows best-effort/human-verify); SC4 LOGIC-PROVEN ONLY (os-gate.test.ts GREEN, no pre-1809 host available); D-02/D-03 Windows byte-semantics best-effort. nyquist_compliant flipped true in 08-VALIDATION.md ONLY on this explicit approval. PKG-01 satisfied (Definition-of-Done item 6). Phase NOT yet marked verified — orchestrator's verifier + phase.complete owns that.
 
 ### Pending Todos
 
-None yet.
+The 5 v1.1 todo items (3 SESS UX + 2 code-review debt) are now formal requirements mapped to phases — see `## Deferred Items` and the v1.1 roadmap:
+
+- edit-modal cwd/startup prefill → SESS-05 (Phase 12)
+- folder picker for working directory → SESS-06 (Phase 12)
+- Start-control discoverability for live sessions → SESS-07 (Phase 11)
+- address deferred code-review findings (Phase 05.1) → DEBT-01 (Phase 14)
+- redo Phase 06.1 code-review criticals → DEBT-02 (Phase 14, mandatory human re-verify gate)
 
 ### Blockers/Concerns
 
-- **[06.1-04 Task 3 — ACTIVE, 2nd pass] SECOND end-of-phase human-verify is the only remaining step.** The FIRST human-verify FAILED; gap-closure round 1 fixed all 4 diagnosed defects + a stale-exit race guard, each locked with a regression test. All automated suites are GREEN (234 unit + 14/14 smoke incl. alt-screen-reset + app-restart-restore). The user must RE-run the hands-on checks against the running app and type "approved" (plus confirm the abnormal-exit frame choice — scrollback-preserving default vs blank crash frame, RESEARCH Open Q1). On approval the executor flips nyquist_compliant: true in BOTH 06-VALIDATION.md and 06.1-VALIDATION.md. **The flags are NOT flipped yet.** To run the app: `npm start` (or `npm run package` then launch out/Just-Wrapper-darwin-arm64/Just-Wrapper.app). Refreshed re-verify checklist is in the executor's return report.
-  - FIX 1: amber "waiting" now fires LIVE on the real `claude` permission screen (settle-independent — the churning footer no longer keeps it blue).
-  - FIX 3: the header ↻ Restart button is GONE — the live header is Clear + Remove only; Restart lives on the row/context-menu and via Remove → Start-from-Inactive.
-  - FIX 4a/4b: a running session carrying a recipe (e.g. a startupCommand) now persists across restart and a self-exiting configured/recipe session drops into the Inactive List immediately.
-- [resolved-by-Plan-03, fixed in 04] persistence.smoke + reorder.smoke had stale ephemeral-persists expectations after Plan 03's D-02 configured-only persistence — corrected in 06.1-04 (Rule-1 test correctness).
-- node-pty version for Electron 42.x needs verification before Phase 2 starts (see research/SUMMARY.md); consider starting on Electron 36.x if compatibility is unclear
-- macOS notarization (Phase 8) requires Apple Developer Program membership (~$99/year); plan ahead
-- **[08-01 — for human confirmation, NOT auto-changed] Windows ConPTY floor 17763 vs 18309.** `os-gate.ts` `MIN_WINDOWS_BUILD` is locked at **17763** (Windows 10 1809, CLAUDE.md/D-05). node-pty's OWN `_useConpty` gate is `>= 18309` — so builds 17763–18308 LAUNCH under our gate but run winpty internally (which CLAUDE.md "What NOT to Use" excludes). The discrepancy is preserved as a code comment in os-gate.ts and was NOT silently changed (08-RESEARCH Open Q1 / A6). If a "ConPTY guaranteed" floor is wanted, the constant becomes 18309 — but only by an explicit human decision.
+- **[DEBT-02 / Phase 14] Automated green is NOT proof for the Phase 06.1 lifecycle fixes.** The 2026-06-09 remediation passed the suite while actively broken and was reverted. Phase 14 must redo CR-01..04 / WR-02 with tests that exercise the real failure/edge paths AND gate completion on a mandatory user re-verify in the running app (start / restart / quit→relaunch / rapid double-restart / mid-write durability).
+- **[WIN-02 / Phase 15] Windows real-hardware run is a DEFERRED human-UAT gate.** A Windows machine becomes available in a few hours; Phase 15 delivers the kit (WIN-01) and earlier phases are not blocked on the run. WIN-02 closes on the user's sign-off (mirror `08-HUMAN-UAT.md`).
+- **[Phases 9–13] Core-Value guard.** Every UI/polish phase must leave the app runnable and must not regress terminal fidelity (the v1.0 Core Value). Token/chrome work touches presentation only; the xterm/PTY data path stays untouched.
+- **[Phase 12 / SESS-06] Bridge-surface budget.** EXPECTED_API_KEYS is currently 20. The folder-picker IPC (`dialog.showOpenDialog` openDirectory) may add a bridge key — weigh it against the security guard; note a `pickDirectory` seam already exists from Phase 06.
+- [08-01 — for human confirmation, NOT auto-changed] Windows ConPTY floor 17763 vs 18309. `os-gate.ts` `MIN_WINDOWS_BUILD` is locked at 17763 (Windows 10 1809, CLAUDE.md/D-05). node-pty's OWN `_useConpty` gate is `>= 18309` — builds 17763–18308 launch under our gate but run winpty internally. Preserved as a code comment; not silently changed. Relevant to the WIN-01 verification kit (Phase 15).
 
 ### Quick Tasks Completed
 
@@ -185,31 +200,32 @@ None yet.
 
 ## Deferred Items
 
-Acknowledged and deferred at v1.0 milestone close on 2026-06-10 (option B — carry debt into v1.1). Full analysis in `.planning/v1.0-MILESTONE-AUDIT.md`. No critical blockers; all 27 requirements satisfied + 20/20 integration wired.
+Acknowledged and deferred at v1.0 milestone close on 2026-06-10 (option B — carry debt into v1.1). Full analysis in `.planning/v1.0-MILESTONE-AUDIT.md`. No critical blockers; all 27 requirements satisfied + 20/20 integration wired. **v1.1 status column shows where each item is now scheduled.**
 
-| Category | Item | Status | Deferred At |
-|----------|------|--------|-------------|
-| verification_gap | Phase 08 VERIFICATION.md — Windows real-hardware (installer run, shell dropdown, pre-1809 dialog) | REAL — needs Windows host | 2026-06-10 |
-| uat_gap | Phase 08 HUMAN-UAT.md — 3 pending Windows scenarios + port 5 POSIX smoke specs to Windows-shell-aware | REAL — needs Windows host | 2026-06-10 |
-| verification_gap | Phase 02 VERIFICATION.md [human_needed] | STALE — fidelity human-confirmed at Phase-3 03-03 checkpoint (PROJECT.md Validated); frontmatter not flipped | 2026-06-10 |
-| uat_gap | Phase 02 HUMAN-UAT.md [partial] — 5 scenarios | STALE — covered by Phase-3 fidelity sign-off | 2026-06-10 |
-| verification_gap | Phase 05 VERIFICATION.md [human_needed] | STALE — quit/reopen + reorder + shell dropdown confirmed (05-VALIDATION complete) | 2026-06-10 |
-| uat_gap | Phase 05 HUMAN-UAT.md [partial] — 3 scenarios | STALE — covered by Phase-5 sign-off | 2026-06-10 |
-| nyquist | Phases 01 / 02 / 03 — nyquist_compliant: false (draft) | Formal Nyquist flag never flipped; functional verification passed | 2026-06-10 |
-| todo | edit-modal does not prefill saved cwd + startup command (ui) | open | 2026-06-10 |
-| todo | add folder picker for working-directory selection (ui) | open | 2026-06-10 |
-| todo | improve Start control discoverability for live sessions (ui) | open | 2026-06-10 |
-| todo | address deferred code-review findings — Phase 05.1 (general) | open | 2026-06-10 |
-| todo | redo Phase 06.1 code-review criticals — re-hand-verify CR-01..04/WR-02 (general) | open (test-covered: 267 unit + 14/14 smoke) | 2026-06-10 |
-| integration_warn | TERM-05 Windows CMD/PowerShell: probe.unsupported notice not consumed by create() — generic timeout msg instead of "auto-run unsupported" | WARNING (safe; Windows-only UX) | 2026-06-10 |
-| quick_task | 260605-ki7 phase-4 sidebar polish [status: unknown] | FALSE-POSITIVE — completed 2026-06-05 (commit 0ea3d68, see Quick Tasks Completed) | 2026-06-10 |
+| Category | Item | Status | Deferred At | v1.1 Phase |
+|----------|------|--------|-------------|------------|
+| verification_gap | Phase 08 VERIFICATION.md — Windows real-hardware (installer run, shell dropdown, pre-1809 dialog) | REAL — needs Windows host | 2026-06-10 | WIN-01/02 → Phase 15 |
+| uat_gap | Phase 08 HUMAN-UAT.md — 3 pending Windows scenarios + port 5 POSIX smoke specs to Windows-shell-aware | REAL — needs Windows host | 2026-06-10 | WIN-01/02 → Phase 15 |
+| verification_gap | Phase 02 VERIFICATION.md [human_needed] | STALE — fidelity human-confirmed at Phase-3 03-03 checkpoint (PROJECT.md Validated); frontmatter not flipped | 2026-06-10 | VAL-01 → Phase 15 |
+| uat_gap | Phase 02 HUMAN-UAT.md [partial] — 5 scenarios | STALE — covered by Phase-3 fidelity sign-off | 2026-06-10 | VAL-01 → Phase 15 |
+| verification_gap | Phase 05 VERIFICATION.md [human_needed] | STALE — quit/reopen + reorder + shell dropdown confirmed (05-VALIDATION complete) | 2026-06-10 | (formal; ride Phase 15) |
+| uat_gap | Phase 05 HUMAN-UAT.md [partial] — 3 scenarios | STALE — covered by Phase-5 sign-off | 2026-06-10 | (formal; ride Phase 15) |
+| nyquist | Phases 01 / 02 / 03 — nyquist_compliant: false (draft) | Formal Nyquist flag never flipped; functional verification passed | 2026-06-10 | VAL-01 → Phase 15 |
+| todo | edit-modal does not prefill saved cwd + startup command (ui) | open | 2026-06-10 | SESS-05 → Phase 12 |
+| todo | add folder picker for working-directory selection (ui) | open | 2026-06-10 | SESS-06 → Phase 12 |
+| todo | improve Start control discoverability for live sessions (ui) | open | 2026-06-10 | SESS-07 → Phase 11 |
+| todo | address deferred code-review findings — Phase 05.1 (general) | open | 2026-06-10 | DEBT-01 → Phase 14 |
+| todo | redo Phase 06.1 code-review criticals — re-hand-verify CR-01..04/WR-02 (general) | open (test-covered: 267 unit + 14/14 smoke) | 2026-06-10 | DEBT-02 → Phase 14 |
+| integration_warn | TERM-05 Windows CMD/PowerShell: probe.unsupported notice not consumed by create() — generic timeout msg instead of "auto-run unsupported" | WARNING (safe; Windows-only UX) | 2026-06-10 | (Windows UX; verify in WIN-01 kit, Phase 15) |
+| quick_task | 260605-ki7 phase-4 sidebar polish [status: unknown] | FALSE-POSITIVE — completed 2026-06-05 (commit 0ea3d68, see Quick Tasks Completed) | 2026-06-10 | resolved |
 
 ## Session Continuity
 
-Last session: 2026-06-10T00:00:00.000Z
-Stopped at: Completed 08-03-PLAN.md (Task 2 human-verify APPROVED; nyquist_compliant flipped true)
-Resume file: None — Phase 8 plans all complete; next is the orchestrator's phase-verifier + phase.complete step
+Last session: 2026-06-10T18:00:00.000Z
+Stopped at: v1.1 roadmap created (Phases 9–15; 14/14 requirements mapped, 0 orphans). ROADMAP.md + REQUIREMENTS.md traceability + STATE.md updated.
+Resume file: None — ready to plan Phase 9 (Design Token Foundation).
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
+- Plan the first v1.1 phase with `/gsd-plan-phase 9` (Design Token Foundation — UI-01; the UI-SPEC step decides the actual visual direction at plan time).
+- Phases 14 (debt) and 15 (validation + Windows kit) are independent of the UI phases and may be scheduled flexibly; WIN-02 stays a deferred human-UAT gate.
