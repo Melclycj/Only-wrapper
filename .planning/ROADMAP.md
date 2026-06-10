@@ -50,7 +50,11 @@ Phase numbering continues from v1.0 (which ended at Phase 8). v1.0 phase directo
   2. All surface colors, type sizes, spacing, radius, and motion durations are sourced from named design tokens (no ad-hoc hardcoded values scattered across components).
   3. Switching the token values in one place visibly re-themes the whole app consistently, proving the tokens are the single source of truth.
   4. The terminal renders and behaves exactly as before — token wiring touches chrome only and does not regress terminal fidelity.
-**Plans**: TBD
+**Scope note (hybrid, D-01)**: Phase 9 DEFINES the complete `--space-*` scale and FULLY migrates the GLOBAL repeated primitives (accent/danger + 5 status accents, 3 shadows, radius, motion, font stacks) to tokens, and LOADS the fonts. Per-surface spacing-VALUE migration completes across Phases 10–13. SC2 is satisfied for the global primitives + the scale exists; SC3 is proven by the color/font primitives.
+**Plans**: 3 plans
+  - [ ] 09-01-PLAN.md — Install @fontsource fonts (supply-chain gate) + create tokens.css single-source layer + wire renderer-entry imports (Wave 1)
+  - [ ] 09-02-PLAN.md — Migrate global primitives in terminal.css → var()/color-mix + status-colors.ts → var(--accent-*) + add tokens-completeness guard test (Wave 2)
+  - [ ] 09-03-PLAN.md — Packaged-font build-output assertion + end-of-phase human-verify (SC1/SC3/font render) phase gate (Wave 3)
 **UI hint**: yes
 
 ### Phase 10: Sidebar Visual Polish
@@ -140,7 +144,7 @@ v1.1 phases execute in numeric order: 9 → 10 → 11 → 12 → 13 → 14 → 1
 | 6.1 Terminal Lifecycle Redesign | v1.0 | 4/4 | Complete | 2026-06-09 |
 | 7. Terminal Search + Scrollback Config | v1.0 | 5/5 | Complete | 2026-06-09 |
 | 8. Cross-Platform Packaging | v1.0 | 3/3 | Complete | 2026-06-10 |
-| 9. Design Token Foundation | v1.1 | 0/TBD | Not started | - |
+| 9. Design Token Foundation | v1.1 | 0/3 | Not started | - |
 | 10. Sidebar Visual Polish | v1.1 | 0/TBD | Not started | - |
 | 11. Terminal Area Polish + Live Start/Restart | v1.1 | 0/TBD | Not started | - |
 | 12. Session Form — Polish + Edit UX | v1.1 | 0/TBD | Not started | - |
