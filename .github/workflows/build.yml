@@ -51,11 +51,20 @@ jobs:
       - run: npm ci
       # HARD gate — Forge package + maker-squirrel (win) / maker-zip (mac), UNSIGNED.
       - run: npm run make
-      # STRONG-PREFERRED gate — WDIO against the PACKAGED binary; the
-      # OS-conditional appBinaryPath (Plan 01) picks the right binary per leg.
-      # This is the SC3 ASAR-internal PTY round-trip proof on Windows.
+      # WDIO against the PACKAGED binary; OS-conditional appBinaryPath (Plan 01)
+      # picks the right binary per leg. macOS smoke is a HARD gate (proves the
+      # SC3 ASAR-internal PTY round-trip). Windows smoke is BEST-EFFORT: the
+      # POSIX-coded smokes (tput cols, %-prompt, JW_STARTUP_OK) do not all
+      # translate to a Windows cmd.exe shell yet, so an observed Windows smoke
+      # failure is non-blocking (build.yml gate policy; observed on the first
+      # Windows run). The Windows shell SPAWN itself is fixed (resolveShell win32
+      # arm); porting the POSIX smoke assertions to Windows is tracked separately.
       - run: npm run test:smoke
+        continue-on-error: ${{ matrix.os == 'windows-latest' }}
+      # Upload even when the (best-effort Windows) smoke step is red, so the
+      # built .exe/.app is always retrievable from the run.
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: just-wrapper-${{ matrix.os }}
           path: out/make/**

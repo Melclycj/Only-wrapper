@@ -23,13 +23,25 @@ export interface ResolvedShell {
  *     Interactive comes free from the PTY's real TTY, so we do NOT add '-i'
  *     (RESEARCH anti-pattern: '-i' can cause double-sourcing/job-control noise).
  *
- * OS-agnostic: the Windows shell mapping (powershell.exe / wsl.exe and its
- * non-POSIX login-flag semantics) is deferred to Phase 8. We intentionally do
- * NOT hard-code a non-macOS path here so the macOS-first case stays correct;
- * the $SHELL/zsh fallback is already platform-neutral for the current targets.
+ * Platform-aware (Phase 8, Open Q2): on win32 the POSIX `$SHELL || /bin/zsh`
+ * fallback spawns a NON-EXISTENT binary (Windows sets no $SHELL and has no
+ * /bin/zsh), so the PTY never produces output — the defect the Phase-8 Windows
+ * CI smoke leg surfaced. The win32 arm defaults to ComSpec (cmd.exe, always set
+ * on Windows) with NO POSIX login flag (interactivity comes from the ConPTY TTY).
+ * A user-picked shell from the D-02 dropdown still overrides this in
+ * PtyManager.create(); this is only the no-shell-stored fallback.
+ *
+ * `platform` is injected (defaults to process.platform) so both arms unit-test
+ * deterministically regardless of the test runner's OS.
  */
-export function resolveShell(): ResolvedShell {
-  // Fallback to /bin/zsh when SHELL is unset OR empty (D-01).
+export function resolveShell(platform: NodeJS.Platform = process.platform): ResolvedShell {
+  if (platform === 'win32') {
+    // cmd.exe via ComSpec (always present on Windows), else the well-known path.
+    // No login flag — cmd.exe has no POSIX `-l`; the ConPTY TTY makes it interactive.
+    const shell = process.env.ComSpec || 'C:\\Windows\\System32\\cmd.exe';
+    return { shell, args: [] };
+  }
+  // POSIX (macOS): fallback to /bin/zsh when SHELL is unset OR empty (D-01).
   const shell = process.env.SHELL || '/bin/zsh';
   // Login flag only — interactive is implied by the PTY TTY.
   const args = ['-l'];
