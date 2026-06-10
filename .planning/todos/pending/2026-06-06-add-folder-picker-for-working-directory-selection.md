@@ -2,6 +2,7 @@
 created: 2026-06-06T14:35:34.115Z
 title: Add folder picker for working directory selection
 area: ui
+resolves_phase: 12
 files:
   - src/renderer/SessionEditModal.tsx:176-189
   - src/main/pty-manager.ts:713-718

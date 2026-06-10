@@ -2,6 +2,7 @@
 created: 2026-06-06T15:15:00.000Z
 title: Address deferred code-review findings from phase 05.1
 area: general
+resolves_phase: 14
 files:
   - .planning/phases/05.1-term-05-startup-command-auto-run/05.1-REVIEW.md
   - src/main/pty-manager.ts

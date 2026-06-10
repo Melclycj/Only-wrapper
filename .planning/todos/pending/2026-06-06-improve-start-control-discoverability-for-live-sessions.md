@@ -2,6 +2,7 @@
 created: 2026-06-06T14:35:34.115Z
 title: Improve Start control discoverability for live sessions
 area: ui
+resolves_phase: 11
 files:
   - src/renderer/IdleCard.tsx
   - src/renderer/SessionManager.tsx

@@ -2,6 +2,7 @@
 created: 2026-06-06T14:35:34.115Z
 title: Edit modal does not prefill saved cwd and startup command
 area: ui
+resolves_phase: 12
 files:
   - src/renderer/SessionEditModal.tsx:68-75
   - src/renderer/session-add.ts:48
