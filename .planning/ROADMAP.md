@@ -87,8 +87,8 @@ Phase numbering continues from v1.0 (which ended at Phase 8). v1.0 phase directo
 
 **Wave 2** *(blocked on Wave 1; the two run in parallel — disjoint files)*
 
-  - [ ] 10-02-PLAN.md — Sidebar.tsx two-line restructure + sidebar.css visual rules (active card/edge bar, amber waiting wash, icon tile, dashed recipe cards, ghost ▶, section counts, collapsed continuity) + ui-lab evidence surfaces (Wave 2)
-  - [ ] 10-03-PLAN.md — ContextMenu D-14 viewport clamp + D-15 danger-ramp Remove/Delete + SessionManager wiring + danger CSS (Wave 2)
+  - [x] 10-02-PLAN.md — Sidebar.tsx two-line restructure + sidebar.css visual rules (active card/edge bar, amber waiting wash, icon tile, dashed recipe cards, ghost ▶, section counts, collapsed continuity) + ui-lab evidence surfaces (Wave 2)
+  - [x] 10-03-PLAN.md — ContextMenu D-14 viewport clamp + D-15 danger-ramp Remove/Delete + SessionManager wiring + danger CSS (Wave 2)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -187,7 +187,7 @@ v1.1 phases execute in numeric order: 9 → 10 → 11 → 12 → 13 → 14 → 1
 | 7. Terminal Search + Scrollback Config | v1.0 | 5/5 | Complete | 2026-06-09 |
 | 8. Cross-Platform Packaging | v1.0 | 3/3 | Complete | 2026-06-10 |
 | 9. Design Token Foundation | v1.1 | 3/3 | Complete    | 2026-06-11 |
-| 10. Sidebar Visual Polish | v1.1 | 1/4 | In Progress|  |
+| 10. Sidebar Visual Polish | v1.1 | 3/4 | In Progress|  |
 | 11. Terminal Area Polish + Live Start/Restart | v1.1 | 0/TBD | Not started | - |
 | 12. Session Form — Polish + Edit UX | v1.1 | 0/TBD | Not started | - |
 | 13. State & Interaction Design | v1.1 | 0/TBD | Not started | - |
