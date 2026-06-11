@@ -46,7 +46,7 @@
 
 **Wave 7 (gap-closure r3 CSS fix; blocked on Wave 6)**
 
-  - [ ] 10-11-PLAN.md — Collapse the ACTIVE row's controls to zero reserved width at rest (remove .sidebar-row.active from the two control-reveal selector groups so it mirrors the rest-state zero-collapse — D-02; reveals on hover/focus only) so a medium name reads in full on the active row; prove with `ui:shots:fresh` completing 11/11 surfaces + the 10-09 assertNameNotCrushed passing — sidebar.css only (GAP-10-G) (Wave 7)
+  - [x] 10-11-PLAN.md — Collapse the ACTIVE row's controls to zero reserved width at rest (remove .sidebar-row.active from the two control-reveal selector groups so it mirrors the rest-state zero-collapse — D-02; reveals on hover/focus only) so a medium name reads in full on the active row; prove with `ui:shots:fresh` completing 11/11 surfaces + the 10-09 assertNameNotCrushed passing — sidebar.css only (GAP-10-G) (Wave 7)
 
 **Wave 8 (gap-closure gate; blocked on Wave 7)**
 

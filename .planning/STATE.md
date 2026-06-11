@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: milestone
-status: "Awaiting `/gsd-plan-phase 10 --gaps` (round 3: 10-11 CSS fix, then 10-10 gate re-run)"
+status: executing
 stopped_at: Phase 10 UI-SPEC approved
-last_updated: "2026-06-11T14:32:16.733Z"
-last_activity: 2026-06-12 -- r2 wave 1 (10-08+10-09) merged; 10-07 GAP-10-D gate-race fix landed; 10-10 Task-1 evidence chain caught GAP-10-G (deterministic, scrollWidth=98 > clientWidth=51 on active row); human gate intentionally NOT run
+last_updated: "2026-06-11T14:40:54.087Z"
+last_activity: 2026-06-11 -- Phase 10 execution started
 progress:
-  total_phases: 7
-  completed_phases: 1
-  total_plans: 13
-  completed_plans: 12
-  percent: 14
+  total_phases: 1
+  completed_phases: 0
+  total_plans: 11
+  completed_plans: 10
+  percent: 0
 ---
 
 # Project State
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-06-10 — v1.1 milestone started)
 
 ## Current Position
 
-Phase: 10 (sidebar-visual-polish) — EXECUTING (gap-closure round 2 done; round 3 needed)
-Plan: 9 of 10 complete (10-10 gate BLOCKED by GAP-10-G — active-row name crush)
-Status: Awaiting `/gsd-plan-phase 10 --gaps` (round 3: 10-11 CSS fix, then 10-10 gate re-run)
-Last activity: 2026-06-12 -- r2 wave 1 (10-08+10-09) merged; 10-07 GAP-10-D gate-race fix landed; 10-10 Task-1 evidence chain caught GAP-10-G (deterministic, scrollWidth=98 > clientWidth=51 on active row); human gate intentionally NOT run
+Phase: 10 (sidebar-visual-polish) — EXECUTING
+Plan: 2 of 11
+Status: Ready to execute
+Last activity: 2026-06-11 -- Phase 10 execution started
 
 ### v1.1 Milestone Phases (9–15)
 
@@ -110,6 +110,7 @@ Phase 9 (UI-01 design tokens) gates the per-surface polish phases (10–13). Pha
 | Phase 9 P2 | 6min | 3 tasks | 4 files |
 | Phase 09 P09-03 | ~30min | 2 tasks | 5 files |
 | Phase 10 P10-07 | ~40min | 2 tasks | 8 files |
+| Phase 10 P11 | ~6min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -184,6 +185,7 @@ Recent decisions affecting current work:
 - [Phase 10-07]: GAP-10-D (S1 blocker — live amber never fired at a real claude --rc Web Search permission prompt) DIAGNOSED + FIXED. Debug-first: a bounded autonomous driver (spike 003, node-pty + @xterm/headless 5.5.0 + production viewportLines(), Esc+Ctrl-C cancel, never approves the search) captured the REAL Web Search permission frame ("Do you want to proceed? / ❯ 1. Yes / 2. Yes, and don't ask again… / 3. No / Esc to cancel · Tab to amend"). The captured frame DISPROVED the 10-06 routed hypothesis: production classify() reads it 'waiting' and decideAgentTick emits 'waiting' — the recognizer was NEVER the broken link. The single broken link is the SessionView agentRunning GATE: main broadcasts the spawn 'running' status SYNCHRONOUSLY inside create() (pty-manager setStatus) BEFORE the SessionView mounts + binds onPtyStatus, so a first-launch session misses the event → gate shut → classify() never runs → amber never fires (the row badge is blue/running correctly because SessionManager seeds it from the spawn return; only the SessionView's local gate stayed shut). FIX (smallest, at the one link): pure agentGateOpen(runningProp, sawRunningEvent)=runningProp||sawRunningEvent; SessionView takes a `running` prop (authoritative row.status, read via runningRef so the keep-alive mount effect keyed on id never re-binds); SessionManager passes running={s.status==='running'}; leaving 'running' flips both inputs false so the gate closes (D-12 false-positive guard intact). RED→GREEN proven by reverting the helper to event-only (1 failed → fixed green). Real frame encoded into agent-state-replay oracle (recognizer anti-regression). 370/370 unit (365 baseline + 5 new), tsc 0, eslint clean; spike-002 oracle (1 WAITING/10 FREE) + 4 decideAgentTick fast-path cases + agent-state.test all green. Dev-only window.__AGENT_TRACE seam KEPT (INERT in production) for the 10-10 operator. No bridge key added (EXPECTED_API_KEYS unchanged); amber stays reserved for 'waiting'. Live amber confirmation owned by the 10-10 BLOCKING human gate; UI-02 stays OPEN.
 - [Phase 10 r2]: 10-08 (GAP-10-E gutter: gap 12→8px, icon tile 32px token, drag handle 8px; WR-01 box-sizing real zero-width; WR-02 dormant trailing gap) + 10-09 (GAP-10-F: assertNameNotCrushed scrollWidth<=clientWidth + long-name ellipsis fixture; WR-03 import path; WR-04 cleanup hook; WR-05 waitUntil) merged via parallel worktrees; post-merge unit 365/365 + smoke 15/15. 10-10 Task-1 evidence chain then ran against the packaged app: unit 370/370, tsc 0, lint clean, smoke 15/15 — but `ui:shots:fresh` FAILED on the new name-completeness assertion: **GAP-10-G** (active-row controls 52px permanently revealed crush a medium name to 51px box vs 98px content; rest-state-only scoping of 10-05/10-08 fixes). Human gate intentionally NOT run (T-10-10-01: never present a known-failing app). The operator's requested harness paid for itself on its first enforced run.
 - [Phase 09-03]: Wave-3 phase gate CLOSED. SC4/D-05 packaging proof GREEN (scripts/assert-fonts-bundled.cjs: 23 woff2 emitted as relative assets, no absolute url(/ font path; verify:fonts npm script kept out of default test). End-of-phase human-verify APPROVED 2026-06-11 — 5/5 PASS: fonts render (Nunito UI + JetBrains Mono terminal), value-preserving, SC3 re-theme from one place (verified mechanically via the ui-lab green-accent demo, zero source edits), SC4 fidelity unchanged. SC1 coherence recorded HONESTLY as PASS-AT-FOUNDATION-SCOPE — operator verdict 'still ugly'; per-surface composition is Phases 10-13. 5 visual gaps logged + routed downstream (sidebar names crushed->P10, terminal pane framing->P11, Save-button accent->P12, context-menu position/danger ramp->P10/13, inactive-row card structure->P10). nyquist_compliant true; 09-VALIDATION complete. A user-directed ui-lab visual harness (commit 81192cd) built mid-session (NOT a plan task) supplied the check-4 + gap evidence.
+- [Phase ?]: [Phase 10-11]: GAP-10-G closed CSS-only — removed .sidebar-row.active from the two control-reveal selector groups in sidebar.css so the active row's Edit/Close controls collapse to zero reserved width at rest (D-02 contract restored, INCLUDING the active row), reclaiming 52px that crushed 'Parlour Claude'. Controls still reveal on :hover/:focus-within/:focus-visible. WR-04 amber precedence, collapsed-rail mirror, D-13 dormant Start exemption, active drag-handle reveal preserved. Fixture + 10-09 assertNameNotCrushed NOT relaxed. ui:shots:fresh 11/11 (was 10/11); unit 370/370, tsc 0, lint clean, smoke 15/15.
 
 ### Pending Todos
 
@@ -233,7 +235,7 @@ Acknowledged and deferred at v1.0 milestone close on 2026-06-10 (option B — ca
 
 ## Session Continuity
 
-Last session: 2026-06-11T05:03:23.273Z
+Last session: 2026-06-11T14:40:27.951Z
 Stopped at: Phase 10 UI-SPEC approved
 Resume file: .planning/phases/10-sidebar-visual-polish/10-UI-SPEC.md
 
