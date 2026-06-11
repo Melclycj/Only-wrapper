@@ -26,7 +26,7 @@ import { CSS } from '@dnd-kit/utilities';
 import type { LogicalId, SessionIconSpec, SessionRecord } from '../shared/types';
 import type { AgentState } from '../shared/agent-state';
 import { presentation } from './status-colors';
-import { secondaryText } from './row-secondary';
+import { secondaryText, rowAgentAttr } from './row-secondary';
 import { COLOR_INITIAL } from './icon-spec';
 import { startAffordances } from './start-affordances';
 
@@ -192,6 +192,10 @@ function SortableSidebarRow({
   // unchanged. agentState is a renderer-only field on the row (like errorMessage),
   // read defensively since the SessionRecord prop type does not declare it.
   const agentState = (s as { agentState?: AgentState }).agentState;
+  // WR-03 (GAP-10-B): the data-agent attribute is running-gated via the pure rowAgentAttr
+  // helper so a finished/exited/stopped/not_started row can never render the amber overlay
+  // even if a stale agentState lingered. Emitted below only when the value is defined.
+  const agentAttr = rowAgentAttr(s.status, agentState);
   const stat = presentation(s.status, agentState);
   const running = isRunning(s.status);
   // SC2 (D-03): a renderer-only spawn-error message rides the SessionRow (not the
@@ -236,10 +240,11 @@ function SortableSidebarRow({
       // active edge bar + the waiting wash can read it (it stays ALSO on the dots/badge
       // below). data-agent is the D-09 seam — CSS targets [data-agent='waiting']; the
       // field is present on NON-active running rows too (OPEN-Q1 resolution), so a
-      // backgrounded waiting row carries the amber wash with zero extra wiring.
+      // backgrounded waiting row carries the amber wash with zero extra wiring. WR-03:
+      // running-gated via rowAgentAttr so a finished row can never carry the overlay.
       style={{ ...style, '--accent': stat.accent } as React.CSSProperties}
       data-session-id={s.logicalId}
-      {...(agentState ? { 'data-agent': agentState } : {})}
+      {...(agentAttr ? { 'data-agent': agentAttr } : {})}
       {...(rowTitle ? { title: rowTitle } : {})}
       {...(dormant ? { 'data-dormant': '' } : {})}
       {...(isDragging ? { 'data-dragging': '' } : {})}

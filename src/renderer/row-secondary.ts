@@ -12,6 +12,30 @@
 // composes the already-resolved label with the cwd tail / startup command per D-03.
 
 import type { SessionStatus } from '../shared/types';
+import type { AgentState } from '../shared/agent-state';
+
+/**
+ * WR-03 (GAP-10-B) — the running-gated data-agent seam. Returns the agent-state overlay
+ * value the Sidebar row's `data-agent` attribute should carry, or `undefined` when no
+ * attribute should be emitted.
+ *
+ * The amber "Waiting for you" treatment (and the other overlays) must surface ONLY on a
+ * LIVE session: a finished/exited/stopped/not_started row that somehow still carried a
+ * stale `agentState` could otherwise falsely render the amber edge bar, making a dead row
+ * scream "I need you". Gating on `status === 'running'` here is belt-and-suspenders — the
+ * store (SessionManager.handleAgentState) and the reducer (apply-status-event.ts) already
+ * clear/withhold agentState off running rows; this final render-time gate guarantees it.
+ *
+ *   rowAgentAttr('running', 'waiting')      === 'waiting'
+ *   rowAgentAttr('running', undefined)      === undefined
+ *   rowAgentAttr('exited',  'waiting')      === undefined  (a finished row never carries amber)
+ */
+export function rowAgentAttr(
+  status: SessionStatus,
+  agentState: AgentState | undefined,
+): AgentState | undefined {
+  return status === 'running' && agentState ? agentState : undefined;
+}
 
 /**
  * Return only the last path segment of a cwd, tolerant of both `/` and `\` separators
