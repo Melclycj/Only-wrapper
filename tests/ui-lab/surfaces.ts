@@ -325,20 +325,25 @@ export const SURFACES: Surface[] = [
       '10-UI-SPEC.md §Interaction Contract (Waiting row)',
     ],
     expects:
-      'A waiting row carries an amber left edge bar + a light amber tint wash + ' +
-      '"Waiting for you" on line 2 — static, no pulse (D-09).',
-    prepare: async () => {
-      // The amber waiting treatment keys on the renderer-only agentState='waiting', which
-      // is set by SessionView's idle detector reading real agent (claude/codex) terminal
-      // frames going quiet. That cannot be forced deterministically in this harness without
-      // a real agent process — so this surface is SKIPPED rather than fabricated. The wash
-      // is instead proven by the unit data-agent contract (Sidebar.tsx data-agent seam +
-      // the sidebar.css [data-agent='waiting'] rule) and the manual end-of-phase human
-      // verify in Plan 03's gate.
-      throw new SkipSurface(
-        'waiting agent-state is not deterministically drivable in the ui-lab harness ' +
-          '(needs a real agent process going idle); proven by unit contract + manual gate',
-      );
+      'A waiting row carries an amber left edge bar + a light amber tint wash (D-09) — ' +
+      'static, no pulse. Driven via a deterministic STYLING-ONLY data-agent seam.',
+    prepare: async (ctx) => {
+      // IN-05 deterministic seam: the amber [data-agent='waiting'] CSS rule fires on the
+      // attribute ALONE, so we make the styling capturable WITHOUT a real agent process by
+      // poking data-agent='waiting' directly onto a real row's DOM node. This is a
+      // PRESENTATION-ONLY proof ("does the CSS render amber") — it deliberately does NOT
+      // exercise the real frame-stability detector. Detector EMISSION is covered elsewhere:
+      // the agent-state-replay oracle (classify() emits exactly 1 WAITING from the real
+      // claude --rc capture) + the WR-02 chain trace in 10-05-SUMMARY + the manual gate.
+      const id = await addSession(ctx);
+      await browser.execute((sid: string) => {
+        const row = document.querySelector<HTMLElement>(
+          `.sidebar-row[data-session-id="${sid}"]`,
+        );
+        row?.setAttribute('data-agent', 'waiting');
+      }, id);
+      // Let the amber edge bar + wash paint before capture.
+      await browser.pause(300);
     },
   },
   {
