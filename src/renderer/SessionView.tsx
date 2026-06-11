@@ -29,7 +29,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { LogicalId } from '../shared/types';
 import { createWatermark } from '../shared/flow-control';
-import { type AgentState } from '../shared/agent-state';
+import { type AgentState, classify } from '../shared/agent-state';
 import {
   type AgentTickState,
   decideAgentTick,
@@ -382,6 +382,31 @@ export function SessionView({
     // from scratch. The per-tick DECISION lives in the pure decideAgentTick helper so
     // it is unit-testable without a DOM/xterm (agent-tick.test.ts).
     const agentTick = setInterval(() => {
+      // ── GAP-10-D dev-only diagnosis trace (10-07 Task 1). INERT in production: only
+      //    fires when an operator has set `window.__AGENT_TRACE = true` in DevTools
+      //    BEFORE driving a real claude --rc to a permission prompt. It logs, per tick,
+      //    the four chain links the plan asks us to trace — agentRunning gate, the live
+      //    viewportLines() array, classify()'s verdict, and decideAgentTick's return —
+      //    so we can see WHICH link drops the "waiting" signal live (the offline oracle
+      //    proves classify()+decideAgentTick are correct on the captured real frame, so
+      //    the break must be the gate or the live read). This is GUARDED, never an
+      //    unconditional console.* in the shipped path (CLAUDE.md no-console rule); it is
+      //    removed/permanently-gated once the diagnosis is confirmed. The viewport text
+      //    stays local to the operator's DevTools (never persisted, never IPC — T-10-07-02).
+      const trace = (window as unknown as { __AGENT_TRACE?: boolean }).__AGENT_TRACE === true;
+      if (trace) {
+        const lines = viewportLines();
+        const verdict = classify(lines);
+        const region = lines.filter((l) => l.trim() !== '').slice(-4);
+        console.log('[AGENT_TRACE]', id, {
+          agentRunning,
+          classify: verdict,
+          waitingStreak: tickState.waitingStreak,
+          lastEmitted: lastAgent,
+          region,
+        });
+      }
+
       if (!agentRunning) return;
       const next = decideAgentTick(tickState, viewportLines(), performance.now());
       if (next !== null) emitAgent(next);
