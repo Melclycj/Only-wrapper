@@ -133,6 +133,34 @@ export function decideAgentTick(
   return null;
 }
 
+/**
+ * Resolve whether the SessionView agent-state GATE is open for a tick (GAP-10-D fix,
+ * 10-07). The per-tick classify() only runs while a session is "running" (D-12: a
+ * dormant/exited session is never classified). The OLD SessionView opened that gate
+ * SOLELY off its own `onPtyStatus` `'running'` event — but main broadcasts the spawn's
+ * `'running'` SYNCHRONOUSLY inside `create()` (pty-manager.ts setStatus), BEFORE the
+ * SessionView mounts and binds its `onPtyStatus` handler, so for a first-launch session
+ * that event is MISSED and the gate never opens → classify() never runs → the amber
+ * "waiting" verdict never fires live (GAP-10-D, captured in spike 003). The sidebar ROW
+ * badge is correct because SessionManager seeds `status:'running'` from the spawn return;
+ * this helper lets the SessionView gate use that SAME authoritative status.
+ *
+ * The gate is open when EITHER the authoritative running prop (the renderer's row.status
+ * === 'running', which the SessionManager already holds correctly) is true, OR a live
+ * `onPtyStatus` `'running'` event was observed (subsequent transitions / restarts). It is
+ * CLOSED only when both say not-running — so leaving 'running' (the live event flips
+ * `sawRunningEvent` false on stopped/exited/error) closes it even if a stale prop lags a
+ * frame. This is the SMALLEST change that closes the diagnosed link without touching the
+ * keep-alive xterm mount (the effect stays keyed on `id`).
+ *
+ * @param runningProp     authoritative status from SessionManager (row.status === 'running')
+ * @param sawRunningEvent whether THIS view's onPtyStatus handler observed a live 'running'
+ * @returns whether the per-tick classify() gate should be open
+ */
+export function agentGateOpen(runningProp: boolean, sawRunningEvent: boolean): boolean {
+  return runningProp || sawRunningEvent;
+}
+
 // Re-export the tick cadence so the SessionView SEAM A imports both the helper and
 // the interval from one place (it already imports TICK_MS from agent-state).
 export { TICK_MS };

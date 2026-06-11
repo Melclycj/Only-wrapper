@@ -665,6 +665,11 @@ export function SessionManager(): React.JSX.Element {
                   key={s.logicalId}
                   id={s.logicalId}
                   active={s.logicalId === activeId && !activeIsCard}
+                  // GAP-10-D fix (10-07): the AUTHORITATIVE running status (seeded from the
+                  // spawn return). Seeds the SessionView agent-state gate so a first-launch
+                  // session whose create()-time 'running' broadcast raced ahead of the
+                  // SessionView onPtyStatus subscription still classifies → amber fires.
+                  running={s.status === 'running'}
                   onAgentState={handleAgentState}
                   // The bar shows ONLY for the active, search-open session — a
                   // backgrounded session never shows it even if its id is searchOpenId

@@ -31,6 +31,7 @@ import type { LogicalId } from '../shared/types';
 import { createWatermark } from '../shared/flow-control';
 import { type AgentState, classify } from '../shared/agent-state';
 import {
+  agentGateOpen,
   type AgentTickState,
   decideAgentTick,
   initAgentTickState,
@@ -126,6 +127,16 @@ export interface SessionViewProps {
   /** Whether this is the currently-visible session (drives WebGL + visibility + focus). */
   active: boolean;
   /**
+   * The AUTHORITATIVE running status from SessionManager (row.status === 'running'),
+   * which the renderer already holds correctly (seeded from the spawn return). Seeds the
+   * agent-state GATE (GAP-10-D fix, 10-07): main broadcasts the spawn's 'running' event
+   * SYNCHRONOUSLY during create(), BEFORE this view mounts and binds onPtyStatus, so a
+   * first-launch session would otherwise miss it and never open the gate — so the amber
+   * "waiting" verdict never fired live. The gate now opens from this prop OR a live
+   * 'running' event (see agentGateOpen).
+   */
+  running: boolean;
+  /**
    * Lift the computed agent-state up to SessionManager's per-row state (TERM-09 / SC4 —
    * D-06/D-10). Called ONLY when the value CHANGES (debounced, change-only) so the
    * parent does not churn. Zero IPC: the state is computed renderer-side off the
@@ -153,6 +164,7 @@ export interface SessionViewProps {
 export function SessionView({
   id,
   active,
+  running,
   onAgentState,
   searchOpen,
   onCloseSearch,
@@ -187,6 +199,14 @@ export function SessionView({
   // through this ref. (Pattern 1, Pitfall 6.)
   const onAgentStateRef = useRef(onAgentState);
   onAgentStateRef.current = onAgentState;
+
+  // GAP-10-D fix (10-07): the authoritative running status, read by the keep-alive
+  // agentTick via a ref so the mount effect (keyed on `id` only — Pitfall 7) never
+  // re-binds when this prop changes. Seeds the agent-state gate so a first-launch
+  // session whose synchronous create()-time 'running' broadcast raced ahead of the
+  // onPtyStatus subscription STILL opens the gate (the missed-event defect).
+  const runningRef = useRef(running);
+  runningRef.current = running;
 
   // ── GAP-07-G4 reset handle (07-05 re-verify). Clears THIS term's search-start
   //    selection so a case-mode toggle in the SearchBar re-highlights from the TOP and
@@ -345,13 +365,21 @@ export function SessionView({
     //        (oracle-proven), so the fast path is false-positive-safe.
     //      - otherwise: hash CHANGED → 'in-progress' (animated "Thinking…" repaints);
     //        hash UNCHANGED for >= SETTLE_MS → settled → classify() ('waiting'|'free').
-    //    The detector is GATED on the session being 'running' (agentRunning, flipped
-    //    by the status handler below) so a dormant/exited session is never classified
-    //    (D-12). We emit only on CHANGE (lastAgent) to avoid parent render churn. The
+    //    The detector is GATED on the session being 'running' (agentGateOpen, seeded
+    //    from the authoritative `running` prop OR a live 'running' status event — the
+    //    GAP-10-D fix, 10-07) so a dormant/exited session is never classified (D-12). We
+    //    emit only on CHANGE (lastAgent) to avoid parent render churn. The
     //    tick reads buffer.active even on a HIDDEN pane (term.write runs
     //    unconditionally below, and reading the buffer needs no WebGL context) — a
     //    backgrounded `claude --rc` can therefore still resolve to amber (D-12). ──
-    let agentRunning = false;
+    // `sawRunningEvent` = whether THIS view's onPtyStatus handler observed a live
+    // 'running' event (subsequent transitions / restarts). The GATE (agentGateOpen)
+    // combines it with the authoritative `runningRef.current` prop so the GAP-10-D race
+    // (the synchronous create()-time broadcast missed before this subscription bound)
+    // no longer keeps a genuinely-running session's gate shut. (D-12: the gate must be
+    // CLOSED on a dormant/exited session — leaving 'running' flips sawRunningEvent false
+    // AND SessionManager flips row.status away from 'running', so both inputs go false.)
+    let sawRunningEvent = false;
     let lastAgent: AgentState | null = null;
     let tickState: AgentTickState = initAgentTickState(performance.now());
     const emitAgent = (state: AgentState): void => {
@@ -376,7 +404,7 @@ export function SessionView({
     };
 
     // The frame-stability tick (D-09). Armed once per mount (the effect is keyed on
-    // `id` only — Pitfall 7), gated on agentRunning, cleared in the effect cleanup.
+    // `id` only — Pitfall 7), gated on agentGateOpen, cleared in the effect cleanup.
     // On an in-place restart the SAME term persists, so the interval keeps running;
     // the status handler resets tickState so the restart's fresh frame is re-evaluated
     // from scratch. The per-tick DECISION lives in the pure decideAgentTick helper so
@@ -385,21 +413,24 @@ export function SessionView({
       // ── GAP-10-D dev-only diagnosis trace (10-07 Task 1). INERT in production: only
       //    fires when an operator has set `window.__AGENT_TRACE = true` in DevTools
       //    BEFORE driving a real claude --rc to a permission prompt. It logs, per tick,
-      //    the four chain links the plan asks us to trace — agentRunning gate, the live
-      //    viewportLines() array, classify()'s verdict, and decideAgentTick's return —
+      //    the chain links the plan asks us to trace — the gate (runningProp +
+      //    sawRunningEvent), classify()'s verdict, and the waiting streak —
       //    so we can see WHICH link drops the "waiting" signal live (the offline oracle
       //    proves classify()+decideAgentTick are correct on the captured real frame, so
       //    the break must be the gate or the live read). This is GUARDED, never an
       //    unconditional console.* in the shipped path (CLAUDE.md no-console rule); it is
       //    removed/permanently-gated once the diagnosis is confirmed. The viewport text
       //    stays local to the operator's DevTools (never persisted, never IPC — T-10-07-02).
+      const gateOpen = agentGateOpen(runningRef.current, sawRunningEvent);
       const trace = (window as unknown as { __AGENT_TRACE?: boolean }).__AGENT_TRACE === true;
       if (trace) {
         const lines = viewportLines();
         const verdict = classify(lines);
         const region = lines.filter((l) => l.trim() !== '').slice(-4);
         console.log('[AGENT_TRACE]', id, {
-          agentRunning,
+          gateOpen,
+          runningProp: runningRef.current,
+          sawRunningEvent,
           classify: verdict,
           waitingStreak: tickState.waitingStreak,
           lastEmitted: lastAgent,
@@ -407,7 +438,7 @@ export function SessionView({
         });
       }
 
-      if (!agentRunning) return;
+      if (!gateOpen) return;
       const next = decideAgentTick(tickState, viewportLines(), performance.now());
       if (next !== null) emitAgent(next);
     }, TICK_MS);
@@ -502,8 +533,11 @@ export function SessionView({
           term.write(`\r\n\x1b[2m— restarted ${hhmm} —\x1b[0m\r\n`);
         }
         hasRunBeforeRef.current = true;
-        // Open the agent-state detector gate (D-12): classify only while running.
-        agentRunning = true;
+        // Record the live 'running' event (D-12: classify only while running). The gate
+        // also opens from the authoritative `runningRef` prop (agentGateOpen) so a
+        // first-launch session whose create()-time broadcast raced ahead of THIS
+        // subscription still classifies — the GAP-10-D fix (10-07).
+        sawRunningEvent = true;
       } else {
         // SEAM B abnormal-exit seam (D-13 / RESEARCH Open Q1): a genuinely-dead frame
         // ('exited'/'error', i.e. a killed vim/less or a crash — NOT 'stopped', which
@@ -524,10 +558,10 @@ export function SessionView({
         // overlay does not linger (D-12 — SessionManager also clears its per-row
         // agentState on this transition). We do NOT clear `agentTick` here: the SAME
         // term persists across an in-place restart (keep-alive xterm), so the interval
-        // keeps running and is simply gated by `agentRunning`. Resetting tickState
+        // keeps running and is simply gated by `agentGateOpen`. Resetting tickState
         // (fresh hash + zeroed waiting streak) means a later restart's fresh frame is
         // re-evaluated from scratch (Pitfall 7).
-        agentRunning = false;
+        sawRunningEvent = false;
         tickState = initAgentTickState(performance.now());
         lastAgent = null;
       }

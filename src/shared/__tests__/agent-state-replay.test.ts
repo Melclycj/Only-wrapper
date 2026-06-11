@@ -176,3 +176,73 @@ describe('agent-state offline replay oracle (capture-claude.jsonl)', () => {
     expect(SETTLE_MS).toBeGreaterThanOrEqual(400);
   });
 });
+
+// ── GAP-10-D real-frame regression (spike 003, 10-07). The 2nd human gate (10-06)
+//    reported live amber never fired at a real claude --rc Web Search permission prompt.
+//    Spike 003 captured the GENUINE frame (capture-claude-websearch.jsonl) — the
+//    screenshot-2 reproduction: "Do you want to proceed?" / "❯ 1. Yes / 2. Yes, and don't
+//    ask again for Web Search commands in <dir> / 3. No" / "Esc to cancel · Tab to amend".
+//    This replays that REAL frame through the SAME @xterm/headless viewport the app renders
+//    and the production classify(), proving the RECOGNIZER recognizes it (it does — the
+//    diagnosed broken link is the SessionView agentRunning gate, covered by
+//    agent-tick.test.ts agentGateOpen, not classify()). Encoding the real frame into the
+//    oracle corpus is the plan's explicit anti-regression for the recognizer side. ──
+const WS_CAPTURE_PATH = join(
+  process.cwd(),
+  '.planning',
+  'spikes',
+  '003-live-amber-repro',
+  'capture-claude-websearch.jsonl',
+);
+
+interface WsEvent {
+  ms: number;
+  ev: 'spawn' | 'tick' | 'settle' | 'driver' | 'exit';
+  action?: string;
+  verdict?: string;
+  fullViewport?: string[];
+}
+
+/**
+ * Read the spike-003 capture and return the FULL viewport of the real Web Search
+ * permission prompt — preferring the WAITING settle frame, falling back to the
+ * websearch-prompt-detected driver event (both carry the same on-screen layout).
+ */
+function loadWebSearchViewport(): string[] {
+  const raw = readFileSync(WS_CAPTURE_PATH, 'utf8').trim().split('\n');
+  const events: WsEvent[] = raw.map((l) => JSON.parse(l) as WsEvent);
+  const settle = events.find(
+    (e) => e.ev === 'settle' && e.verdict === 'WAITING' && Array.isArray(e.fullViewport),
+  );
+  if (settle?.fullViewport) return settle.fullViewport;
+  const detected = events.find(
+    (e) => e.ev === 'driver' && e.action === 'websearch-prompt-detected' && Array.isArray(e.fullViewport),
+  );
+  if (detected?.fullViewport) return detected.fullViewport;
+  throw new Error('spike-003 capture has no full-viewport Web Search frame');
+}
+
+describe('GAP-10-D real Web Search frame (spike 003 capture)', () => {
+  it('the capture contains the real "Do you want to proceed?" permission frame', () => {
+    const viewport = loadWebSearchViewport();
+    const text = viewport.join('\n');
+    expect(text).toMatch(/do you want to proceed\?/i);
+    expect(text).toMatch(/esc to cancel/i);
+    // The ❯-numbered options the recognizer must read.
+    expect((text.match(/^\s*[❯>]?\s*\d+\.\s+\S/gm) || []).length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('production classify() reads the REAL captured Web Search frame as "waiting" via @xterm/headless', async () => {
+    // Write the genuine captured viewport into a real headless Terminal, read it back the
+    // SAME way production does (viewportLines), and classify the live buffer. This is the
+    // offline reproduction the 10-06 hypothesis predicted would FAIL — it does NOT: the
+    // recognizer is correct, which is why the diagnosis moved to the agentRunning gate.
+    const viewport = loadWebSearchViewport();
+    // Strip trailing blank rows so the headless terminal's cursor region matches the live
+    // layout (the footer is the last non-empty line — claude's input box is not rendered
+    // while the menu is up). Reconstruct via @xterm/headless (real parse, not hand-shaped).
+    const nonEmpty = viewport.filter((l) => l.trim() !== '');
+    const verdict = await classifySettleFrame(nonEmpty);
+    expect(verdict).toBe('waiting');
+  });
+});

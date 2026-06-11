@@ -14,6 +14,7 @@
 
 import { describe, it, expect } from 'vitest';
 import {
+  agentGateOpen,
   decideAgentTick,
   initAgentTickState,
   WAITING_TICKS,
@@ -109,5 +110,35 @@ describe('decideAgentTick — settle-independent waiting (FIX 1)', () => {
     expect(decideAgentTick(state, prompt, TICK_MS)).toBeNull();
     // After SETTLE_MS of the unchanged prompt → settled → free.
     expect(decideAgentTick(state, prompt, 1000)).toBe('free');
+  });
+});
+
+// ── GAP-10-D (10-07): the diagnosed broken link is the SessionView agentRunning GATE,
+//    NOT the recognizer. Spike 003 captured the REAL claude --rc Web Search permission
+//    frame and proved classify() returns 'waiting' and decideAgentTick emits 'waiting'
+//    on it — so the live amber failure was the gate never opening because main broadcasts
+//    'running' during create() BEFORE the SessionView onPtyStatus subscription binds (the
+//    event is missed for a first-launch session). agentGateOpen() lets the gate seed from
+//    the authoritative running status the renderer (SessionManager row.status) already
+//    holds, closing the link. ──
+describe('agentGateOpen — GAP-10-D gate race fix (10-07)', () => {
+  it('REPRO: opens the gate from the authoritative running prop even when the live "running" event was MISSED (the create()/mount race)', () => {
+    // The exact GAP-10-D condition: SessionManager reports the session running
+    // (row.status === 'running', seeded from the spawn return), but the SessionView's
+    // own onPtyStatus handler never observed a 'running' event because main broadcast it
+    // synchronously inside create() before the subscription bound. The OLD code gated
+    // ONLY on the observed event → gate CLOSED → classify() never ran → amber never fired.
+    expect(agentGateOpen(/* runningProp */ true, /* sawRunningEvent */ false)).toBe(true);
+  });
+
+  it('also opens from a live "running" event observed after mount (restart / subsequent transitions)', () => {
+    expect(agentGateOpen(false, true)).toBe(true);
+    expect(agentGateOpen(true, true)).toBe(true);
+  });
+
+  it('stays CLOSED when neither the prop nor a live event reports running (dormant / exited — D-12)', () => {
+    // Leaving 'running' (stopped/exited/error) must close the gate so the overlay does
+    // not linger on a dead session — the false-positive guard (D-12).
+    expect(agentGateOpen(false, false)).toBe(false);
   });
 });
