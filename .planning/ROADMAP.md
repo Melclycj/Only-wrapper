@@ -83,7 +83,7 @@ Phase numbering continues from v1.0 (which ended at Phase 8). v1.0 phase directo
 **Plans**: 4 plans
 **Wave 1**
 
-  - [ ] 10-01-PLAN.md — Pure modules (row-secondary D-03 + viewport-clamp D-14) with tests + extract sidebar CSS → sidebar.css and wire the 3 touch-points (Wave 1)
+  - [x] 10-01-PLAN.md — Pure modules (row-secondary D-03 + viewport-clamp D-14) with tests + extract sidebar CSS → sidebar.css and wire the 3 touch-points (Wave 1)
 
 **Wave 2** *(blocked on Wave 1; the two run in parallel — disjoint files)*
 
@@ -187,7 +187,7 @@ v1.1 phases execute in numeric order: 9 → 10 → 11 → 12 → 13 → 14 → 1
 | 7. Terminal Search + Scrollback Config | v1.0 | 5/5 | Complete | 2026-06-09 |
 | 8. Cross-Platform Packaging | v1.0 | 3/3 | Complete | 2026-06-10 |
 | 9. Design Token Foundation | v1.1 | 3/3 | Complete    | 2026-06-11 |
-| 10. Sidebar Visual Polish | v1.1 | 0/4 | Not started | - |
+| 10. Sidebar Visual Polish | v1.1 | 1/4 | In Progress|  |
 | 11. Terminal Area Polish + Live Start/Restart | v1.1 | 0/TBD | Not started | - |
 | 12. Session Form — Polish + Edit UX | v1.1 | 0/TBD | Not started | - |
 | 13. State & Interaction Design | v1.1 | 0/TBD | Not started | - |
