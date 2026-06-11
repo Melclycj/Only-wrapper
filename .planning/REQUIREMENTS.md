@@ -12,7 +12,7 @@ Phase numbering continues from v1.0 (which ended at Phase 8). Each requirement m
 
 ### Visual Design System
 
-- [ ] **UI-01**: The app applies a single, deliberately-chosen visual direction — one design-token system (palette, typography scale, spacing scale, surface/elevation, radius, motion) — consistently across every screen, replacing piecemeal styling. The visual direction itself is decided at plan time (UI-SPEC), then tokenized and applied; this requirement is the foundation the per-surface requirements build on.
+- [x] **UI-01**: The app applies a single, deliberately-chosen visual direction — one design-token system (palette, typography scale, spacing scale, surface/elevation, radius, motion) — consistently across every screen, replacing piecemeal styling. The visual direction itself is decided at plan time (UI-SPEC), then tokenized and applied; this requirement is the foundation the per-surface requirements build on.
 - [ ] **UI-02**: The session sidebar (expanded and collapsed) presents a clear visual hierarchy — icon, name, and the 5-state status are legible and intentionally styled, and the active session is unmistakably distinguished.
 - [ ] **UI-03**: The terminal area chrome — session header, Working Area vs Inactive List, and the live-session controls (Clear / Remove / Restart, and Start on inactive entries) — is visually polished and clearly structured.
 - [ ] **UI-04**: The create/edit session form is visually polished — grouped fields, clear labels, icon/color picker, and inline validation feedback — and reads as one designed surface.
@@ -85,7 +85,7 @@ Each v1.1 requirement maps to exactly one phase. Phase numbering continues from 
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| UI-01 | Phase 9 — Design Token Foundation | Pending |
+| UI-01 | Phase 9 — Design Token Foundation | Complete |
 | UI-02 | Phase 10 — Sidebar Visual Polish | Pending |
 | UI-03 | Phase 11 — Terminal Area Polish + Live Start/Restart | Pending |
 | SESS-07 | Phase 11 — Terminal Area Polish + Live Start/Restart | Pending |
