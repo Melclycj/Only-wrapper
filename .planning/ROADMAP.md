@@ -56,7 +56,7 @@ Phase numbering continues from v1.0 (which ended at Phase 8). v1.0 phase directo
 **Scope note (hybrid, D-01)**: Phase 9 DEFINES the complete `--space-*` scale and FULLY migrates the GLOBAL repeated primitives (accent/danger + 5 status accents, 3 shadows, radius, motion, font stacks) to tokens, and LOADS the fonts. Per-surface spacing-VALUE migration completes across Phases 10–13. SC2 is satisfied for the global primitives + the scale exists; SC3 is proven by the color/font primitives.**Plans**: 3 plans
 **Wave 1**
 
-  - [ ] 09-01-PLAN.md — Install @fontsource fonts (supply-chain gate) + create tokens.css single-source layer + wire renderer-entry imports (Wave 1)
+  - [x] 09-01-PLAN.md — Install @fontsource fonts (supply-chain gate) + create tokens.css single-source layer + wire renderer-entry imports (Wave 1)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -173,7 +173,7 @@ v1.1 phases execute in numeric order: 9 → 10 → 11 → 12 → 13 → 14 → 1
 | 6.1 Terminal Lifecycle Redesign | v1.0 | 4/4 | Complete | 2026-06-09 |
 | 7. Terminal Search + Scrollback Config | v1.0 | 5/5 | Complete | 2026-06-09 |
 | 8. Cross-Platform Packaging | v1.0 | 3/3 | Complete | 2026-06-10 |
-| 9. Design Token Foundation | v1.1 | 0/3 | Not started | - |
+| 9. Design Token Foundation | v1.1 | 1/3 | In Progress|  |
 | 10. Sidebar Visual Polish | v1.1 | 0/TBD | Not started | - |
 | 11. Terminal Area Polish + Live Start/Restart | v1.1 | 0/TBD | Not started | - |
 | 12. Session Form — Polish + Edit UX | v1.1 | 0/TBD | Not started | - |

@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: UI Polish & Debt Cleanup
-status: planning
+status: executing
 stopped_at: Phase 9 context gathered
-last_updated: "2026-06-10T13:13:16.508Z"
-last_activity: 2026-06-10 — v1.1 roadmap created (Phases 9–15; 14 requirements mapped, 0 orphans)
+last_updated: "2026-06-11T00:27:11.527Z"
+last_activity: 2026-06-11 -- Phase 09 execution started
 progress:
   total_phases: 7
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 3
+  completed_plans: 1
   percent: 0
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-10 — v1.1 milestone started)
 
 **Core value:** Real terminal fidelity — `claude --rc`, `codex`, `vim`, `ssh`, REPLs all behave exactly like a native terminal inside the wrapper. v1.1 polish + debt work must not regress it at any point.
-**Current focus:** v1.1 — UI Polish & Debt Cleanup roadmapped (Phases 9–15, 14/14 requirements mapped). Next: plan Phase 9 (Design Token Foundation) via `/gsd-plan-phase 9`. Carried debt tracked in `## Deferred Items` below; Phases 14–15 close it.
+**Current focus:** Phase 09 — design-token-foundation
 
 ## Current Position
 
-Phase: 9 — Design Token Foundation (not started)
-Plan: —
-Status: Roadmap created — ready to plan Phase 9
-Last activity: 2026-06-10 — v1.1 roadmap created (Phases 9–15; 14 requirements mapped, 0 orphans)
+Phase: 09 (design-token-foundation) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
+Last activity: 2026-06-11 -- Phase 09 execution started
 
 ### v1.1 Milestone Phases (9–15)
 
@@ -105,6 +105,7 @@ Phase 9 (UI-01 design tokens) gates the per-surface polish phases (10–13). Pha
 | Phase 08 P01 | ~7min | 3 tasks | 12 files |
 | Phase 08 P02 | 12min | 2 tasks | 4 files |
 | Phase 08 P03 | ~10min + human-verify | 2 tasks | 3 files |
+| Phase 09 P01 | ~9min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -174,6 +175,7 @@ Recent decisions affecting current work:
 - [Phase 08-01]: macOS-buildable packaging slice complete. (1) Pure electron-free `src/main/os-gate.ts` (mirrors shell-resolver.ts): `MIN_WINDOWS_BUILD=17763`, `parseWindowsBuild` (regex group-3 BUILD, like node-pty's own parser), `isUnsupportedWindows` (win32 + parseable build < floor; **fail-OPEN** on unparseable so a parse quirk never bricks a supported host; non-win32 never gated). Wired at the TOP of `app.whenReady` in index.ts BEFORE store.load() — native `dialog.showErrorBox`→`app.quit()`→`return`, so the gate precedes every node-pty spawn path (D-05/SC4). 9 fixture-string unit tests GREEN. (2) Placeholder `assets/icon.{icns,ico,png}` (icns via iconutil/sips; **real multi-size .ico** 16–256, `file`→"MS Windows icon resource", not a renamed PNG) + `assets/README.md` (swap-by-file later). `forge.config.ts` EXTENDED additively: name/appBundleId/`icon:'assets/icon'` (no ext) + **env-gated** `osxSign: process.env.APPLE_IDENTITY ? {} : undefined` / `osxNotarize: process.env.APPLE_ID ? {...} : undefined` (unsigned default, D-04, **zero secret committed**) + `MakerSquirrel({setupIcon:'assets/icon.ico'})`; `windowsSign` left UNSET. The proven `asar.unpackDir` / `ignore` keep-clause / `rebuildConfig.onlyModules:[]` (D-06) are **byte-for-byte unchanged**. package.json author+appId. `docs/PACKAGING.md` (make overview, `xattr -dr com.apple.quarantine`, env-gated signing flip). (3) `wdio.conf.ts` `appBinaryPath` now a `process.platform==='win32'` ternary on `os.arch()` (darwin .app / win32 .exe for Plan-03 CI); `pty-roundtrip.smoke.test.ts` stale RED banner removed, `echo hello` is the cross-platform SC3 invariant, `$TERM`/Ctrl+C guarded to non-win32 (it.skip). **Real proof on dev box**: `npm run make`→`out/Just-Wrapper-darwin-arm64/Just-Wrapper.app` (icon applied, bundle id com.justwrapper.app, spawn-helper unpacked+executable); `npm run test:smoke`→15/15 spec files, pty-roundtrip 3/3 GREEN (PTY echoes from inside app.asar.unpacked). 301 unit GREEN, EXPECTED_API_KEYS stays exactly **20** (window-config.ts untouched, security.guard GREEN), tsc clean. **Zero new bridge keys, zero new package installs.**
 - [Phase ?]: 08-02: CMD/PowerShell readiness degrades-loudly; Windows shell default from ComSpec unconditional (D-05); zero new bridge keys (EXPECTED_API_KEYS=20)
 - [Phase 08-03]: 2-OS GitHub Actions matrix (windows-latest + macos-latest) is the canonical producer + verifier — `.github/workflows/build.yml`: npm ci → npm run make (HARD gate) → npm run test:smoke (strong-preferred) → upload-artifact out/make; ZERO secrets, unsigned (D-04, maker-squirrel unsigned + osxSign/osxNotarize env-gated off), NO mandatory native rebuild (D-06 — postinstall fix-node-pty does the opportunistic non-fatal rebuild). docs/PACKAGING.md gained a Continuous Integration section. Task 2 canonical `claude --rc` packaged human-verify APPROVED 2026-06-10: the user ran `npm run make`, opened the packaged macOS `.app`, created the canonical session (Parlour Claude RC / 🛋️ / real project dir / `claude --rc`) and confirmed LIVE interactive launch — **SC2 LIVE-CONFIRMED on macOS ONLY**. Honest SC map: SC1(mac)/SC3(mac) automated GREEN; SC1(win)/SC3(win) CI-produced (runnable-on-real-Windows best-effort/human-verify); SC4 LOGIC-PROVEN ONLY (os-gate.test.ts GREEN, no pre-1809 host available); D-02/D-03 Windows byte-semantics best-effort. nyquist_compliant flipped true in 08-VALIDATION.md ONLY on this explicit approval. PKG-01 satisfied (Definition-of-Done item 6). Phase NOT yet marked verified — orchestrator's verifier + phase.complete owns that.
+- [Phase ?]: [Phase 09-01]: Wave-1 token foundation — ADD tokens.css :root layer + @fontsource fonts (nunito 5.2.7 / jetbrains-mono 5.2.8, exact-pinned, no CDN) + index.tsx import order (fonts -> tokens.css -> terminal.css). NO literal migrated (terminal.css/status-colors.ts keep literals until Plan 02 — D-01 hybrid scope). Kept --radius 18px as an alias not renamed (D-04 Discretion). 317 unit GREEN, tsc clean, forge/vite untouched.
 
 ### Pending Todos
 
@@ -222,7 +224,7 @@ Acknowledged and deferred at v1.0 milestone close on 2026-06-10 (option B — ca
 
 ## Session Continuity
 
-Last session: 2026-06-10T12:36:35.800Z
+Last session: 2026-06-11T00:27:06.308Z
 Stopped at: Phase 9 context gathered
 Resume file: .planning/phases/09-design-token-foundation/09-CONTEXT.md
 
