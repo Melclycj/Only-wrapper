@@ -127,6 +127,32 @@ From DESIGN.md §Aesthetic direction + §Design tokens:
       in soft ink; case toggle shows a clear active state (accent wash).
 - [ ] Buttons (prev/next/close) are quiet icon affordances with hover states.
 
+## sidebar-waiting
+
+> Skipped surface (the waiting agent-state is not deterministically drivable in the
+> harness — see `surfaces.ts`). When captured manually (Plan 03's human-verify gate),
+> score against these lines. Otherwise the D-09 treatment is verified by the unit
+> `data-agent` contract (`Sidebar.tsx` seam + `sidebar.css [data-agent='waiting']` rule).
+
+- [ ] A waiting row carries an **amber left edge bar** (`--accent-waiting`) — distinct
+      from the running-blue / idle-slate edge of its neighbours.
+- [ ] A **light amber tint wash** fills the row (static — NO pulse/animation); calm,
+      not alarming.
+- [ ] Line 2 reads **"Waiting for you"** in soft ink with the amber status dot.
+- [ ] The amber treatment is present even when the waiting row is NOT the active row
+      (a backgrounded waiting session still signals "needs me").
+
+## inactive-recipes
+
+- [ ] Inactive List rows read as **dashed eggshell recipe cards** (dashed `--line`
+      border + faint recipe surface tint) — anchored cards, not unanchored text (Gap 5).
+- [ ] Each recipe row reads **icon (line 1) + name (line 1) + the startup command on
+      line 2** (e.g. `npm run dev`) — the recipe's essence, visibly subordinate ink.
+- [ ] An **always-visible circular ghost ▶ Start** sits on the row (outlined brand-blue
+      at rest, NOT hidden behind hover) and **fills brand-blue on hover**.
+- [ ] The dormant icon + name read slightly dimmed (present-but-asleep), NOT disabled.
+- [ ] The `INACTIVE · {n}` section label + hairline divider separate it from Working Area.
+
 ## sidebar-collapsed
 
 - [ ] Icon rail keeps identity: emoji/preset tiles readable at rail width.
@@ -134,3 +160,6 @@ From DESIGN.md §Aesthetic direction + §Design tokens:
       survives collapse.
 - [ ] Collapse control affordance is discoverable; the terminal visibly gains
       the reclaimed width without layout glitches.
+- [ ] The **active tile** keeps its filled/lifted card + a status-colored left edge bar;
+      a **waiting tile** mirrors the amber edge bar — and **no secondary text leaks** into
+      the narrow rail (D-07/D-10).
