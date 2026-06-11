@@ -80,7 +80,20 @@ Phase numbering continues from v1.0 (which ended at Phase 8). v1.0 phase directo
   3. In collapsed (icon-only) mode the active session and per-row status remain identifiable, and the layout stays clean at the narrow rail width.
   4. Sidebar interactions (click-to-switch, drag-to-reorder, keyboard switching) continue to work unchanged and the terminal keep-alive on switch is not regressed.
 
-**Plans**: TBD
+**Plans**: 4 plans
+**Wave 1**
+
+  - [ ] 10-01-PLAN.md — Pure modules (row-secondary D-03 + viewport-clamp D-14) with tests + extract sidebar CSS → sidebar.css and wire the 3 touch-points (Wave 1)
+
+**Wave 2** *(blocked on Wave 1; the two run in parallel — disjoint files)*
+
+  - [ ] 10-02-PLAN.md — Sidebar.tsx two-line restructure + sidebar.css visual rules (active card/edge bar, amber waiting wash, icon tile, dashed recipe cards, ghost ▶, section counts, collapsed continuity) + ui-lab evidence surfaces (Wave 2)
+  - [ ] 10-03-PLAN.md — ContextMenu D-14 viewport clamp + D-15 danger-ramp Remove/Delete + SessionManager wiring + danger CSS (Wave 2)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+  - [ ] 10-04-PLAN.md — Full suite + packaged ui-lab capture scored against the rubric + blocking end-of-phase human-verify (SC1-SC4) phase gate (Wave 3)
+
 **UI hint**: yes
 
 ### Phase 11: Terminal Area Polish + Live Start/Restart
@@ -174,7 +187,7 @@ v1.1 phases execute in numeric order: 9 → 10 → 11 → 12 → 13 → 14 → 1
 | 7. Terminal Search + Scrollback Config | v1.0 | 5/5 | Complete | 2026-06-09 |
 | 8. Cross-Platform Packaging | v1.0 | 3/3 | Complete | 2026-06-10 |
 | 9. Design Token Foundation | v1.1 | 3/3 | Complete    | 2026-06-11 |
-| 10. Sidebar Visual Polish | v1.1 | 0/TBD | Not started | - |
+| 10. Sidebar Visual Polish | v1.1 | 0/4 | Not started | - |
 | 11. Terminal Area Polish + Live Start/Restart | v1.1 | 0/TBD | Not started | - |
 | 12. Session Form — Polish + Edit UX | v1.1 | 0/TBD | Not started | - |
 | 13. State & Interaction Design | v1.1 | 0/TBD | Not started | - |
