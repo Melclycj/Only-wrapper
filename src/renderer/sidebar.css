@@ -94,8 +94,16 @@
  * backgrounded waiting row carries it). Amber left edge bar + a light static amber wash.
  * No animation (the highest-attention signal is calm, not pulsing). */
 .sidebar-row[data-agent='waiting'] {
-  border-left: 3px solid var(--accent-waiting);
   background: color-mix(in oklch, var(--accent-waiting) 8%, transparent);
+}
+
+/* WR-04 explicit precedence: amber waiting WINS over the active status accent on the edge
+ * bar — the locked Phase-6 amber-reserved contract. Matching BOTH the active+waiting row AND
+ * the non-active waiting row in one rule makes the win order-INDEPENDENT (a future reorder of
+ * the .active and [data-agent='waiting'] blocks can no longer silently invert it). */
+.sidebar-row.active[data-agent='waiting'],
+.sidebar-row[data-agent='waiting'] {
+  border-left: 3px solid var(--accent-waiting);
 }
 
 /* D-04 large icon tile — a rounded ~34px tile spanning both text lines, with a larger
@@ -162,6 +170,19 @@
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
+  /* GAP-10-A: at rest the container's gap + margin-left would still reserve a few px even
+   * with every child collapsed to zero — zero them out until the cluster is revealed so the
+   * name reclaims the full width. Restored on the hover/focus reveal selectors below. A
+   * dormant row keeps its standing margin because its always-visible ▶ Start needs spacing. */
+  gap: 0;
+  margin-left: 0;
+}
+
+.sidebar-row:hover .row-controls,
+.sidebar-row.active .row-controls,
+.sidebar-row:focus-within .row-controls,
+.sidebar-row:focus-visible .row-controls,
+.sidebar-row[data-dormant] .row-controls {
   gap: var(--space-1);
   margin-left: var(--space-1);
 }
@@ -171,22 +192,40 @@
  * cannot exceed its parent's opacity). Revealed on row hover, on the active row, and on
  * keyboard focus (:focus-within for a focused child button, :focus-visible for the
  * focused row) so the cluster is reachable without a mouse (a11y). */
+/* GAP-10-A / WR-01 fix: opacity:0 alone leaves the control's layout box reserved, so the
+ * cluster permanently crushed the session name on the 220px rail even at rest. Collapse the
+ * box to ZERO horizontal width (max-width/padding/border-width → 0, overflow:hidden) so an
+ * unrevealed control consumes no layout width; the name reclaims the space. The buttons stay
+ * in the DOM (the E2E driver addresses every data-testid). Keep the transition on `opacity`
+ * ONLY — max-width is layout-bound (web/performance.md), so it snaps rather than animating. */
 .sidebar-row .row-control {
   opacity: 0;
+  max-width: 0;
+  overflow: hidden;
+  padding: 0;
+  border-width: 0;
   transition: opacity var(--duration-fast) var(--ease-standard);
 }
 
+/* Restore the box on hover / active / keyboard focus (24px = the .row-control width below). */
 .sidebar-row:hover .row-control,
 .sidebar-row.active .row-control,
 .sidebar-row:focus-within .row-control,
 .sidebar-row:focus-visible .row-control {
   opacity: 1;
+  max-width: 24px;
+  padding: 0;
+  border-width: 1px;
 }
 
 /* D-13: the Inactive recipe ▶ Start is EXEMPT from the hover-reveal — it stays visible
- * on a dormant row even when not hovered (the recipe card's standing invitation). */
+ * on a dormant row even when not hovered (the recipe card's standing invitation). It must
+ * also keep its RESERVED width (do NOT collapse to zero — D-13 / 6.1 D-06 exemption). */
 .sidebar-row[data-dormant] .row-control-start {
   opacity: 1;
+  max-width: 24px;
+  padding: 0;
+  border-width: 1px;
 }
 
 /* Compact square monochrome icon buttons (Restart ↻ · Edit ✎ · Delete ✕): the glyph
@@ -428,6 +467,9 @@
   border-left: 3px solid var(--accent);
 }
 
+/* WR-04 mirror in the collapsed rail: amber waiting wins over the active accent
+ * order-independently here too. */
+.sidebar.collapsed .sidebar-row.active[data-agent='waiting'],
 .sidebar.collapsed .sidebar-row[data-agent='waiting'] {
   border-left: 3px solid var(--accent-waiting);
 }
