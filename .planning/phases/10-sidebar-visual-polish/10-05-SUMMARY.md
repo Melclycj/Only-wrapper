@@ -121,6 +121,12 @@ None introduced. The ui-lab `data-agent` seam is a deterministic test-only DOM p
 - The code-level closes for GAP-10-A, GAP-10-B (WR-02/WR-03/IN-05), and WR-04 are complete and token-clean. GAP-10-C was correctly left untouched (no edge-bar color-semantics change).
 - **Deferred to 10-06 (re-verify gate):** the packaged ui-lab capture (proving the amber PNG + the name-legibility fix visually), the smoke suite, and the BLOCKING human re-verify. This plan is code-only.
 
+## Self-Check: PASSED
+
+- Created files verified on disk: `src/renderer/__tests__/sidebar-agent-attr.test.ts`, `.planning/phases/10-sidebar-visual-polish/10-05-SUMMARY.md`
+- All task commits verified in git log: `08dcda8` (Task 1), `6b77fc0` (Task 2 RED), `dd5138b` (Task 2 GREEN), `bf29389` (Task 3)
+- Working tree clean
+
 ---
 *Phase: 10-sidebar-visual-polish*
 *Completed: 2026-06-11*
