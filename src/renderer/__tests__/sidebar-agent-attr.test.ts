@@ -13,7 +13,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { rowAgentAttr } from '../row-secondary';
-import type { SessionStatus } from '../shared/types';
+import type { SessionStatus } from '../../shared/types';
 
 describe('rowAgentAttr — data-agent seam is running-gated (WR-03)', () => {
   it('running + waiting → "waiting" (the amber signal surfaces live)', () => {

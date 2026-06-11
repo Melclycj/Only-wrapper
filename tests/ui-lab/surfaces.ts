@@ -208,6 +208,11 @@ async function contextMenuLabels(): Promise<string[]> {
   );
 }
 
+/** WR-04: the row id the `sidebar-waiting` surface poked `data-agent='waiting'`
+ *  onto, recorded in prepare() so cleanup() targets the exact row (the ctx.ids
+ *  list keeps growing in later surfaces, so an index lookup would be wrong). */
+let waitingPokedId: string | null = null;
+
 // ── the surface registry (ordered) ───────────────────────────────────────────
 
 export const SURFACES: Surface[] = [
@@ -420,14 +425,48 @@ export const SURFACES: Surface[] = [
       // the agent-state-replay oracle (classify() emits exactly 1 WAITING from the real
       // claude --rc capture) + the WR-02 chain trace in 10-05-SUMMARY + the manual gate.
       const id = await addSession(ctx);
+      // WR-04: record the poked id so cleanup() removes the fabricated attribute from
+      // the EXACT row we touched (not ctx.ids[length-1], which the list may outgrow
+      // before cleanup runs) — stops the amber leaking into later captures.
+      waitingPokedId = id;
       await browser.execute((sid: string) => {
         const row = document.querySelector<HTMLElement>(
           `.sidebar-row[data-session-id="${sid}"]`,
         );
         row?.setAttribute('data-agent', 'waiting');
       }, id);
-      // Let the amber edge bar + wash paint before capture.
-      await browser.pause(300);
+      // WR-05: assert the attribute actually LANDED before capturing. A silent no-op
+      // (selector miss / stale id) would otherwise produce a false-success screenshot of
+      // a plain row. Gate on observable DOM state, not a sleep.
+      await browser.waitUntil(
+        async () =>
+          browser.execute((sid: string) => {
+            const row = document.querySelector<HTMLElement>(
+              `.sidebar-row[data-session-id="${sid}"]`,
+            );
+            return row?.getAttribute('data-agent') === 'waiting';
+          }, id),
+        {
+          timeout: 2000,
+          interval: 100,
+          timeoutMsg: `data-agent='waiting' did not land on row ${id} — the amber seam is a silent no-op`,
+        },
+      );
+      // IN-01: the waitUntil above subsumes most of the old pause(300) hedge; keep only a
+      // short settle for the WebGL amber edge-bar/wash paint to flush before capture.
+      await browser.pause(120);
+    },
+    // WR-04: remove the fabricated data-agent so it never leaks into the
+    // inactive-recipes / sidebar-collapsed captures that run after this surface.
+    cleanup: async () => {
+      if (!waitingPokedId) return;
+      const pokedId = waitingPokedId;
+      await browser.execute((sid: string) => {
+        document
+          .querySelector<HTMLElement>(`.sidebar-row[data-session-id="${sid}"]`)
+          ?.removeAttribute('data-agent');
+      }, pokedId);
+      waitingPokedId = null;
     },
   },
   {
