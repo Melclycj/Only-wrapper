@@ -1,7 +1,20 @@
 import ReactDOM from 'react-dom/client';
 import '../shared/api-types'; // Window.api augmentation
-import { SessionManager } from './SessionManager';
+
+// Fonts FIRST (D-05) — the weights the UI actually uses. Each is the latin
+// subset by default with font-display:swap baked into the generated @font-face.
+import '@fontsource/nunito/400.css';
+import '@fontsource/nunito/600.css';
+import '@fontsource/nunito/700.css';
+import '@fontsource/jetbrains-mono/400.css';
+import '@fontsource/jetbrains-mono/700.css';
+
+// Token layer (D-02) BEFORE the consuming stylesheet, so @font-face + :root vars
+// are defined when terminal.css parses.
+import './tokens.css';
 import './terminal.css';
+
+import { SessionManager } from './SessionManager';
 
 // v1 (03-02) = the multi-session IDE layout: a basic DESIGN.md sidebar (icon +
 // name + live status badge, click-to-switch, add-session) + a viewport stack of

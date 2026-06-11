@@ -1,0 +1,87 @@
+/* tokens.css — the :root design-token layer (Phase 9, D-02/D-03/D-04/D-05).
+ *
+ * Single source of truth for the app's design tokens. Every value is carried
+ * VERBATIM from terminal.css / status-colors.ts / DESIGN.md §"Design tokens" —
+ * this file is VALUE-PRESERVING: Phase 9 changes rendered geometry/color for
+ * NOTHING except the now-real fonts (Nunito UI / JetBrains Mono terminal, loaded
+ * via @fontsource in index.tsx). Imported BEFORE terminal.css so these :root vars
+ * exist when the component stylesheet parses.
+ *
+ * Migration of terminal.css / status-colors.ts literals onto these tokens is
+ * Plan 09-02 (Wave 2); this file only ADDS the token home.
+ *
+ * The --space-* scale is DEFINED-NOT-APPLIED this phase (D-01): the per-surface
+ * polish phases (10–13) consume it. Existing padding/gap/margin are NOT migrated. */
+:root {
+  /* Surface / ink / line — lifted as-is from terminal.css:6-17, plus --bg from
+   * DESIGN.md §"Design tokens" (the warm-white interior, not yet in :root). */
+  --surface: #ffffff;
+  --bg: oklch(0.975 0.008 85); /* DESIGN.md — warm-white interior */
+  --bg-sunk: oklch(0.955 0.01 85);
+  --ink: oklch(0.32 0.012 70);
+  --ink-soft: oklch(0.5 0.012 70);
+  --ink-faint: oklch(0.66 0.01 75);
+  --line: oklch(0.91 0.008 80);
+  --line-soft: oklch(0.94 0.006 80);
+
+  /* Terminal palette — CSS gutter only. The xterm JS theme (TERMINAL_THEME in
+   * SessionView.tsx) is a SEPARATE hex mirror; --term-text/--term-faint are NOT
+   * routed into it (D-03, RESEARCH Pitfall 5). */
+  --term-bg: #1e232c; /* = oklch(0.255 0.018 264) */
+  --term-text: oklch(0.9 0.012 250); /* ADD (D-03) */
+  --term-faint: oklch(0.66 0.02 255); /* ADD (D-03) */
+
+  /* Brand colors */
+  --color-accent: oklch(0.62 0.14 248); /* the 28× solid blue */
+  --color-accent-strong: oklch(0.58 0.14 248); /* hover */
+  --color-danger: oklch(0.58 0.16 25); /* the error red */
+  --color-danger-strong: oklch(0.54 0.16 25); /* destructive hover */
+
+  /* Status accents — consumed by status-colors.ts via var() (D-03). */
+  --accent-running: var(--color-accent); /* blue */
+  --accent-finished: oklch(0.6 0.13 150); /* green */
+  --accent-idle: oklch(0.64 0.02 260); /* slate (stopped + not_started) */
+  --accent-error: var(--color-danger); /* red */
+  --accent-waiting: oklch(0.66 0.15 60); /* amber — TERM-09 reserved */
+
+  /* Radius — value-preserving from the distinct radii in terminal.css. */
+  --radius-xs: 6px; /* .row-icon */
+  --radius-sm: 7px; /* .row-control / .search-control */
+  --radius-md: 8px; /* inputs, emoji-cell, context-menu-item, swatches */
+  --radius-lg: 10px; /* rows, modal-btn, search-bar */
+  --radius-xl: 12px; /* context-menu, edit-restart-group, idle-card-config */
+  --radius: 18px; /* KEEP existing alias (cards: modal-dialog, idle-card, rail-tooltip) — D-04 Discretion */
+  /* Note: 999px pills (status-dot, chips) stay literal — fully round, not a scale step. */
+
+  /* Elevation — the 3 distinct shadows in use. */
+  --shadow-pop: 0 6px 18px oklch(0.32 0.012 70 / 0.14); /* cards/tooltip/search/dragging */
+  --shadow-dialog: 0 18px 48px oklch(0.255 0.018 264 / 0.28); /* modal/idle-card */
+  --shadow-menu: 0 10px 30px oklch(0.255 0.018 264 / 0.22); /* context-menu */
+  /* Note: the .collapsed-status-dot ring `0 0 0 2px var(--surface)` is a ring, not
+   * an elevation shadow — Plan 02 leaves it literal (no token here). */
+
+  /* Motion — value-preserving (existing 0.12s ease). Compositor-friendly only. */
+  --duration-fast: 120ms;
+  --ease-standard: ease;
+
+  /* Type stacks — the now-real fonts (loaded via @fontsource in index.tsx). */
+  --font-ui: 'Nunito', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Spacing scale — DEFINED ONLY this phase (D-01). NOT applied to existing
+   * padding/gap/margin; Phases 10–13 consume it during per-surface polish.
+   * 4px base + half-steps to cover existing values. */
+  --space-0_5: 2px;
+  --space-1: 4px;
+  --space-1_5: 6px;
+  --space-2: 8px;
+  --space-2_5: 10px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  /* The odd-ball 5px/14px/22px spacing values stay one-offs; Phases 10–13 retune
+   * them to the nearest scale step during per-surface polish (D-01). */
+}
