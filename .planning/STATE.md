@@ -4,13 +4,13 @@ milestone: v1.1
 milestone_name: UI Polish & Debt Cleanup
 status: executing
 stopped_at: Phase 10 UI-SPEC approved
-last_updated: "2026-06-11T14:00:00.000Z"
-last_activity: 2026-06-11 -- Phase 10 gap-closure r2 Wave 6: 10-07 executed (GAP-10-D diagnosed + fixed)
+last_updated: "2026-06-12T00:30:00.000Z"
+last_activity: 2026-06-12 -- Phase 10 gap-closure r2 executed (10-07/08/09 done); 10-10 gate BLOCKED by new GAP-10-G (active-row name crush, caught by the 10-09 machine check) -> route to round 3
 progress:
   total_phases: 7
   completed_phases: 1
   total_plans: 13
-  completed_plans: 9
+  completed_plans: 12
   percent: 14
 ---
 
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-06-10 — v1.1 milestone started)
 
 ## Current Position
 
-Phase: 10 (sidebar-visual-polish) — EXECUTING
-Plan: 1 of 10
-Status: Executing Phase 10
-Last activity: 2026-06-11 -- Phase 10 execution started
+Phase: 10 (sidebar-visual-polish) — EXECUTING (gap-closure round 2 done; round 3 needed)
+Plan: 9 of 10 complete (10-10 gate BLOCKED by GAP-10-G — active-row name crush)
+Status: Awaiting `/gsd-plan-phase 10 --gaps` (round 3: 10-11 CSS fix, then 10-10 gate re-run)
+Last activity: 2026-06-12 -- r2 wave 1 (10-08+10-09) merged; 10-07 GAP-10-D gate-race fix landed; 10-10 Task-1 evidence chain caught GAP-10-G (deterministic, scrollWidth=98 > clientWidth=51 on active row); human gate intentionally NOT run
 
 ### v1.1 Milestone Phases (9–15)
 
@@ -182,6 +182,7 @@ Recent decisions affecting current work:
 - [Phase ?]: [Phase 09-01]: Wave-1 token foundation — ADD tokens.css :root layer + @fontsource fonts (nunito 5.2.7 / jetbrains-mono 5.2.8, exact-pinned, no CDN) + index.tsx import order (fonts -> tokens.css -> terminal.css). NO literal migrated (terminal.css/status-colors.ts keep literals until Plan 02 — D-01 hybrid scope). Kept --radius 18px as an alias not renamed (D-04 Discretion). 317 unit GREEN, tsc clean, forge/vite untouched.
 - [Phase 9]: [Phase 09-02]: Wave-2 token migration COMPLETE — terminal.css global primitives (28x accent blue, 8x danger red, 3 shadows, 8x Nunito + 2x JetBrains-Mono, 0.12s motion) now reference var()/color-mix; status-colors.ts accents to var(--accent-*) (TDD RED->GREEN, overlay-only-when-running contract intact). New pure-node tokens-completeness.test.ts proves SC2/SC3: every var(--token) in terminal.css + status-colors.ts resolves to a tokens.css definition (--accent inline runtime channel allow-listed) + the 4 migrated literals absent. Value-preserving (only visible change = fonts from Wave 1). 326 unit GREEN, tsc clean, SessionView/forge/vite untouched, EXPECTED_API_KEYS unchanged. — UI-01 single-source-of-truth payoff: retuning brand blue/danger red is now a one-line tokens.css edit, not 28+8 hand-edits.
 - [Phase 10-07]: GAP-10-D (S1 blocker — live amber never fired at a real claude --rc Web Search permission prompt) DIAGNOSED + FIXED. Debug-first: a bounded autonomous driver (spike 003, node-pty + @xterm/headless 5.5.0 + production viewportLines(), Esc+Ctrl-C cancel, never approves the search) captured the REAL Web Search permission frame ("Do you want to proceed? / ❯ 1. Yes / 2. Yes, and don't ask again… / 3. No / Esc to cancel · Tab to amend"). The captured frame DISPROVED the 10-06 routed hypothesis: production classify() reads it 'waiting' and decideAgentTick emits 'waiting' — the recognizer was NEVER the broken link. The single broken link is the SessionView agentRunning GATE: main broadcasts the spawn 'running' status SYNCHRONOUSLY inside create() (pty-manager setStatus) BEFORE the SessionView mounts + binds onPtyStatus, so a first-launch session misses the event → gate shut → classify() never runs → amber never fires (the row badge is blue/running correctly because SessionManager seeds it from the spawn return; only the SessionView's local gate stayed shut). FIX (smallest, at the one link): pure agentGateOpen(runningProp, sawRunningEvent)=runningProp||sawRunningEvent; SessionView takes a `running` prop (authoritative row.status, read via runningRef so the keep-alive mount effect keyed on id never re-binds); SessionManager passes running={s.status==='running'}; leaving 'running' flips both inputs false so the gate closes (D-12 false-positive guard intact). RED→GREEN proven by reverting the helper to event-only (1 failed → fixed green). Real frame encoded into agent-state-replay oracle (recognizer anti-regression). 370/370 unit (365 baseline + 5 new), tsc 0, eslint clean; spike-002 oracle (1 WAITING/10 FREE) + 4 decideAgentTick fast-path cases + agent-state.test all green. Dev-only window.__AGENT_TRACE seam KEPT (INERT in production) for the 10-10 operator. No bridge key added (EXPECTED_API_KEYS unchanged); amber stays reserved for 'waiting'. Live amber confirmation owned by the 10-10 BLOCKING human gate; UI-02 stays OPEN.
+- [Phase 10 r2]: 10-08 (GAP-10-E gutter: gap 12→8px, icon tile 32px token, drag handle 8px; WR-01 box-sizing real zero-width; WR-02 dormant trailing gap) + 10-09 (GAP-10-F: assertNameNotCrushed scrollWidth<=clientWidth + long-name ellipsis fixture; WR-03 import path; WR-04 cleanup hook; WR-05 waitUntil) merged via parallel worktrees; post-merge unit 365/365 + smoke 15/15. 10-10 Task-1 evidence chain then ran against the packaged app: unit 370/370, tsc 0, lint clean, smoke 15/15 — but `ui:shots:fresh` FAILED on the new name-completeness assertion: **GAP-10-G** (active-row controls 52px permanently revealed crush a medium name to 51px box vs 98px content; rest-state-only scoping of 10-05/10-08 fixes). Human gate intentionally NOT run (T-10-10-01: never present a known-failing app). The operator's requested harness paid for itself on its first enforced run.
 - [Phase 09-03]: Wave-3 phase gate CLOSED. SC4/D-05 packaging proof GREEN (scripts/assert-fonts-bundled.cjs: 23 woff2 emitted as relative assets, no absolute url(/ font path; verify:fonts npm script kept out of default test). End-of-phase human-verify APPROVED 2026-06-11 — 5/5 PASS: fonts render (Nunito UI + JetBrains Mono terminal), value-preserving, SC3 re-theme from one place (verified mechanically via the ui-lab green-accent demo, zero source edits), SC4 fidelity unchanged. SC1 coherence recorded HONESTLY as PASS-AT-FOUNDATION-SCOPE — operator verdict 'still ugly'; per-surface composition is Phases 10-13. 5 visual gaps logged + routed downstream (sidebar names crushed->P10, terminal pane framing->P11, Save-button accent->P12, context-menu position/danger ramp->P10/13, inactive-row card structure->P10). nyquist_compliant true; 09-VALIDATION complete. A user-directed ui-lab visual harness (commit 81192cd) built mid-session (NOT a plan task) supplied the check-4 + gap evidence.
 
 ### Pending Todos
@@ -196,6 +197,7 @@ The 5 v1.1 todo items (3 SESS UX + 2 code-review debt) are now formal requiremen
 
 ### Blockers/Concerns
 
+- **[Phase 10 / GAP-10-G — BLOCKS the 10-10 gate] Active-row name crush.** Found 2026-06-12 by the 10-09 `assertNameNotCrushed` machine check during 10-10 Task 1 (deterministic: "Parlour Claude" scrollWidth=98 > clientWidth=51; active row's permanently-revealed Edit+Close controls reserve 52px on the 220px rail; rest-state fixes 10-05/10-08 never covered the ACTIVE state). Full evidence + fix direction in 10-VERIFICATION.md addendum. Route: `/gsd-plan-phase 10 --gaps` → 10-11 (sidebar.css active-row width reclaim) → re-run 10-10. Do NOT relax the machine check; planner must honor the operator's attempt-2 verdict as authority on fix-CSS vs adjust-fixture.
 - **[DEBT-02 / Phase 14] Automated green is NOT proof for the Phase 06.1 lifecycle fixes.** The 2026-06-09 remediation passed the suite while actively broken and was reverted. Phase 14 must redo CR-01..04 / WR-02 with tests that exercise the real failure/edge paths AND gate completion on a mandatory user re-verify in the running app (start / restart / quit→relaunch / rapid double-restart / mid-write durability).
 - **[WIN-02 / Phase 15] Windows real-hardware run is a DEFERRED human-UAT gate.** A Windows machine becomes available in a few hours; Phase 15 delivers the kit (WIN-01) and earlier phases are not blocked on the run. WIN-02 closes on the user's sign-off (mirror `08-HUMAN-UAT.md`).
 - **[Phases 9–13] Core-Value guard.** Every UI/polish phase must leave the app runnable and must not regress terminal fidelity (the v1.0 Core Value). Token/chrome work touches presentation only; the xterm/PTY data path stays untouched.

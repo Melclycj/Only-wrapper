@@ -24,7 +24,8 @@ re_verification:
     - "WR-05 (code review finding, WARNING): ui-lab sidebar-waiting surface poke has no assertion that the attribute or CSS paint landed — a silent no-op produces a false-success screenshot."
 gaps:
   - truth: "A waiting row (active OR not) carries an amber left edge bar + amber tint wash (D-09) — fires in the live running app on a real claude --rc permission prompt"
-    status: failed
+    status: resolved
+    resolved_note: "[2026-06-12 round-2 execution, orchestrator] CODE-FIXED by 10-07 (commits c14c28c + efed57f): real frame captured, root cause = SessionView agentRunning gate race (spawn 'running' broadcast precedes the view's onPtyStatus bind), fixed via agentGateOpen(runningProp, sawRunningEvent); real-frame regression test RED→GREEN. LIVE confirmation still owned by the 10-10 BLOCKING human gate (incomplete — blocked by GAP-10-G below). Do NOT re-plan this gap in round 3; only the 10-10 gate re-run covers it."
     reason: "GAP-10-D (S1 blocker): at the 2nd human gate (10-06) the row status stayed BLUE at a real Web Search permission prompt (screenshot 2). ITEM 2 failed at step 5-6. The 10-06-SUMMARY hypothesis attributes the failure to the recognizer not matching the frame, but codebase analysis shows classify() DOES match both numberedMenu (❯ 1./2./3.) and claudeFooter ('Esc to cancel · Tab to amend') for the screenshot-2 frame, AND decideAgentTick (agent-tick.ts, from Phase 6.1 080807a) has a settle-INDEPENDENT path that fires regardless of full-frame hash settling. The actual root cause is unconfirmed at the code level; the human gate verdict is the authoritative record. nyquist_compliant stays false."
     artifacts:
       - path: "src/renderer/agent-tick.ts"
@@ -35,7 +36,8 @@ gaps:
       - "10-07 must reproduce the live failure with the exact screenshot-2 frame shape, diagnose whether the issue is in the recognizer, the settle-independent path, the agentRunning gating, the active-pane focus model, or another factor — then fix it and confirm with a real claude --rc permission prompt in the running app."
 
   - truth: "The leading gutter (drag handle + icon tile) is compactly sized so the session name gets maximum width (GAP-10-E)"
-    status: failed
+    status: resolved
+    resolved_note: "[2026-06-12 round-2 execution, orchestrator] CODE-FIXED by 10-08 (commits 14d1749 + 0849d2d): inter-item gap 12→8px, icon tile 34→32px token-sourced, drag-handle 12px→8px; WR-01 (box-sizing) + WR-02 (dormant trailing gap) folded in. Visual 'feels right' confirmation owned by the 10-10 human gate. Do NOT re-plan in round 3."
     reason: "GAP-10-E (S3 design adjustment): ITEM 1 was APPROVED at the 2nd gate but the operator requested a NEW minor adjustment — 'the space in the front is too wide. compact a bit to leave more sapace'. This is a post-approval design tweak, not a gate failure, but it blocks the unqualified 'approved' the phase requires."
     artifacts:
       - path: "src/renderer/sidebar.css"
@@ -44,13 +46,24 @@ gaps:
       - "Reduce the leading gutter width (drag handle + icon tile) in sidebar.css so the session name receives more horizontal space. Re-verify visually in the running app as part of the 10-07 gate."
 
   - truth: "The ui-lab harness deterministically asserts name completeness so name-crush regressions are machine-checked (GAP-10-F)"
-    status: failed
+    status: resolved
+    resolved_note: "[2026-06-12 round-2 execution, orchestrator] DELIVERED AND PROVEN WORKING by 10-09 (commits ad860e6 + 980b0c6): assertNameNotCrushed (scrollWidth <= clientWidth on .row-name) + long-name ellipsis fixture + WR-03/04/05 hardening. Proof it works: this exact assertion caught GAP-10-G below on its first enforced run. Do NOT re-plan in round 3 — and do NOT relax the check to make the gate pass."
     reason: "GAP-10-F (S3 harness improvement): operator asked 'why isnt the visualization harness used here to verify whether name is complete?' — no scrollWidth <= clientWidth assertion exists on .row-name in the harness. The SC2 name-legibility verdict is currently eye-scored from PNGs only."
     artifacts:
       - path: "tests/ui-lab/surfaces.ts"
         issue: "No deterministic name-completeness assertion (e.g. scrollWidth <= clientWidth on .row-name, or a long-name fixture + truncation budget check). Human eye-scoring is the only verification path for name legibility."
     missing:
       - "Add a deterministic assertion in the ui-lab harness (scrollWidth <= clientWidth on .row-name, or a long-name fixture asserting no visible overflow) so future name-crush regressions are caught automatically."
+
+  - truth: "A medium-length session name renders in full on the ACTIVE row at rest — the always-revealed active-row controls must not crush the name (SC2; the operator's attempt-2 'Ses…' complaint was about the active/hover row)"
+    status: failed
+    reason: "GAP-10-G (S2, blocks the 10-10 gate — NEW, found 2026-06-12 by the 10-09 machine check during 10-10 Task 1): `UI_LAB_TAG=p10-gapfix-round2 npm run ui:shots:fresh` FAILED on the sidebar-populated surface (10 of 11 surfaces captured), twice with identical numbers — '.row-name' for 'Parlour Claude' truncated, scrollWidth=98 > clientWidth=51. Diagnostic JSON on the failing row: rowClass='sidebar-row active', rowHasActive=true, rowMatchesFocusWithin=false, rowMatchesHover=false, activeElement=BODY, rowWidth=199, iconWidth=32, controlsWidth=52, textWidth=51. Root cause (evidence-backed): the `.sidebar-row.active .row-control` rules PERMANENTLY reveal the Edit ✎ + Close ✕ controls (52px) with no hover/focus involved. The GAP-10-A fix (10-05) and the gutter compaction (10-08) reclaimed control width ONLY in the NON-active/rest state (10-05's own spec: 'a long-name running non-active row reserves ZERO control width') — the ACTIVE row's 52px was never reclaimed, so on the 220px rail a 14-char medium name (98px content) is crushed into a 51px box. This is the same defect class as the operator's attempt-2 complaint, on the row state the operator actually looks at most."
+    artifacts:
+      - path: "src/renderer/sidebar.css"
+        issue: "Active-row control reveal (.sidebar-row.active .row-control) reserves 52px of permanent layout width, crushing medium names on the active row. Fix direction: let the active row's controls overlay or collapse to zero reserved width like the rest state (revealing on hover/focus-within), or reduce the active control footprint, so a medium name fits at the active state too."
+    missing:
+      - "Round-3 plan (10-11) must make a medium-length name render in full on the ACTIVE row, with the 10-09 assertNameNotCrushed as the deterministic acceptance check (the run must complete 11/11 surfaces), then 10-10's evidence chain + BLOCKING human gate re-run."
+      - "Planner decision (operator's attempt-2 verdict is the authority): fix the CSS so the name fits at the active state (recommended — executor + orchestrator concur) vs adjusting the fixture to exempt the active row. Do NOT relax the machine check to make the gate pass."
 ---
 
 # Phase 10: Sidebar Visual Polish — Re-Verification Report (after plans 10-05 + 10-06)
@@ -236,5 +249,44 @@ Additionally, five code-review Warnings (WR-01 through WR-05) from the 10-05 del
 
 ---
 
+## Addendum — Gap-closure round-2 execution outcome (2026-06-12, orchestrator)
+
+> Appended by the execute-phase orchestrator after plans 10-07/10-08/10-09 executed and plan 10-10's
+> automated evidence chain (Task 1) ran. This addendum supersedes the round-2 gap statuses above:
+> the structured `gaps:` frontmatter has been updated in place (D/E/F → resolved with notes, G added).
+
+### Round-2 plan outcomes
+
+| Plan | Status | Outcome |
+|------|--------|---------|
+| 10-07 | ✓ complete | GAP-10-D diagnosed with a REAL captured Web Search frame (spike 003, autonomous driver — `drive-claude-websearch.cjs`). Root cause was NOT the recognizer: the SessionView `agentRunning` gate raced (spawn 'running' broadcast precedes the view's `onPtyStatus` bind), so amber detection never armed on first-launch sessions. Fixed via `agentGateOpen(runningProp, sawRunningEvent)`; real-frame regression test RED→GREEN; 370/370 unit. |
+| 10-08 | ✓ complete | GAP-10-E gutter compacted (gap 12→8px, icon tile 32px token, drag handle 8px) + WR-01 (`box-sizing: border-box` real zero-width) + WR-02 (dormant trailing gap removed). |
+| 10-09 | ✓ complete | GAP-10-F harness delivered: `assertNameNotCrushed` (scrollWidth <= clientWidth) + long-name ellipsis fixture + WR-03 import fix + WR-04 cleanup hook + WR-05 waitUntil. |
+| 10-10 | ✗ BLOCKED at Task 1 | The new 10-09 machine check caught **GAP-10-G** (below). The BLOCKING human gate (Task 2) was deliberately NOT run — presenting a known-failing app would be dishonest and defeats the harness's purpose. `nyquist_compliant` stays false; no attempt-3 row written. |
+
+### 10-10 Task-1 evidence (against the PACKAGED app)
+
+| Gate | Result |
+|------|--------|
+| `npm run test:unit` | 370/370 PASS (42 files; incl. 10-07 real-frame regression + spike-002 oracle "exactly 1 WAITING") |
+| `npx tsc --noEmit` | exit 0 |
+| `npm run lint` | clean on Phase-10 files; 12 known spike `.cjs` errors tracked in deferred-items.md (commit 290ad3c) |
+| `npm run make` | packaged app built; node-pty unpacked outside ASAR |
+| `npm run test:smoke` | 15/15 spec files PASS against the packaged binary |
+| `UI_LAB_TAG=p10-gapfix-round2 npm run ui:shots:fresh` | **FAILED** — sidebar-populated surface: name-crush assertion fired (10/11 surfaces captured), deterministic across two runs |
+
+### GAP-10-G (new, S2 — blocks the gate)
+
+`.row-name` for "Parlour Claude" truncated on the **ACTIVE** row: scrollWidth=98 > clientWidth=51.
+Row diagnostic: `rowClass='sidebar-row active'`, no hover, no focus-within, `activeElement=BODY`,
+rowWidth=199 / iconWidth=32 / **controlsWidth=52** / textWidth=51. The active row's permanently-revealed
+Edit ✎ + Close ✕ controls (52px) were never covered by the GAP-10-A (rest-state) or 10-08 (gutter) fixes.
+Fix belongs in `src/renderer/sidebar.css`; acceptance check = the 10-09 `assertNameNotCrushed` completing 11/11 surfaces.
+
+**Routing:** `/gsd-plan-phase 10 --gaps` → round-3 plan 10-11 (GAP-10-G CSS fix) → re-run 10-10 (evidence chain + BLOCKING human gate).
+
+---
+
 _Verified: 2026-06-11T22:22:00Z_
 _Verifier: Claude (gsd-verifier) — re-verification after gap-closure plans 10-05 + 10-06_
+_Addendum: 2026-06-12 — execute-phase orchestrator (round-2 outcome + GAP-10-G; evidence from 10-10 Task-1 executor run)_
