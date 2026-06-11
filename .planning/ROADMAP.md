@@ -80,7 +80,7 @@ Phase numbering continues from v1.0 (which ended at Phase 8). v1.0 phase directo
   3. In collapsed (icon-only) mode the active session and per-row status remain identifiable, and the layout stays clean at the narrow rail width.
   4. Sidebar interactions (click-to-switch, drag-to-reorder, keyboard switching) continue to work unchanged and the terminal keep-alive on switch is not regressed.
 
-**Plans**: 4 plans
+**Plans**: 6 plans (4 original + 2 gap-closure)
 **Wave 1**
 
   - [x] 10-01-PLAN.md — Pure modules (row-secondary D-03 + viewport-clamp D-14) with tests + extract sidebar CSS → sidebar.css and wire the 3 touch-points (Wave 1)
@@ -92,7 +92,17 @@ Phase numbering continues from v1.0 (which ended at Phase 8). v1.0 phase directo
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-  - [x] 10-04-PLAN.md — Full suite + packaged ui-lab capture scored against the rubric + blocking end-of-phase human-verify (SC1-SC4) phase gate (Wave 3)
+  - [x] 10-04-PLAN.md — Full suite + packaged ui-lab capture scored against the rubric + blocking end-of-phase human-verify (SC1-SC4) phase gate (Wave 3) — verdict NOT_APPROVED; 3 gaps routed to gap-closure
+
+**Gap-closure** *(human gate NOT_APPROVED — closing GAP-10-A name-crush + GAP-10-B amber-waiting + WR-03/WR-04/IN-05; GAP-10-C resolved by user, no code change)*
+
+**Wave 4 (gap-closure code fixes)**
+
+  - [ ] 10-05-PLAN.md — Collapse hover-control box to zero width at rest (GAP-10-A/WR-01) + running-gate the data-agent seam & unit-test it & trace the WR-02 live chain (GAP-10-B/WR-03) + order-independent waiting-beats-active edge bar (WR-04) + unblock the ui-lab sidebar-waiting capture seam (IN-05) (Wave 4)
+
+**Wave 5 (gap-closure gate; blocked on Wave 4)**
+
+  - [ ] 10-06-PLAN.md — Full suite + fresh packaged no-injection capture (incl. the unblocked sidebar-waiting surface) + rescore SC2/D-09 + BLOCKING human re-verify of the two live-app items (closes P04-T1/P04-T3, flips the Nyquist gate only on explicit "approved") (Wave 5)
 
 **UI hint**: yes
 
