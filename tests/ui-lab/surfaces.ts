@@ -135,6 +135,70 @@ async function pressEscape(): Promise<void> {
   await browser.keys(['Escape']);
 }
 
+/** Read the `.row-name` geometry + computed text-overflow for a row. */
+async function rowNameMetrics(
+  id: string,
+): Promise<{ found: boolean; scrollWidth: number; clientWidth: number; text: string; textOverflow: string }> {
+  return browser.execute((sid: string) => {
+    const name = document.querySelector<HTMLElement>(
+      `.sidebar-row[data-session-id="${sid}"] .row-name`,
+    );
+    if (!name) {
+      return { found: false, scrollWidth: 0, clientWidth: 0, text: '', textOverflow: '' };
+    }
+    return {
+      found: true,
+      // scrollWidth = the content's full width; clientWidth = the visible box.
+      // scrollWidth <= clientWidth ⇒ the name is fully shown (NOT truncated).
+      scrollWidth: name.scrollWidth,
+      clientWidth: name.clientWidth,
+      text: (name.textContent ?? '').trim(),
+      textOverflow: getComputedStyle(name).textOverflow,
+    };
+  }, id);
+}
+
+/** GAP-10-F: machine-check that a name that SHOULD fit is not crushed.
+ *  Throws a descriptive Error (NOT SkipSurface) so a name-crush regression
+ *  FAILS the run loudly instead of being eye-scored from a PNG. */
+async function assertNameNotCrushed(id: string): Promise<void> {
+  const m = await rowNameMetrics(id);
+  if (!m.found) {
+    throw new Error(
+      `assertNameNotCrushed: no .row-name element for row ${id} — the name surface is missing entirely`,
+    );
+  }
+  if (m.scrollWidth > m.clientWidth) {
+    throw new Error(
+      `name-crush regression: ".row-name" for "${m.text}" is truncated ` +
+        `(scrollWidth=${m.scrollWidth} > clientWidth=${m.clientWidth}). ` +
+        `A medium-length name must render in full at rest.`,
+    );
+  }
+}
+
+/** GAP-10-F: a deliberately overlong name must degrade GRACEFULLY via ellipsis
+ *  — allowed to truncate, but only through `text-overflow: ellipsis`, with a
+ *  bounded content box and no layout break. Throws on a hard crush. */
+async function assertLongNameDegradesGracefully(id: string): Promise<void> {
+  const m = await rowNameMetrics(id);
+  if (!m.found) {
+    throw new Error(
+      `assertLongNameDegradesGracefully: no .row-name element for row ${id}`,
+    );
+  }
+  if (m.clientWidth <= 0) {
+    throw new Error(
+      `long-name layout break: ".row-name" for "${m.text}" collapsed to clientWidth=${m.clientWidth} (expected a bounded, > 0 content box)`,
+    );
+  }
+  if (m.textOverflow !== 'ellipsis') {
+    throw new Error(
+      `long-name overflow is not handled by ellipsis: computed text-overflow="${m.textOverflow}" (expected "ellipsis") for "${m.text}"`,
+    );
+  }
+}
+
 /** Visible labels of the open context menu's items. */
 async function contextMenuLabels(): Promise<string[]> {
   return browser.execute(() =>
@@ -202,6 +266,26 @@ export const SURFACES: Surface[] = [
         async () => (await rowText(idB)).includes('Parlour Claude'),
         { timeout: 5000, interval: 100, timeoutMsg: 'rename did not land' },
       );
+      // GAP-10-F: machine-check the canonical MEDIUM name is shown in full
+      // (no truncation) at rest — gated on the observable rename landing above,
+      // not a bare pause. A name-crush regression now FAILS the run loudly.
+      await assertNameNotCrushed(idB);
+
+      // GAP-10-F long-name fixture: a deliberately overlong name must degrade
+      // gracefully via ellipsis (bounded box, no layout break), NOT hard-crush
+      // the rest of the row. Exercises the ellipsis budget the rail relies on.
+      const idLong = await addSession(ctx);
+      const longName = 'Marketing Parlour Long Session Name For Overflow Test';
+      await openEditModal(idLong);
+      await setInputByTestId('edit-name', longName);
+      await clickByTestId('edit-save');
+      await waitForTestIdGone('session-edit-modal');
+      await browser.waitUntil(
+        async () => (await rowText(idLong)).includes('Marketing Parlour'),
+        { timeout: 5000, interval: 100, timeoutMsg: 'long-name rename did not land' },
+      );
+      await assertLongNameDegradesGracefully(idLong);
+
       // Session C: exits cleanly → "Finished" status ramp.
       const idC = await addSession(ctx);
       await sendKeysTo(idC, 'exit');
