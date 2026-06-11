@@ -109,8 +109,8 @@ Phase numbering continues from v1.0 (which ended at Phase 8). v1.0 phase directo
 **Wave 6 (gap-closure r2 code/harness fixes — 3 plans, disjoint files, parallel)**
 
   - [ ] 10-07-PLAN.md — DEBUG-FIRST: reproduce the real claude --rc Web Search frame, diagnose the single broken link in the live amber chain (no assumed root cause), fix it, lock with a real-frame regression test (GAP-10-D blocker) (Wave 6)
-  - [ ] 10-08-PLAN.md — Compact the leading gutter (drag handle + icon tile + row gap) so the name reclaims width (GAP-10-E) + make zero-width-at-rest real (WR-01) + kill dormant-row trailing gap (WR-02) — sidebar.css only (Wave 6)
-  - [ ] 10-09-PLAN.md — Deterministic name-completeness assertion in the ui-lab harness (GAP-10-F) + fix the broken type-import (WR-03) + sidebar-waiting cleanup hook (WR-04) + assert-the-attribute-landed (WR-05) (Wave 6)
+  - [x] 10-08-PLAN.md — Compact the leading gutter (drag handle + icon tile + row gap) so the name reclaims width (GAP-10-E) + make zero-width-at-rest real (WR-01) + kill dormant-row trailing gap (WR-02) — sidebar.css only (Wave 6)
+  - [x] 10-09-PLAN.md — Deterministic name-completeness assertion in the ui-lab harness (GAP-10-F) + fix the broken type-import (WR-03) + sidebar-waiting cleanup hook (WR-04) + assert-the-attribute-landed (WR-05) (Wave 6)
 
 **Wave 7 (gap-closure r2 gate; blocked on Wave 6)**
 
@@ -209,7 +209,7 @@ v1.1 phases execute in numeric order: 9 → 10 → 11 → 12 → 13 → 14 → 1
 | 7. Terminal Search + Scrollback Config | v1.0 | 5/5 | Complete | 2026-06-09 |
 | 8. Cross-Platform Packaging | v1.0 | 3/3 | Complete | 2026-06-10 |
 | 9. Design Token Foundation | v1.1 | 3/3 | Complete    | 2026-06-11 |
-| 10. Sidebar Visual Polish | v1.1 | 6/10 | Gaps found (r2) |  |
+| 10. Sidebar Visual Polish | v1.1 | 8/10 | In Progress|  |
 | 11. Terminal Area Polish + Live Start/Restart | v1.1 | 0/TBD | Not started | - |
 | 12. Session Form — Polish + Edit UX | v1.1 | 0/TBD | Not started | - |
 | 13. State & Interaction Design | v1.1 | 0/TBD | Not started | - |
