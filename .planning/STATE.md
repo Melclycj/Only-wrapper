@@ -1,11 +1,11 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.1
-milestone_name: UI Polish & Debt Cleanup
-status: executing
+milestone_name: milestone
+status: "Awaiting `/gsd-plan-phase 10 --gaps` (round 3: 10-11 CSS fix, then 10-10 gate re-run)"
 stopped_at: Phase 10 UI-SPEC approved
-last_updated: "2026-06-12T00:30:00.000Z"
-last_activity: 2026-06-12 -- Phase 10 gap-closure r2 executed (10-07/08/09 done); 10-10 gate BLOCKED by new GAP-10-G (active-row name crush, caught by the 10-09 machine check) -> route to round 3
+last_updated: "2026-06-11T14:32:16.733Z"
+last_activity: 2026-06-12 -- r2 wave 1 (10-08+10-09) merged; 10-07 GAP-10-D gate-race fix landed; 10-10 Task-1 evidence chain caught GAP-10-G (deterministic, scrollWidth=98 > clientWidth=51 on active row); human gate intentionally NOT run
 progress:
   total_phases: 7
   completed_phases: 1
