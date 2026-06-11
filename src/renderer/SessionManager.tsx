@@ -737,8 +737,16 @@ export function SessionManager(): React.JSX.Element {
             // D-03/D-06: a dormant (Inactive-List) target offers permanent Delete; a
             // live (Working-Area) target offers Remove (kill PTY, keep recipe).
             menuIsDormant
-              ? { label: 'Delete', onSelect: () => handleDeleteRequest(menuState.id) }
-              : { label: 'Remove', onSelect: () => handleCloseRequest(menuState.id) },
+              ? {
+                  label: 'Delete',
+                  danger: true,
+                  onSelect: () => handleDeleteRequest(menuState.id),
+                }
+              : {
+                  label: 'Remove',
+                  danger: true,
+                  onSelect: () => handleCloseRequest(menuState.id),
+                },
           ]}
         />
       )}
