@@ -15,6 +15,8 @@
     "test:smoke": "wdio run wdio.conf.ts",
     "test": "npm run test:unit && npm run test:smoke",
     "verify:fonts": "node scripts/assert-fonts-bundled.cjs",
+    "ui:shots": "wdio run wdio.uilab.conf.ts",
+    "ui:shots:fresh": "npm run package && npm run ui:shots",
     "postinstall": "node scripts/fix-node-pty.cjs"
   },
   "keywords": [],

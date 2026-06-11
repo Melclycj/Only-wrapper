@@ -20,6 +20,26 @@ if (started) {
   app.quit();
 }
 
+// Test seam (ui-lab / WDIO visual harness): redirect userData BEFORE any consumer
+// resolves it (SessionStore.load() resolves its file path under userData at
+// whenReady-time). Guarded by env var — unset in normal runs, so production
+// behavior is unchanged. Lets the capture harness boot against an isolated,
+// disposable store instead of the developer's real
+// ~/Library/Application Support/Just-Wrapper (no data risk, deterministic
+// empty-state, safe to run while a dev instance is open).
+//
+// sessionData is deliberately PINNED BACK to its pre-override value: setting
+// userData implicitly drags Chromium's sessionData (where DevToolsActivePort
+// lives) along with it, which breaks chromedriver's port-file discovery and
+// times out every WDIO session. Re-pinning keeps the Chromium profile wherever
+// the launcher put it (chromedriver's --user-data-dir temp dir under WDIO)
+// while the app's OWN data (lowdb store) is isolated under JW_USER_DATA_DIR.
+if (process.env.JW_USER_DATA_DIR) {
+  const sessionData = app.getPath('sessionData');
+  app.setPath('userData', process.env.JW_USER_DATA_DIR);
+  app.setPath('sessionData', sessionData);
+}
+
 // Single PtyManager owns all live PTY children (one this phase; N in Phase 3).
 // Instantiated at module scope so the before-quit hook can dispose it even if
 // the window is already gone.

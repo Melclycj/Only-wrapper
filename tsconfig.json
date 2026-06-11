@@ -16,6 +16,6 @@
     "jsx": "react-jsx",
     "types": ["node"]
   },
-  "include": ["src", "forge.config.ts", "vite.*.config.ts", "eslint.config.ts", "vitest.config.ts", "wdio.conf.ts"],
+  "include": ["src", "forge.config.ts", "vite.*.config.ts", "eslint.config.ts", "vitest.config.ts", "wdio.conf.ts", "wdio.uilab.conf.ts"],
   "exclude": ["src/**/__tests__/**", "tests/**", "node_modules"]
 }

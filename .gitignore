@@ -5,3 +5,5 @@ dist/
 # Stray Vite main-build artifact (lib build emits main.js at root when run
 # outside Forge's outDir); it is regenerated and must never be committed/linted.
 /main.js
+# ui-lab visual-capture artifacts (screenshots, manifests, disposable userData)
+artifacts/

@@ -12,7 +12,9 @@ import os from 'node:os';
 // out/Just-Wrapper-<platform>-<arch>; the macOS bundle nests the executable at
 // .app/Contents/MacOS/Just-Wrapper while Windows is a bare Just-Wrapper.exe. The
 // Windows leg is consumed by the CI matrix (Plan 03); macOS runs locally.
-const appBinaryPath =
+// Exported so wdio.uilab.conf.ts (the ui-lab visual-capture harness) reuses the
+// exact same packaged binary — one resolution, two configs.
+export const appBinaryPath =
   process.platform === 'win32'
     ? `./out/Just-Wrapper-win32-${os.arch()}/Just-Wrapper.exe`
     : `./out/Just-Wrapper-darwin-${os.arch()}/Just-Wrapper.app/Contents/MacOS/Just-Wrapper`;
