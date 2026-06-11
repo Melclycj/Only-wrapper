@@ -28,6 +28,10 @@ const terminalCss = readFileSync(
   resolve(__dirname, '../terminal.css'),
   'utf8',
 );
+const sidebarCss = readFileSync(
+  resolve(__dirname, '../sidebar.css'),
+  'utf8',
+);
 const statusColorsTs = readFileSync(
   resolve(__dirname, '../status-colors.ts'),
   'utf8',
@@ -91,6 +95,15 @@ describe('tokens.css single source of truth (SC2/SC3)', () => {
     expect(undefinedRefs).toEqual([]);
   });
 
+  it('every var(--token) in sidebar.css is defined in tokens.css', () => {
+    // The sidebar rules were extracted into sidebar.css (Plan 10-01); the completeness
+    // guard must follow them so a moved/added var(--token) that resolves to nothing
+    // still fails loudly (RESEARCH Pitfall 4 — keep the 3 touch-points honest).
+    const referenced = referencedTokens(sidebarCss);
+    const undefinedRefs = [...referenced].filter((t) => !defined.has(t));
+    expect(undefinedRefs).toEqual([]);
+  });
+
   it('every var(--token) in status-colors.ts is defined in tokens.css', () => {
     const referenced = referencedTokens(statusColorsTs);
     const undefinedRefs = [...referenced].filter((t) => !defined.has(t));
@@ -117,6 +130,30 @@ describe('terminal.css literal absence (SC2 migration proof)', () => {
 
   it('the raw JetBrains Mono font stack is gone from terminal.css', () => {
     expect(count(terminalCss, "'JetBrains Mono'")).toBe(0);
+  });
+});
+
+describe('sidebar.css literal absence (SC2 migration proof — extracted rules stay guarded)', () => {
+  // The sidebar block moved into sidebar.css (Plan 10-01); the migrated primitives must
+  // stay absent there too, so the value-preserving move cannot silently reintroduce a raw
+  // literal that bypasses tokens.css (RESEARCH Pitfall 4).
+  const count = (haystack: string, needle: string): number =>
+    haystack.split(needle).length - 1;
+
+  it('the migrated accent-blue literal is absent from sidebar.css', () => {
+    expect(count(sidebarCss, 'oklch(0.62 0.14 248')).toBe(0);
+  });
+
+  it('the migrated danger-red literal is absent from sidebar.css', () => {
+    expect(count(sidebarCss, 'oklch(0.58 0.16 25')).toBe(0);
+  });
+
+  it('the raw Nunito font stack is absent from sidebar.css', () => {
+    expect(count(sidebarCss, "'Nunito'")).toBe(0);
+  });
+
+  it('the raw JetBrains Mono font stack is absent from sidebar.css', () => {
+    expect(count(sidebarCss, "'JetBrains Mono'")).toBe(0);
   });
 });
 

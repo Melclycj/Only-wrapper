@@ -91,7 +91,11 @@ export function resolveOverrideCss(): OverrideResolution | null {
   const sources: string[] = [];
   let css = '';
   if (process.env.UI_LAB_LIVE_CSS === '1') {
-    for (const rel of ['src/renderer/tokens.css', 'src/renderer/terminal.css']) {
+    for (const rel of [
+      'src/renderer/tokens.css',
+      'src/renderer/terminal.css',
+      'src/renderer/sidebar.css',
+    ]) {
       css += `${fs.readFileSync(path.resolve(process.cwd(), rel), 'utf8')}\n`;
       sources.push(rel);
     }
