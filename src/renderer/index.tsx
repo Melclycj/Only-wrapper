@@ -13,6 +13,7 @@ import '@fontsource/jetbrains-mono/700.css';
 // are defined when terminal.css parses.
 import './tokens.css';
 import './terminal.css';
+import './sidebar.css';
 
 import { SessionManager } from './SessionManager';
 
