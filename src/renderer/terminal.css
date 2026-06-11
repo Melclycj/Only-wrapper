@@ -310,6 +310,20 @@ body {
   outline: none;
 }
 
+/* D-15: the destructive Remove/Delete item reads in the danger ramp, consistent
+   with the destructive ConfirmModal. Hover/focus uses the same color-mix tint
+   idiom as .row-control-close:hover (re-stated here — that rule moved to
+   sidebar.css). Tokens-first: var(--color-danger) + color-mix, no literal. */
+.context-menu-item-danger {
+  color: var(--color-danger);
+}
+
+.context-menu-item-danger:hover,
+.context-menu-item-danger:focus-visible {
+  background: color-mix(in oklch, var(--color-danger) 8%, transparent);
+  color: var(--color-danger);
+}
+
 /* ── Icon picker (D-07/D-08/D-09) — curated grid + free-text + color swatches ──── */
 
 .icon-picker {

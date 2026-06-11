@@ -11,12 +11,15 @@
 // with arrow-key roving focus. Styled from DESIGN.md tokens (warm --surface card,
 // --line border, Nunito) in terminal.css.
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { clampToViewport } from './viewport-clamp';
 
 /** A single menu entry: a visible label + the action to run when chosen. */
 export interface ContextMenuItem {
   label: string;
   onSelect: () => void;
+  /** D-15: render in the --color-danger ramp (destructive Remove/Delete). */
+  danger?: boolean;
 }
 
 export interface ContextMenuProps {
@@ -36,6 +39,32 @@ export function ContextMenu({
   onClose,
 }: ContextMenuProps): React.JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
+
+  // D-14: open at the raw cursor anchor, then measure-then-clamp so the whole menu
+  // stays inside the viewport (it used to overlap the sidebar header on a top/left
+  // right-click). `pos` starts at the raw anchor and is corrected after mount once
+  // the menu's own width/height is measurable. Purely additive — the focus/Esc/
+  // click-outside/roving-arrow logic below is untouched.
+  const [pos, setPos] = useState<{ left: number; top: number }>({
+    left: x,
+    top: y,
+  });
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    setPos(
+      clampToViewport(
+        x,
+        y,
+        rect.width,
+        rect.height,
+        window.innerWidth,
+        window.innerHeight,
+        8,
+      ),
+    );
+  }, [x, y]);
 
   // Click-outside (document mousedown) + Esc dismiss, mirroring the ConfirmModal
   // add/remove listener pair. Focus the first item so arrow keys work immediately.
@@ -84,7 +113,7 @@ export function ContextMenu({
       role="menu"
       className="context-menu"
       data-testid="context-menu"
-      style={{ left: x, top: y }}
+      style={{ left: pos.left, top: pos.top }}
       onKeyDown={onKeyDown}
     >
       {items.map((it) => (
@@ -92,7 +121,10 @@ export function ContextMenu({
           key={it.label}
           type="button"
           role="menuitem"
-          className="context-menu-item"
+          className={
+            'context-menu-item' +
+            (it.danger ? ' context-menu-item-danger' : '')
+          }
           onClick={() => {
             it.onSelect();
             onClose();

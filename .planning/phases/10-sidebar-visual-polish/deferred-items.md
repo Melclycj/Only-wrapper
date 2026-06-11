@@ -1,17 +1,21 @@
 # Phase 10 — Deferred Items (out-of-scope discoveries)
 
-These were found during Plan 10-02 execution but are NOT caused by this plan's changes.
-Logged per the executor scope boundary; NOT fixed here.
+Out-of-scope discoveries logged during execution. NOT fixed in this phase.
+Independently found by both Plan 10-02 and Plan 10-03 executors.
 
 ## Pre-existing lint errors in `.planning/spikes/*.cjs`
 
-`npm run lint` reports 8 errors in spike record/analysis scripts that pre-date this
-branch (present at base commit `2d365a8`):
+`npm run lint` (eslint .) reports 8 errors, all in spike research scripts that
+pre-date this phase (present at base commit `2d365a8`) and are unrelated to any
+Phase-10 source change:
 
-- `.planning/spikes/001-frame-stability-mechanism/record.cjs` — `no-require-imports` (×4), `no-unused-vars` (`lastNonEmpty`)
-- `.planning/spikes/002-real-agent-frames/reanalyze.cjs` — `no-require-imports` (×2), `no-unused-vars` (`last`)
+- `.planning/spikes/001-frame-stability-mechanism/record.cjs` — 4× `@typescript-eslint/no-require-imports`, 1× `no-unused-vars` (`lastNonEmpty`)
+- `.planning/spikes/002-real-agent-frames/reanalyze.cjs` — 2× `no-require-imports`, 1× `no-unused-vars` (`last`)
 
-These are throwaway spike instrumentation scripts (CommonJS `.cjs`), unrelated to the
-sidebar restyle. `npx eslint src/renderer/Sidebar.tsx` and `src/renderer/sidebar.css`
-are clean. Not fixed (out of scope). Candidate for a lint-ignore on `.planning/spikes/`
-or deletion of the spike scripts in a future cleanup task.
+These `.cjs` spike scripts use CommonJS `require()` which the flat ESLint config
+forbids. They are throwaway spike instrumentation, untouched by Phase 10 (10-02
+edits Sidebar.tsx / sidebar.css / ui-lab files; 10-03 edits ContextMenu.tsx /
+SessionManager.tsx / terminal.css). Scoped lint on all changed files is clean.
+
+Candidate fixes for a future cleanup task: add a lint-ignore for
+`.planning/spikes/`, or delete the spike scripts.
