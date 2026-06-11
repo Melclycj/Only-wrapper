@@ -123,6 +123,15 @@ This phase directly closes the three sidebar gaps logged at the Phase-9 human ga
 - Whether to add new ui-lab surfaces (e.g. a waiting-state or inactive-list capture) to
   `tests/ui-lab/surfaces.ts` for evidence of D-09/D-11.
 
+### Gap-closure addendum (user decision, 2026-06-11)
+- **GAP-10-C resolved — KEEP the locked spec (D-05/D-06 unchanged).** The operator's
+  human-gate feedback ("expected per-session custom color on the row") was given while the
+  amber waiting treatment was broken (GAP-10-B), so blue was the only accent that ever
+  appeared. Decision: edge bar stays STATUS-colored; per-session custom color stays on the
+  icon tile (D-04). Do NOT change edge-bar color semantics in gap closure. Re-judge the
+  visual impression at the post-gap-closure human re-verify, with amber working. If it
+  still reads wrong there, that becomes a new design item — not part of this phase.
+
 </decisions>
 
 <canonical_refs>
