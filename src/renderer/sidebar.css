@@ -185,9 +185,31 @@
 .sidebar-row:hover .row-controls,
 .sidebar-row.active .row-controls,
 .sidebar-row:focus-within .row-controls,
-.sidebar-row:focus-visible .row-controls,
-.sidebar-row[data-dormant] .row-controls {
+.sidebar-row:focus-visible .row-controls {
   gap: var(--space-1);
+  margin-left: var(--space-1);
+}
+
+/* WR-02 fix: a dormant row at rest keeps its leading standing margin (so the always-visible
+ * ▶ Start sits off the name), but the CONTAINER gap is 0 — flex gap would otherwise insert
+ * --space-1 between the ▶ and the zero-collapsed hidden ✎/🗑, reserving dead trailing space
+ * on every Inactive recipe card. The ▶ gets its own leading spacing via margin-left below. */
+.sidebar-row[data-dormant] .row-controls {
+  gap: 0;
+  margin-left: var(--space-1);
+}
+
+/* On hover/focus of a dormant row the ✎/🗑 cluster reveals, so restore the inter-button gap
+ * (mirrors the live-row reveal selectors above). The ▶'s own margin still spaces it. */
+.sidebar-row[data-dormant]:hover .row-controls,
+.sidebar-row[data-dormant]:focus-within .row-controls,
+.sidebar-row[data-dormant]:focus-visible .row-controls {
+  gap: var(--space-1);
+}
+
+/* The dormant always-visible ▶ carries its own leading margin so it stands off the name
+ * even with the container gap at 0 (D-13 standing-invitation spacing preserved). */
+.sidebar-row[data-dormant] .row-control-start {
   margin-left: var(--space-1);
 }
 
@@ -202,7 +224,14 @@
  * unrevealed control consumes no layout width; the name reclaims the space. The buttons stay
  * in the DOM (the E2E driver addresses every data-testid). Keep the transition on `opacity`
  * ONLY — max-width is layout-bound (web/performance.md), so it snaps rather than animating. */
+/* WR-01 fix: box-sizing:border-box makes max-width:0 clamp the FULL box (border included).
+ * Without it the later equal-specificity `border: 1px solid transparent` shorthand (in the
+ * compact-button block below) clobbered this `border-width: 0` at content-box, so every
+ * hidden control still rendered ~2px of border width and crushed the name. With border-box
+ * the zero-collapse is real and order-independent (robust to a future reorder of the two
+ * .row-control blocks). */
 .sidebar-row .row-control {
+  box-sizing: border-box;
   opacity: 0;
   max-width: 0;
   overflow: hidden;
@@ -211,7 +240,9 @@
   transition: opacity var(--duration-fast) var(--ease-standard);
 }
 
-/* Restore the box on hover / active / keyboard focus (24px = the .row-control width below). */
+/* Restore the box on hover / active / keyboard focus. With box-sizing:border-box (above)
+ * the revealed width IS 24px INCLUDING the 1px border — matching the .row-control width in
+ * the compact-button block below (the box now measures border-to-border, not content+2px). */
 .sidebar-row:hover .row-control,
 .sidebar-row.active .row-control,
 .sidebar-row:focus-within .row-control,
