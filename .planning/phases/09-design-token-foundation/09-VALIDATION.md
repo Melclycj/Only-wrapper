@@ -1,10 +1,11 @@
 ---
 phase: 9
 slug: design-token-foundation
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: complete
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-06-10
+updated: 2026-06-11
 ---
 
 # Phase 9 — Validation Strategy
@@ -48,9 +49,9 @@ created: 2026-06-10
 | 09-02 / Task 1 | 02 | 2 | UI-01 | T-09-03 / T-09-04 | the migrated global literals (blue/danger oklch, Nunito/JetBrains font stacks, 3 shadows, 0.12s motion) are GONE from terminal.css → var()/color-mix; value-preserving | unit (static text-count) | `npm run test:unit` | ❌ W0 (tokens-completeness NEW) | ⬜ pending |
 | 09-02 / Task 2 | 02 | 2 | UI-01 | T-09-04 | status-colors.ts returns `var(--accent-*)`; labels unchanged; overlay-only-when-running contract intact; guard test updated in lockstep | unit | `npx vitest run src/renderer/__tests__/status-colors.test.ts` | ✅ exists — UPDATE | ⬜ pending |
 | 09-02 / Task 3 | 02 | 2 | UI-01 | — | every `var(--*)` referenced in terminal.css + status-colors.ts is defined in tokens.css; migrated literals absent | unit (pure-node static text) | `npx vitest run src/renderer/__tests__/tokens-completeness.test.ts` | ❌ W0 — NEW | ⬜ pending |
-| 09-03 / Task 1 | 03 | 3 | UI-01 | T-09-06 packaging | @fontsource woff2 emitted as RELATIVE-path renderer assets in the packaged build; no absolute `url(/` font path | build-output assertion (pure-node) | `npm run make && npm run verify:fonts` | ❌ W0 — NEW | ⬜ pending |
+| 09-03 / Task 1 | 03 | 3 | UI-01 | T-09-06 packaging | @fontsource woff2 emitted as RELATIVE-path renderer assets in the packaged build; no absolute `url(/` font path | build-output assertion (pure-node) | `npm run make && npm run verify:fonts` | ✅ exists | ✅ green |
 | (existing) | — | — | UI-01 | T-09-05 / T-09-08 | SC4: PTY round-trip echoes + EXPECTED_API_KEYS stays 20 (terminal fidelity + bridge surface intact) | smoke + existing security-guard | `npm run test:unit && npm run test:smoke` | ✅ exists — must stay GREEN | ⬜ pending |
-| 09-03 / Task 2 | 03 | 3 | UI-01 | T-09-07 | SC1 coherence + SC3 re-theme-from-one-place + Nunito/JetBrains Mono actually render (value-preserving otherwise) | manual (end-of-phase human-verify — the phase gate) | n/a — `09-HUMAN-UAT.md` | ❌ — NEW | ⬜ pending |
+| 09-03 / Task 2 | 03 | 3 | UI-01 | T-09-07 | SC1 coherence + SC3 re-theme-from-one-place + Nunito/JetBrains Mono actually render (value-preserving otherwise) | manual (end-of-phase human-verify — the phase gate) | n/a — `09-HUMAN-UAT.md` | ✅ exists | ✅ approved 2026-06-11 |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -61,8 +62,8 @@ created: 2026-06-10
 - [ ] `src/renderer/tokens.css` (new, Plan 01) — the `:root` design-token layer the completeness test asserts against. Created in Plan 01 Wave 1.
 - [ ] `src/renderer/__tests__/tokens-completeness.test.ts` (new, Plan 02 Task 3) — pure-node static assertion: every `var(--token)` referenced in `terminal.css` + `status-colors.ts` is defined in `tokens.css`, AND the migrated raw literals (blue `oklch(0.62 0.14 248)`, error `oklch(0.58 0.16 25)`, the Nunito/JetBrains font stacks) no longer appear as raw literals in `terminal.css`.
 - [ ] `src/renderer/__tests__/status-colors.test.ts` (update, Plan 02 Task 2) — assert `var(--accent-*)` references instead of literal oklch (D-03); keep the overlay-only-when-running contract assertions GREEN.
-- [ ] `scripts/assert-fonts-bundled.cjs` + `verify:fonts` npm script (new, Plan 03 Task 1) — the packaged-font build-output assertion (woff2 emitted + no absolute font url).
-- [ ] `09-HUMAN-UAT.md` (new, Plan 03 Task 2) — the SC1/SC3 + font-render manual checklist (end-of-phase gate).
+- [x] `scripts/assert-fonts-bundled.cjs` + `verify:fonts` npm script (new, Plan 03 Task 1) — the packaged-font build-output assertion (woff2 emitted + no absolute font url). GREEN: 23 woff2, no absolute url.
+- [x] `09-HUMAN-UAT.md` (new, Plan 03 Task 2) — the SC1/SC3 + font-render manual checklist (end-of-phase gate). All 5 checks PASS, approved 2026-06-11.
 - [ ] No framework install needed — Vitest covers unit; WebdriverIO covers the packaged smoke; the build-output assertion is pure node. jsdom deliberately NOT added.
 
 ---
@@ -84,6 +85,8 @@ created: 2026-06-10
 - [ ] Wave 0 covers all MISSING references (tokens.css, tokens-completeness.test.ts, assert-fonts-bundled.cjs, 09-HUMAN-UAT.md)
 - [ ] No watch-mode flags
 - [ ] Feedback latency < 30s
-- [ ] `nyquist_compliant: true` set in frontmatter (ONLY on the Plan 03 Task 2 human-verify approval)
+- [x] `nyquist_compliant: true` set in frontmatter (ONLY on the Plan 03 Task 2 human-verify approval)
 
-**Approval:** pending
+**Approval:** APPROVED 2026-06-11 — operator completed the end-of-phase human-verify
+(`09-HUMAN-UAT.md`): all 5 checks PASS (Check 2 SC1 coherence at foundation scope; 5 visual
+gaps logged + deferred to Phases 10–13). `nyquist_compliant` flipped true on this signal.

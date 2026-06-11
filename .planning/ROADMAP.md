@@ -31,7 +31,7 @@ Built inside-out: Core Value (real terminal fidelity) proven first, then the ses
 
 Phase numbering continues from v1.0 (which ended at Phase 8). v1.0 phase directories (`01-*` … `08-*`, including `05.1` and `06.1`) are preserved untouched — the debt phases read their REVIEW / VALIDATION artifacts.
 
-- [ ] **Phase 9: Design Token Foundation** — Lock one cohesive design-token system (palette, type, spacing, surface, radius, motion) and wire it app-wide.
+- [x] **Phase 9: Design Token Foundation** — Lock one cohesive design-token system (palette, type, spacing, surface, radius, motion) and wire it app-wide. (completed 2026-06-11)
 - [ ] **Phase 10: Sidebar Visual Polish** — Apply the tokens to the session sidebar: clear hierarchy, legible 5-state status, unmistakable active session (expanded + collapsed).
 - [ ] **Phase 11: Terminal Area Polish + Live Start/Restart** — Polish the terminal-area chrome (header, Working Area / Inactive List, controls) and add a discoverable Start/Restart control for live sessions.
 - [ ] **Phase 12: Session Form — Polish + Edit UX** — Make the create/edit form one designed surface, fix saved-cwd/startup prefill (record round-trip), and add a native folder picker.
@@ -64,7 +64,7 @@ Phase numbering continues from v1.0 (which ended at Phase 8). v1.0 phase directo
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-  - [ ] 09-03-PLAN.md — Packaged-font build-output assertion + end-of-phase human-verify (SC1/SC3/font render) phase gate (Wave 3)
+  - [x] 09-03-PLAN.md — Packaged-font build-output assertion + end-of-phase human-verify (SC1/SC3/font render) phase gate (Wave 3)
 
 **UI hint**: yes
 
@@ -173,7 +173,7 @@ v1.1 phases execute in numeric order: 9 → 10 → 11 → 12 → 13 → 14 → 1
 | 6.1 Terminal Lifecycle Redesign | v1.0 | 4/4 | Complete | 2026-06-09 |
 | 7. Terminal Search + Scrollback Config | v1.0 | 5/5 | Complete | 2026-06-09 |
 | 8. Cross-Platform Packaging | v1.0 | 3/3 | Complete | 2026-06-10 |
-| 9. Design Token Foundation | v1.1 | 2/3 | In Progress|  |
+| 9. Design Token Foundation | v1.1 | 3/3 | Complete   | 2026-06-11 |
 | 10. Sidebar Visual Polish | v1.1 | 0/TBD | Not started | - |
 | 11. Terminal Area Polish + Live Start/Restart | v1.1 | 0/TBD | Not started | - |
 | 12. Session Form — Polish + Edit UX | v1.1 | 0/TBD | Not started | - |

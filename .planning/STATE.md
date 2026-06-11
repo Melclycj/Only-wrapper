@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: UI Polish & Debt Cleanup
-status: executing
+status: verifying
 stopped_at: Completed 09-02-PLAN.md (Wave 2 token migration)
-last_updated: "2026-06-11T00:36:56.297Z"
+last_updated: "2026-06-11T01:45:19.192Z"
 last_activity: 2026-06-11 -- Phase 09 execution started
 progress:
   total_phases: 7
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 3
-  completed_plans: 2
-  percent: 0
+  completed_plans: 3
+  percent: 14
 ---
 
 # Project State
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-06-10 — v1.1 milestone started)
 
 Phase: 09 (design-token-foundation) — EXECUTING
 Plan: 3 of 3
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-06-11 -- Phase 09 execution started
 
 ### v1.1 Milestone Phases (9–15)
@@ -107,6 +107,7 @@ Phase 9 (UI-01 design tokens) gates the per-surface polish phases (10–13). Pha
 | Phase 08 P03 | ~10min + human-verify | 2 tasks | 3 files |
 | Phase 09 P01 | ~9min | 2 tasks | 4 files |
 | Phase 9 P2 | 6min | 3 tasks | 4 files |
+| Phase 09 P09-03 | ~30min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -178,6 +179,7 @@ Recent decisions affecting current work:
 - [Phase 08-03]: 2-OS GitHub Actions matrix (windows-latest + macos-latest) is the canonical producer + verifier — `.github/workflows/build.yml`: npm ci → npm run make (HARD gate) → npm run test:smoke (strong-preferred) → upload-artifact out/make; ZERO secrets, unsigned (D-04, maker-squirrel unsigned + osxSign/osxNotarize env-gated off), NO mandatory native rebuild (D-06 — postinstall fix-node-pty does the opportunistic non-fatal rebuild). docs/PACKAGING.md gained a Continuous Integration section. Task 2 canonical `claude --rc` packaged human-verify APPROVED 2026-06-10: the user ran `npm run make`, opened the packaged macOS `.app`, created the canonical session (Parlour Claude RC / 🛋️ / real project dir / `claude --rc`) and confirmed LIVE interactive launch — **SC2 LIVE-CONFIRMED on macOS ONLY**. Honest SC map: SC1(mac)/SC3(mac) automated GREEN; SC1(win)/SC3(win) CI-produced (runnable-on-real-Windows best-effort/human-verify); SC4 LOGIC-PROVEN ONLY (os-gate.test.ts GREEN, no pre-1809 host available); D-02/D-03 Windows byte-semantics best-effort. nyquist_compliant flipped true in 08-VALIDATION.md ONLY on this explicit approval. PKG-01 satisfied (Definition-of-Done item 6). Phase NOT yet marked verified — orchestrator's verifier + phase.complete owns that.
 - [Phase ?]: [Phase 09-01]: Wave-1 token foundation — ADD tokens.css :root layer + @fontsource fonts (nunito 5.2.7 / jetbrains-mono 5.2.8, exact-pinned, no CDN) + index.tsx import order (fonts -> tokens.css -> terminal.css). NO literal migrated (terminal.css/status-colors.ts keep literals until Plan 02 — D-01 hybrid scope). Kept --radius 18px as an alias not renamed (D-04 Discretion). 317 unit GREEN, tsc clean, forge/vite untouched.
 - [Phase 9]: [Phase 09-02]: Wave-2 token migration COMPLETE — terminal.css global primitives (28x accent blue, 8x danger red, 3 shadows, 8x Nunito + 2x JetBrains-Mono, 0.12s motion) now reference var()/color-mix; status-colors.ts accents to var(--accent-*) (TDD RED->GREEN, overlay-only-when-running contract intact). New pure-node tokens-completeness.test.ts proves SC2/SC3: every var(--token) in terminal.css + status-colors.ts resolves to a tokens.css definition (--accent inline runtime channel allow-listed) + the 4 migrated literals absent. Value-preserving (only visible change = fonts from Wave 1). 326 unit GREEN, tsc clean, SessionView/forge/vite untouched, EXPECTED_API_KEYS unchanged. — UI-01 single-source-of-truth payoff: retuning brand blue/danger red is now a one-line tokens.css edit, not 28+8 hand-edits.
+- [Phase 09-03]: Wave-3 phase gate CLOSED. SC4/D-05 packaging proof GREEN (scripts/assert-fonts-bundled.cjs: 23 woff2 emitted as relative assets, no absolute url(/ font path; verify:fonts npm script kept out of default test). End-of-phase human-verify APPROVED 2026-06-11 — 5/5 PASS: fonts render (Nunito UI + JetBrains Mono terminal), value-preserving, SC3 re-theme from one place (verified mechanically via the ui-lab green-accent demo, zero source edits), SC4 fidelity unchanged. SC1 coherence recorded HONESTLY as PASS-AT-FOUNDATION-SCOPE — operator verdict 'still ugly'; per-surface composition is Phases 10-13. 5 visual gaps logged + routed downstream (sidebar names crushed->P10, terminal pane framing->P11, Save-button accent->P12, context-menu position/danger ramp->P10/13, inactive-row card structure->P10). nyquist_compliant true; 09-VALIDATION complete. A user-directed ui-lab visual harness (commit 81192cd) built mid-session (NOT a plan task) supplied the check-4 + gap evidence.
 
 ### Pending Todos
 
@@ -226,7 +228,7 @@ Acknowledged and deferred at v1.0 milestone close on 2026-06-10 (option B — ca
 
 ## Session Continuity
 
-Last session: 2026-06-11T00:36:56.291Z
+Last session: 2026-06-11T01:44:39.534Z
 Stopped at: Completed 09-02-PLAN.md (Wave 2 token migration)
 Resume file: .planning/phases/09-design-token-foundation/09-CONTEXT.md
 
