@@ -24,11 +24,11 @@ export const STATUS_STYLE: Record<
   SessionStatus,
   { label: string; accent: string }
 > = {
-  running: { label: 'Running', accent: 'oklch(0.62 0.14 248)' }, // blue (in-progress)
-  exited: { label: 'Finished', accent: 'oklch(0.60 0.13 150)' }, // green (finished)
-  stopped: { label: 'Stopped', accent: 'oklch(0.64 0.02 260)' }, // slate (free/idle)
-  not_started: { label: 'Idle', accent: 'oklch(0.64 0.02 260)' }, // slate
-  error: { label: 'Error', accent: 'oklch(0.58 0.16 25)' }, // DERIVED red ramp (D-04, no mockup state)
+  running: { label: 'Running', accent: 'var(--accent-running)' }, // blue (in-progress)
+  exited: { label: 'Finished', accent: 'var(--accent-finished)' }, // green (finished)
+  stopped: { label: 'Stopped', accent: 'var(--accent-idle)' }, // slate (free/idle)
+  not_started: { label: 'Idle', accent: 'var(--accent-idle)' }, // slate
+  error: { label: 'Error', accent: 'var(--accent-error)' }, // DERIVED red ramp (D-04, no mockup state)
 };
 
 // ─── Agent-state presentation overlay (TERM-09 / SC4 — D-06/D-07) ────────────
@@ -45,9 +45,9 @@ export const AGENT_STYLE: Record<
   AgentState,
   { label: string; accent: string }
 > = {
-  'in-progress': { label: 'In progress', accent: 'oklch(0.62 0.14 248)' }, // blue
-  waiting: { label: 'Waiting for you', accent: 'oklch(0.66 0.15 60)' }, // amber (TERM-09 — reserved)
-  free: { label: 'Free', accent: 'oklch(0.64 0.02 260)' }, // slate
+  'in-progress': { label: 'In progress', accent: 'var(--accent-running)' }, // blue
+  waiting: { label: 'Waiting for you', accent: 'var(--accent-waiting)' }, // amber (TERM-09 — reserved)
+  free: { label: 'Free', accent: 'var(--accent-idle)' }, // slate
 };
 
 /**
@@ -76,7 +76,7 @@ export function statusLabel(status: SessionStatus): string {
   return STATUS_STYLE[status].label;
 }
 
-/** Convenience accessor for a status's accent color (oklch string). */
+/** Convenience accessor for a status's accent color (var(--accent-*) reference). */
 export function statusAccent(status: SessionStatus): string {
   return STATUS_STYLE[status].accent;
 }
