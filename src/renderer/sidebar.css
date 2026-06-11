@@ -182,8 +182,12 @@
   margin-left: 0;
 }
 
+/* GAP-10-G: the active row now mirrors the rest-state zero-collapse (D-02: controls are
+ * hover/keyboard-focus-revealed only, INCLUDING the active row — no reserved width). The
+ * `.sidebar-row.active` clause was removed from this reveal group so the active row's
+ * container gap+margin stay 0 at rest, freeing the 8px back to the name; the cluster still
+ * reveals on hover / :focus-within / :focus-visible (mouse + keyboard reachable). */
 .sidebar-row:hover .row-controls,
-.sidebar-row.active .row-controls,
 .sidebar-row:focus-within .row-controls,
 .sidebar-row:focus-visible .row-controls {
   gap: var(--space-1);
@@ -240,11 +244,15 @@
   transition: opacity var(--duration-fast) var(--ease-standard);
 }
 
-/* Restore the box on hover / active / keyboard focus. With box-sizing:border-box (above)
- * the revealed width IS 24px INCLUDING the 1px border — matching the .row-control width in
- * the compact-button block below (the box now measures border-to-border, not content+2px). */
+/* Restore the box on hover / keyboard focus. With box-sizing:border-box (above) the revealed
+ * width IS 24px INCLUDING the 1px border — matching the .row-control width in the
+ * compact-button block below (the box now measures border-to-border, not content+2px).
+ * GAP-10-G: the `.sidebar-row.active` clause was removed here so the active row's controls
+ * stay collapsed to zero reserved width at rest (D-02: hover/focus-revealed only, INCLUDING
+ * the active row), reclaiming the ~48px (2 controls × 24px) that crushed a medium name. The
+ * Edit ✎ + Close ✕ still reveal on :hover (mouse), :focus-within (keyboard tab onto a
+ * control), and :focus-visible (keyboard row focus) — never hidden-and-unreachable. */
 .sidebar-row:hover .row-control,
-.sidebar-row.active .row-control,
 .sidebar-row:focus-within .row-control,
 .sidebar-row:focus-visible .row-control {
   opacity: 1;
