@@ -318,6 +318,89 @@ export const SURFACES: Surface[] = [
     },
   },
   {
+    id: 'sidebar-waiting',
+    title: 'Waiting row amber treatment (D-09)',
+    designRefs: [
+      'DESIGN.md §Status system (waiting=amber, reserved)',
+      '10-UI-SPEC.md §Interaction Contract (Waiting row)',
+    ],
+    expects:
+      'A waiting row carries an amber left edge bar + a light amber tint wash + ' +
+      '"Waiting for you" on line 2 — static, no pulse (D-09).',
+    prepare: async () => {
+      // The amber waiting treatment keys on the renderer-only agentState='waiting', which
+      // is set by SessionView's idle detector reading real agent (claude/codex) terminal
+      // frames going quiet. That cannot be forced deterministically in this harness without
+      // a real agent process — so this surface is SKIPPED rather than fabricated. The wash
+      // is instead proven by the unit data-agent contract (Sidebar.tsx data-agent seam +
+      // the sidebar.css [data-agent='waiting'] rule) and the manual end-of-phase human
+      // verify in Plan 03's gate.
+      throw new SkipSurface(
+        'waiting agent-state is not deterministically drivable in the ui-lab harness ' +
+          '(needs a real agent process going idle); proven by unit contract + manual gate',
+      );
+    },
+  },
+  {
+    id: 'inactive-recipes',
+    title: 'Inactive List dashed recipe cards (ghost ▶ Start)',
+    designRefs: [
+      'DESIGN.md §Status system (idle/slate ramp)',
+      'DESIGN.md §v1 component inventory (IdeSidebarRow)',
+    ],
+    expects:
+      'Inactive List rows are dashed eggshell recipe cards: icon + name (line 1) + the ' +
+      'startup-command secondary (line 2), with an always-visible circular ghost ▶ Start ' +
+      'that fills brand-blue on hover (D-11/D-13, Gap 5 closed).',
+    prepare: async (ctx) => {
+      // Create a session, configure it (name + emoji + a saved startup command so it is
+      // a CONFIGURED recipe), then Remove it — a configured Remove keeps the recipe and
+      // optimistically flips the row to not_started, landing it in the Inactive List as a
+      // dashed recipe card with the ghost ▶ and the startup-command secondary line.
+      const idR = await addSession(ctx);
+      await openEditModal(idR);
+      await setInputByTestId('edit-name', 'Dev Server');
+      await setInputByTestId('edit-emoji-text', '🌱');
+      await setInputByTestId('edit-startup', 'npm run dev');
+      await clickByTestId('edit-save');
+      await waitForTestIdGone('session-edit-modal');
+      // Right-click → Remove (configured live row → keep recipe → Inactive List).
+      await openContextMenu(idR);
+      await waitForTestId('context-menu');
+      const labels = await contextMenuLabels();
+      if (!labels.includes('Remove')) {
+        await pressEscape();
+        await waitForTestIdGone('context-menu');
+        throw new SkipSurface(
+          `context menu has no "Remove" item (items: ${labels.join(', ')})`,
+        );
+      }
+      await clickMenuItem('Remove');
+      // Confirm the Remove (the existing ConfirmModal — confirm button = confirm-close).
+      await waitForTestId('confirm-modal');
+      await clickByTestId('confirm-close');
+      await waitForTestIdGone('confirm-modal');
+      // Wait until the row has moved into the Inactive List (dashed recipe card).
+      await browser.waitUntil(
+        async () =>
+          browser.execute((sid: string) => {
+            const container = document.querySelector(
+              '[data-testid="inactive-list"]',
+            );
+            return !!container?.querySelector(
+              `.sidebar-row[data-session-id="${sid}"]`,
+            );
+          }, idR),
+        {
+          timeout: 8000,
+          interval: 150,
+          timeoutMsg: 'recipe row did not move into the Inactive List after Remove',
+        },
+      );
+      await browser.pause(400);
+    },
+  },
+  {
     id: 'sidebar-collapsed',
     title: 'Collapsed icon rail',
     designRefs: [

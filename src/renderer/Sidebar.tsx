@@ -26,6 +26,7 @@ import { CSS } from '@dnd-kit/utilities';
 import type { LogicalId, SessionIconSpec, SessionRecord } from '../shared/types';
 import type { AgentState } from '../shared/agent-state';
 import { presentation } from './status-colors';
+import { secondaryText } from './row-secondary';
 import { COLOR_INITIAL } from './icon-spec';
 import { startAffordances } from './start-affordances';
 
@@ -231,8 +232,14 @@ function SortableSidebarRow({
         (isActive ? 'sidebar-row active' : 'sidebar-row') +
         (isDragging ? ' dragging' : '')
       }
-      style={style}
+      // D-05/D-06/D-09: lift the per-row inline --accent up to the ROW container so the
+      // active edge bar + the waiting wash can read it (it stays ALSO on the dots/badge
+      // below). data-agent is the D-09 seam — CSS targets [data-agent='waiting']; the
+      // field is present on NON-active running rows too (OPEN-Q1 resolution), so a
+      // backgrounded waiting row carries the amber wash with zero extra wiring.
+      style={{ ...style, '--accent': stat.accent } as React.CSSProperties}
       data-session-id={s.logicalId}
+      {...(agentState ? { 'data-agent': agentState } : {})}
       {...(rowTitle ? { title: rowTitle } : {})}
       {...(dormant ? { 'data-dormant': '' } : {})}
       {...(isDragging ? { 'data-dragging': '' } : {})}
@@ -269,14 +276,28 @@ function SortableSidebarRow({
         style={{ '--accent': stat.accent } as React.CSSProperties}
         aria-hidden="true"
       />
-      <span className="row-name">{s.name}</span>
-      <span
-        className="status-badge"
-        style={{ '--accent': stat.accent } as React.CSSProperties}
-        title={stat.label}
-      >
-        <span className="status-dot" />
-        {stat.label}
+      {/* D-01/D-03 two-line block: line 1 = full-width session name (ellipsis on
+          overflow), line 2 = a status-colored dot + the D-03 secondary text (status
+          word + cwd tail for a live row, or the recipe's startup command for a
+          dormant row). The .row-text column needs min-width:0 (CSS) for the name
+          ellipsis to work. Both lines hide in the collapsed rail (CSS). */}
+      <span className="row-text">
+        <span className="row-name">{s.name}</span>
+        <span className="row-secondary">
+          <span
+            className="status-dot"
+            style={{ '--accent': stat.accent } as React.CSSProperties}
+            aria-hidden="true"
+          />
+          {secondaryText(
+            {
+              status: s.status,
+              cwd: s.cwd,
+              startupCommand: s.startupCommand,
+            },
+            stat.label,
+          )}
+        </span>
       </span>
       <span className="row-controls">
         {/* DEFECT C: the sidebar ▶ primary Start renders ONLY when startAffordances says
@@ -522,7 +543,10 @@ export function Sidebar({
             data-testid="working-area"
           >
             <span className="sidebar-section-label" aria-hidden={collapsed}>
-              Working Area
+              Working Area{' '}
+              <span className="sidebar-section-count">
+                · {workingArea.length}
+              </span>
             </span>
             {workingArea.map(renderRow)}
           </div>
@@ -535,7 +559,10 @@ export function Sidebar({
               data-testid="inactive-list"
             >
               <span className="sidebar-section-label" aria-hidden={collapsed}>
-                Inactive List
+                Inactive{' '}
+                <span className="sidebar-section-count">
+                  · {inactiveList.length}
+                </span>
               </span>
               {inactiveList.map(renderRow)}
             </div>
