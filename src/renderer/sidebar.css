@@ -64,7 +64,10 @@
 .sidebar-row {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  /* GAP-10-E: the inter-item gap (handle↔icon↔text) compacts from --space-3 (12px) to
+   * --space-2 (8px) so the leading gutter steals less of the 220px rail and the name
+   * column reclaims width. The row horizontal PADDING stays --space-3 (UI-SPEC). */
+  gap: var(--space-2);
   padding: var(--space-2_5) var(--space-3);
   border-radius: var(--radius-lg);
   border: 1px solid transparent;
@@ -106,12 +109,13 @@
   border-left: 3px solid var(--accent-waiting);
 }
 
-/* D-04 large icon tile — a rounded ~34px tile spanning both text lines, with a larger
- * emoji optical size. 34px is an element dimension (UI-SPEC Spacing-Scale exception). */
+/* D-04 large icon tile — a rounded tile spanning both text lines, with a larger emoji
+ * optical size. GAP-10-E: compacted from 34px to --space-8 (32px) — still inside D-04's
+ * 32-36px band, now a token-sourced element dimension, freeing ~2px back to the name. */
 .sidebar-row .row-icon {
   flex: 0 0 auto;
-  width: 34px;
-  height: 34px;
+  width: var(--space-8);
+  height: var(--space-8);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -309,8 +313,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 12px;
-  margin-left: -2px;
+  /* GAP-10-E: compacted from 12px to --space-2 (8px) and the -2px negative nudge dropped
+   * — the ⠿ still telegraphs draggability without eating leading width. Hover-reveal
+   * (opacity 0 → 1 below) unchanged. */
+  width: var(--space-2);
   color: var(--ink-faint);
   font-size: 13px;
   line-height: 1;
