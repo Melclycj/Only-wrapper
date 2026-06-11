@@ -18,21 +18,21 @@ describe('presentation() agent-state overlay (D-06/D-07)', () => {
   it('running + in-progress → blue "In progress"', () => {
     expect(presentation('running', 'in-progress')).toEqual({
       label: 'In progress',
-      accent: 'oklch(0.62 0.14 248)',
+      accent: 'var(--accent-running)',
     });
   });
 
   it('running + waiting → amber "Waiting for you" (TERM-09)', () => {
     expect(presentation('running', 'waiting')).toEqual({
       label: 'Waiting for you',
-      accent: 'oklch(0.66 0.15 60)',
+      accent: 'var(--accent-waiting)',
     });
   });
 
   it('running + free → slate "Free"', () => {
     expect(presentation('running', 'free')).toEqual({
       label: 'Free',
-      accent: 'oklch(0.64 0.02 260)',
+      accent: 'var(--accent-idle)',
     });
   });
 
@@ -45,7 +45,7 @@ describe('presentation() agent-state overlay (D-06/D-07)', () => {
     expect(presentation('exited', 'waiting')).toEqual(STATUS_STYLE.exited);
     expect(presentation('exited', 'waiting')).toEqual({
       label: 'Finished',
-      accent: 'oklch(0.60 0.13 150)',
+      accent: 'var(--accent-finished)',
     });
   });
 
@@ -73,16 +73,16 @@ describe('presentation() agent-state overlay (D-06/D-07)', () => {
 });
 
 describe('AGENT_STYLE ramp (06-UI-SPEC §Color authoritative oklch)', () => {
-  it('amber oklch(0.66 0.15 60) is reserved exclusively for waiting', () => {
-    expect(AGENT_STYLE.waiting.accent).toBe('oklch(0.66 0.15 60)');
+  it('amber var(--accent-waiting) is reserved exclusively for waiting', () => {
+    expect(AGENT_STYLE.waiting.accent).toBe('var(--accent-waiting)');
     // No other agent-state ramp carries the reserved amber accent.
-    expect(AGENT_STYLE['in-progress'].accent).not.toBe('oklch(0.66 0.15 60)');
-    expect(AGENT_STYLE.free.accent).not.toBe('oklch(0.66 0.15 60)');
+    expect(AGENT_STYLE['in-progress'].accent).not.toBe('var(--accent-waiting)');
+    expect(AGENT_STYLE.free.accent).not.toBe('var(--accent-waiting)');
   });
 
   it('STATUS_STYLE process accents are unchanged in shape', () => {
-    expect(STATUS_STYLE.running.accent).toBe('oklch(0.62 0.14 248)');
-    expect(STATUS_STYLE.exited.accent).toBe('oklch(0.60 0.13 150)');
-    expect(STATUS_STYLE.error.accent).toBe('oklch(0.58 0.16 25)');
+    expect(STATUS_STYLE.running.accent).toBe('var(--accent-running)');
+    expect(STATUS_STYLE.exited.accent).toBe('var(--accent-finished)');
+    expect(STATUS_STYLE.error.accent).toBe('var(--accent-error)');
   });
 });
