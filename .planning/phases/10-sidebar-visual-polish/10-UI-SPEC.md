@@ -33,15 +33,12 @@ created: 2026-06-11
 
 This phase is the FIRST CONSUMER of the `--space-*` scale that Phase 9 defined-but-did-not-apply (09-CONTEXT D-01). All sidebar geometry (row padding, gaps, section spacing, icon-tile margins) MUST be expressed with these tokens. Odd-ball one-off values currently in `terminal.css` (5px / 14px / 22px) snap to the nearest step (CONTEXT Discretion).
 
-Declared values (4px base; half-steps retained to cover existing geometry without value drift):
+**Declared spacing scale — formal contract (4px base; multiples of 4 only):**
 
 | Token | Value | Usage in this phase |
 |-------|-------|---------------------|
-| `--space-0_5` | 2px | Hairline insets, dot ring offset |
 | `--space-1` | 4px | Icon-to-text micro gaps, edge-bar-to-content |
-| `--space-1_5` | 6px | Tight inline gaps (dot ↔ word) |
 | `--space-2` | 8px | Section divider padding, control gaps, secondary-line top gap |
-| `--space-2_5` | 10px | Row vertical padding (compact) |
 | `--space-3` | 12px | Row horizontal padding, icon-tile ↔ text gap |
 | `--space-4` | 16px | Default block spacing, section label padding |
 | `--space-5` | 20px | Generous row block (two-line rows ~40% taller — D-01) |
@@ -49,7 +46,13 @@ Declared values (4px base; half-steps retained to cover existing geometry withou
 | `--space-8` | 32px | Major vertical rhythm |
 | `--space-12` | 48px | Reserved (not expected in the sidebar) |
 
-**8-point compliance:** The canonical 4/8/16/24/32/48 steps are all present (`--space-1`/`--space-2`/`--space-4`/`--space-6`/`--space-8`/`--space-12`). The half-steps (2/6/10/12/20px) exist deliberately to migrate the existing value-preserving geometry without changing rendered pixels — they are a documented exception, not ad-hoc values.
+**8-point compliance:** Every value in the formal scale above is a multiple of 4. The canonical 4/8/16/24/32/48 steps are all present (`--space-1`/`--space-2`/`--space-4`/`--space-6`/`--space-8`/`--space-12`), with 12px and 20px as on-scale intermediate steps.
+
+> **Footnote — value-preserving migration aliases (NOT part of the formal spacing contract):**
+> The following three tokens carry sub-4px / non-multiple-of-4 values that exist ONLY to migrate the pre-existing `terminal.css` geometry into the token system **without changing rendered pixels** during this restyle. They are migration aliases, not design-contract spacing steps, and the planner/executor should treat them as such — no NEW geometry should be authored against them; new spacing decisions use the formal scale above. Where the ui-lab loop allows snapping a value to the nearest formal step without harming the layout, prefer that.
+> - `--space-0_5` = 2px — hairline insets, dot ring offset (carried)
+> - `--space-1_5` = 6px — tight inline gaps (dot ↔ word) (carried)
+> - `--space-2_5` = 10px — row vertical padding, compact variant (carried)
 
 **Exceptions:**
 - The collapsed rail width (~52px icon-only) is a layout dimension, not a spacing-scale step (carried from Phase 4 `.collapsed`). Keep as-is.
@@ -115,6 +118,8 @@ The sidebar shows few words — most identity is the user's own session name/ico
 | Element | Copy |
 |---------|------|
 | Primary CTA (inactive recipe row) | `▶` Start — circular ghost button, always visible (D-13); icon-only, `aria-label="Start session"` (a11y) |
+| Hover-reveal control — edit | `✎` icon-only, `aria-label="Rename session"` (a11y — keyboard/SR equivalent of the hover-reveal control) |
+| Hover-reveal control — close | `✕` icon-only, `aria-label="Close session"` (a11y — keyboard/SR equivalent of the hover-reveal control) |
 | Section label — live | `WORKING AREA · {n}` (small-caps, count appended — D-12) |
 | Section label — dormant | `INACTIVE · {n}` (small-caps, count appended — D-12) |
 | Status word — running | `Running` (or `In progress` when agent overlay active) |
@@ -142,7 +147,7 @@ This phase is presentation-only; behavior is frozen, but the visual STATES of in
 |-------------|-----------------|
 | Active row | Filled `--surface` card + `--line` border + `--shadow-pop` lift + 3–4px left edge bar in the status `--accent` (D-05/D-06). Unmistakable at a glance (SC1). |
 | Waiting row (active OR not) | Amber left edge bar + light amber tint wash + secondary line = "Waiting for you" (D-09). Static, no pulse. |
-| Hover-reveal controls | edit ✎ / close ✕ float over the row's right end at `opacity:0 → 1` on `:hover` AND `:focus-visible` (keyboard a11y required — D-02). No reserved width. Compositor-friendly transition (`opacity` only). |
+| Hover-reveal controls | edit ✎ (`aria-label="Rename session"`) / close ✕ (`aria-label="Close session"`) float over the row's right end at `opacity:0 → 1` on `:hover` AND `:focus-visible` (keyboard a11y required — D-02). No reserved width. Compositor-friendly transition (`opacity` only). |
 | Always-visible control | The inactive recipe `▶ Start` is EXEMPT from the hover-reveal (always shown — D-13/6.1 D-06). start-no-cmd + Delete follow the hover-reveal policy. |
 | Drag-to-reorder | dnd-kit `PointerSensor` 5px activation (click-to-switch preserved) + `KeyboardSensor`; one SortableContext spans both buckets; dragging row keeps its lift/opacity state. Re-verify feel after ~40% taller rows (RESEARCH Pitfall 5). |
 | Collapsed rail | Active tile = filled/lifted + status-color edge bar on the rail's left; waiting tile mirrors amber edge bar; status dot enlarged to ~10px bottom-right with a thicker `--surface` ring (D-07/D-10). No whole-tile status tint. |
