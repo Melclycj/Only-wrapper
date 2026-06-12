@@ -252,3 +252,47 @@ returns no commits — the R3 2026-06-09 dedup reducer is consumed, not changed)
 _Reviewed: 2026-06-12 (gate plan 10-13, Task 1)_
 _Reviewer: Claude (gsd-code-reviewer, delta pass over 08dcda8^..4e03d84)_
 _Depth: standard_
+
+---
+
+# Round-5 delta review (plan 10-14 — GAP-10-J + GAP-10-K)
+
+**Reviewed:** 2026-06-13 (gate plan 10-15, Task 1)
+**Depth:** standard
+**Scope:** the round-5 source deltas across commits `e395509^..0cd0662`:
+`src/renderer/agent-tick.ts` (new `sampleAgentFrame`), `src/renderer/SessionView.tsx`
+(viewportLines delegation + xterm fontFamily CJK fallback), `src/main/pty-locale.ts`
+(new `resolvePtyLocale`), `src/main/pty-manager.ts` (spawn-env wiring),
+`src/renderer/tokens.css` (`--font-mono` CJK fallback), and the two new regression tests
+`src/renderer/__tests__/agent-frame-sample.test.ts` + `src/main/__tests__/pty-locale.test.ts`.
+**Status:** clean — **0 Critical / 0 High / 0 Medium / 0 Low / 1 Info**.
+
+## Verdict per change
+
+| Plan | Change | Verdict | Evidence |
+|---|---|---|---|
+| 10-14 | GAP-10-J `sampleAgentFrame(buffer, rows)` reads `baseY` not `viewportY` | **Sound** | The sampler reads `buffer.getLine(buffer.baseY + i)` for `i in 0..rows` — the live-tail anchor (`baseY === viewportY` only at the bottom; `viewportY < baseY` when scrolled up), so the classified frame is scroll-position-independent. Pure / DOM-free via a minimal structural `AgentFrameBuffer` interface (no xterm import, no cast). Preserves the original `ln ? translateToString(true) : ''` semantics (missing line → ''). Still reads the live region only, so the 001 stale-scrollback-menu mitigation is preserved (a menu left in scrollback is no longer in the sampled set). |
+| 10-14 | SessionView `viewportLines()` delegates to `sampleAgentFrame(term.buffer.active, term.rows)` | **Sound** | Both call sites (the `decideAgentTick` tick AND the dev-only `__AGENT_TRACE` block) now read the same baseY source through the one helper. The keep-alive mount (effect keyed on `id` only) and the xterm/PTY data path (`term.write`, `onPtyData`, `ptyWrite`) are untouched — the change is a read-source swap. xterm's real `IBuffer` satisfies `AgentFrameBuffer` structurally (no `any`, no cast hack). |
+| 10-14 | GAP-10-K `resolvePtyLocale(env, platform?)` (locale) | **Sound** | Honors an inherited UTF-8 `LC_ALL` (POSIX precedence) OR `LANG` → returns `{}` (the broad-blast-radius mitigation: a user's `zh_CN.UTF-8`/`ja_JP.UTF-8` is never clobbered); defaults `en_US.UTF-8` only when no UTF-8 locale is inherited (Finder-launch or bare C/POSIX); returns `{}` on win32 (ConPTY code-page model, no POSIX LANG injected). Pure — no node-pty/electron import (grep-confirmed). Case-insensitive `.utf-8`/`utf8` detection covers the common spellings. |
+| 10-14 | spawn-env wiring in `pty-manager.ts` | **Sound** | `...resolvePtyLocale(process.env)` is spread **AFTER** `...process.env`, so the override order is correct: an inherited UTF-8 LANG survives (resolver returns `{}`), and a bare `C`/`POSIX` is upgraded (resolver's `en_US.UTF-8` overrides the earlier `LANG: 'C'`). No other spawn-arg change; no bridge edit (`src/main/window-config.ts` has no diff — EXPECTED_API_KEYS stays 20). No unconditional `console.*` added. |
+| 10-14 | GAP-10-K font stack (`--font-mono` + xterm `fontFamily`) | **Sound** | `'JetBrains Mono', 'PingFang SC', 'Microsoft YaHei', monospace` in BOTH `tokens.css` (the CSS consumers inherit it via `var(--font-mono)`) and the xterm `fontFamily` literal (xterm can't read CSS custom properties, so the stacks are kept identical). JetBrains Mono stays the PRIMARY Latin identity; the CJK families are OS-provided (no font FILE bundled — no supply-chain surface; `@fontsource` imports unchanged); generic `monospace` stays last. `@xterm/addon-unicode11` already fixes CJK to 2-cell width. `tokens-completeness.test.ts` does not scan tokens.css for the literal so the edit is not tripped (14/14 green). |
+| 10-14 | the two new regression tests | **Sound (genuine, not tautologies)** | `agent-frame-sample.test.ts`: the scroll-invariance assertions (`scrolledUp.toEqual(atBottom)` + `classify(...) === 'free'` for both scroll positions) would FAIL on the old `viewportY` code (scrolled-up would sample the scrollback menu) — and a separate case proves a LIVE-tail menu still classifies `'waiting'` (guards against a blindly-return-free regression). `pty-locale.test.ts`: 8 truth-table rows (default / honor LANG / honor LC_ALL / case-variant utf8 / C→upgrade / linux / win32-noop×2). No `sleep`/`waitForTimeout`; pure unit tests. |
+
+## Findings
+
+### Info
+
+#### IN-R5-01: `resolvePtyLocale` sets `LC_ALL` (the override-all category) when defaulting
+**File:** `src/main/pty-locale.ts:60-62`
+**Issue:** When no UTF-8 locale is inherited, the resolver returns BOTH `LANG` and `LC_ALL = en_US.UTF-8`. `LC_ALL` overrides every `LC_*` category, so in the (rare) case a user launched with ONLY a non-UTF-8 `LC_CTYPE` set and no `LANG`/`LC_ALL`, that `LC_CTYPE` would be superseded by `en_US.UTF-8`.
+**Disposition:** Accepted, non-blocking. The default branch only fires when there is no UTF-8 `LANG`/`LC_ALL` (the empty Finder-launch env, or a bare `C`/`POSIX`) — there is effectively nothing to clobber in that state, and setting `LC_ALL` is the most robust guarantee of UTF-8 for the Finder-launch case the gap targets. Both the inherited and the default value would be UTF-8 (or upgrading from C), so the core value (CJK rendering) is preserved either way. A user who deliberately needs a different ctype can still set it via a per-session startup command. No action.
+
+## Critical/High fixes applied pre-gate
+
+**None required.** Zero Critical and zero High findings on the round-5 deltas. `npx tsc --noEmit` exits **0** (no fix needed; baseline green). The single Info is dispositioned above (no code change). Consistent with the rounds 2-4 verdict — nothing reaches the human gate that a Critical/High should have caught first.
+
+---
+
+_Reviewed: 2026-06-13 (gate plan 10-15, Task 1)_
+_Reviewer: Claude (gsd-code-reviewer, delta pass over e395509^..0cd0662)_
+_Depth: standard_
