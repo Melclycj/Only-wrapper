@@ -363,7 +363,61 @@ captured as a new todo).
 
 ---
 
+## Addendum — Gap-closure round-4 execution outcome (2026-06-12, orchestrator)
+
+Round-4 plans executed: **10-12** (GAP-10-H fix + GAP-10-I amendment) and **10-13** (delta review +
+full suite + packaged capture + BLOCKING human gate, attempt 4).
+
+### Round-4 plan outcomes
+
+| Plan | Result | Notes |
+|------|--------|-------|
+| 10-12 | ✓ complete | GAP-10-H diagnosed (spike 004) as a render-path VERIFICATION gap, not a pure-predicate defect; fix = `activeIsCard` byte-lock + unit truth-table (`totalStartCount===1`) + a live-DOM `assertSingleStartAffordance`. GAP-10-I waiting wash-only landed (active edge bar D-05/D-06 preserved). tsc 0, unit, tokens green, bridge stays 20. |
+| 10-13 | ✓ complete (gate ran) | Deferred rounds 2-4 delta code-review CLEAN (0 Critical / 0 High; `10-REVIEW.md`). Full suite green against the PACKAGED app: unit 373/373, tsc 0, lint clean (only the 12 known spike `.cjs`), smoke effectively 15/15 (one `startup-command` spec was a parallel-load flake — confirmed GREEN on isolated re-run; 10-12 touches no PTY code), `ui:shots:fresh` (tag `p10-gapfix-round4-gate`) captured 10/11 surfaces with name-completeness enforced + GAP-10-I wash-only visible. The `idle-card` surface skipped — a PRE-EXISTING harness limitation (identical skip across all 4 captures: "context menu has no Stop item"), so the live single-Start proof falls to the human gate by design. |
+
+### Gate attempt 4 verdict (2026-06-12)
+
+**ITEM H (single Start, GAP-10-H): APPROVED. ITEM I (waiting wash-only, GAP-10-I): APPROVED.** Operator
+accepts the single-Start design (the sidebar ▶ suppressed when the IdleCard "▶ Start session" mounts —
+option A, no change requested). **GAP-10-H and GAP-10-I are CLOSED.** GAP-10-D/E/F/G remain closed
+(no-regression).
+
+But the verdict is QUALIFIED by a NEW defect:
+
+**GAP-10-J (new, S2 — gate-qualifying):** scrolling the session terminal history UP flips the sidebar
+status (free → in-progress → waiting-for-you). Root cause located: `src/renderer/SessionView.tsx`
+(~lines 396–401) samples the agent-state classifier frame from `term.buffer.active.getLine(b.viewportY + i)`
+— the VISIBLE viewport top, which moves with scroll — instead of the live output tail (`b.baseY`). Scrolling
+into scrollback re-classifies old frames. Fix (round 5): sample from `baseY` (or `length - rows`) so the
+classified status is scroll-position-independent; pin with a regression test that scrolls the buffer and
+asserts the status is unchanged. The per-tick `classify()` seam (`agent-tick.ts`) is correct; the sampling
+SOURCE is the bug.
+
+**GAP-10-K (new, S3 — operator question + terminal-fidelity gap):** Chinese/CJK does not render in the
+terminal ("chn is not enabled"). Encoding is NOT the problem — the data path is UTF-8 end-to-end (node-pty
+forwards UTF-8; xterm.js decodes UTF-8; `@xterm/addon-unicode11` gives CJK the correct 2-cell width). Two
+likely causes: (1) `pty.spawn` env (`pty-manager.ts` ~328) inherits `process.env` with NO explicit `LANG`/
+`LC_ALL`/`LC_CTYPE` — a Finder-launched app lacks a UTF-8 locale, so CLI tools fall back to C/POSIX (ASCII)
+and won't emit CJK; (2) `--font-mono: 'JetBrains Mono', monospace` (`tokens.css:69`) has no CJK glyphs, so
+Chinese relies on imperfect system fallback (tofu / width misalignment). Fix (round 5 or todo): set a UTF-8
+`LANG`/`LC_ALL` in the spawn env + add a CJK-capable monospace fallback to `--font-mono`. Core-value
+relevant (real terminal fidelity).
+
+**CARRIED (pre-existing, not Phase-10): `npm run make` lowdb crash.** The `make` distributable build shows
+lowdb's browser `LocalStorage`/`WebStorage` source on open (module-resolution pulls the browser ESM in the
+ASAR/make path). The app uses `lowdb/node` JSONFile only; the `npm run package` build boots clean (smoke +
+boot-verify GREEN). `forge.config.ts` / vite config predate Phase 10. A packaging/distribution item —
+capture as a todo (or fold into round 5 if the operator wants the make path fixed).
+
+**Current state:** `nyquist_compliant: false` (unchanged). UI-02 stays OPEN. GAP-10-H/I CLOSED; D/E/F/G
+remain closed. New open items: GAP-10-J (scroll→status, gate-qualifying) + GAP-10-K (CJK locale/font).
+**Routing:** `/gsd-plan-phase 10 --gaps` → round 5 (fix plan 10-14 + a new gate plan). The gate flips true
+only after GAP-10-J is closed and the operator re-verifies with an explicit unqualified "approved".
+
+---
+
 _Verified: 2026-06-11T22:22:00Z_
 _Verifier: Claude (gsd-verifier) — re-verification after gap-closure plans 10-05 + 10-06_
 _Addendum: 2026-06-12 — execute-phase orchestrator (round-2 outcome + GAP-10-G; evidence from 10-10 Task-1 executor run)_
 _Addendum 2: 2026-06-12 — execute-phase orchestrator (round-3 outcome: D/E/F/G live-confirmed closed; gate attempt 3 NOT_APPROVED_QUALIFIED; GAP-10-H opened; routing to round 4)_
+_Addendum 3: 2026-06-12 — execute-phase orchestrator (round-4 outcome: GAP-10-H + GAP-10-I live-confirmed CLOSED at gate attempt 4; NOT_APPROVED_QUALIFIED — new GAP-10-J scroll→status + GAP-10-K CJK locale/font opened; routing to round 5)_

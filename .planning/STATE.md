@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: milestone
 status: executing
-stopped_at: Phase 10 plan 10-12 executed — GAP-10-H fix + GAP-10-I amendment landed; awaiting the 10-13 round-4 gate
-last_updated: "2026-06-12T14:05:00.000Z"
-last_activity: 2026-06-12 -- 10-12 round-4 gap-closure code fixes executed (GAP-10-H + GAP-10-I)
+stopped_at: Phase 10 gate attempt 4 (10-13) ran — GAP-10-H + GAP-10-I operator-approved + CLOSED, but NOT_APPROVED_QUALIFIED; new GAP-10-J (scroll→status) + GAP-10-K (CJK) → round 5 (10-14 via /gsd-plan-phase 10 --gaps)
+last_updated: "2026-06-12T15:40:00.000Z"
+last_activity: 2026-06-12 -- 10-13 round-4 gate (attempt 4): H/I approved + closed; NOT_APPROVED_QUALIFIED — GAP-10-J + GAP-10-K opened
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 13
-  completed_plans: 12
+  completed_plans: 13
   percent: 0
 ---
 
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-06-10 — v1.1 milestone started)
 
 ## Current Position
 
-Phase: 10 (sidebar-visual-polish) — EXECUTING
-Plan: 12 of 13 (10-12 executed; 10-13 round-4 gate is next)
-Status: Executing Phase 10
-Last activity: 2026-06-12 -- 10-12 round-4 gap-closure code fixes executed (GAP-10-H + GAP-10-I)
+Phase: 10 (sidebar-visual-polish) — EXECUTING (gate attempt 4 NOT_APPROVED_QUALIFIED → round 5)
+Plan: 13 of 13 executed; gate attempt 4 ran — GAP-10-H/I operator-approved + CLOSED, new GAP-10-J (scroll→status) + GAP-10-K (CJK) → round 5 (10-14)
+Status: Executing Phase 10 — round 5 gap-closure pending (`/gsd-plan-phase 10 --gaps`)
+Last activity: 2026-06-12 -- 10-13 round-4 gate (attempt 4): H/I approved + closed; NOT_APPROVED_QUALIFIED — GAP-10-J (scroll→status) + GAP-10-K (CJK) opened
 
 ### v1.1 Milestone Phases (9–15)
 
