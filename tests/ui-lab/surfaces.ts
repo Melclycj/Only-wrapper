@@ -460,8 +460,9 @@ export const SURFACES: Surface[] = [
       '10-UI-SPEC.md §Interaction Contract (Waiting row)',
     ],
     expects:
-      'A waiting row carries an amber left edge bar + a light amber tint wash (D-09) — ' +
-      'static, no pulse. Driven via a deterministic STYLING-ONLY data-agent seam.',
+      'A waiting row carries a light amber tint WASH ONLY (no edge bar) (D-09, amended ' +
+      '2026-06-12 GAP-10-I) — static, no pulse. Driven via a deterministic STYLING-ONLY ' +
+      'data-agent seam.',
     prepare: async (ctx) => {
       // IN-05 deterministic seam: the amber [data-agent='waiting'] CSS rule fires on the
       // attribute ALONE, so we make the styling capturable WITHOUT a real agent process by

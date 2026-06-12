@@ -93,20 +93,15 @@
   box-shadow: var(--shadow-pop);
 }
 
-/* D-09 WAITING treatment (fires even when NOT active — sits independent of .active so a
- * backgrounded waiting row carries it). Amber left edge bar + a light static amber wash.
- * No animation (the highest-attention signal is calm, not pulsing). */
+/* D-09 WAITING treatment, AMENDED 2026-06-12 (GAP-10-I — operator: "waiting dont show
+ * edge for now. Later i will add more dynamic effect to show stage of agent."). Waiting is
+ * now the amber tint WASH ONLY — NO amber left edge bar. Fires even when NOT active (sits
+ * independent of .active so a backgrounded waiting row carries the wash). No animation (the
+ * static wash is the calm interim signal until the future dynamic agent-stage effect).
+ * The obsolete WR-04 compound precedence selector (.sidebar-row.active[data-agent='waiting'])
+ * was REMOVED with the edge bar — with no waiting bar there is no precedence to arbitrate. */
 .sidebar-row[data-agent='waiting'] {
   background: color-mix(in oklch, var(--accent-waiting) 8%, transparent);
-}
-
-/* WR-04 explicit precedence: amber waiting WINS over the active status accent on the edge
- * bar — the locked Phase-6 amber-reserved contract. Matching BOTH the active+waiting row AND
- * the non-active waiting row in one rule makes the win order-INDEPENDENT (a future reorder of
- * the .active and [data-agent='waiting'] blocks can no longer silently invert it). */
-.sidebar-row.active[data-agent='waiting'],
-.sidebar-row[data-agent='waiting'] {
-  border-left: 3px solid var(--accent-waiting);
 }
 
 /* D-04 large icon tile — a rounded tile spanning both text lines, with a larger emoji
@@ -506,17 +501,13 @@
 }
 
 /* D-07/D-10 collapsed continuity: the active tile keeps its filled/lifted card + the
- * status-colored left edge bar, and a waiting tile mirrors the amber edge bar — so the
- * "which session is active / which needs me" read survives the collapse. */
+ * status-colored left edge bar so the "which session is active" read survives the collapse.
+ * GAP-10-I (2026-06-12 D-09 amendment): the collapsed waiting EDGE BAR was REMOVED (and with
+ * it the obsolete WR-04 collapsed mirror) — the collapsed waiting indication now falls back
+ * to the amber status dot (.collapsed-status-dot reads the row's --accent, which is amber
+ * while waiting). D-05/D-06 (the active row's own status-colored bar) are unamended. */
 .sidebar.collapsed .sidebar-row.active {
   border-left: 3px solid var(--accent);
-}
-
-/* WR-04 mirror in the collapsed rail: amber waiting wins over the active accent
- * order-independently here too. */
-.sidebar.collapsed .sidebar-row.active[data-agent='waiting'],
-.sidebar.collapsed .sidebar-row[data-agent='waiting'] {
-  border-left: 3px solid var(--accent-waiting);
 }
 
 /* Reveal the status dot at the icon's bottom-right corner when collapsed. Enlarged to
