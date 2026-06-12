@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: milestone
 status: executing
-stopped_at: Phase 10 gate attempt 4 (10-13) ran — GAP-10-H + GAP-10-I operator-approved + CLOSED, but NOT_APPROVED_QUALIFIED; new GAP-10-J (scroll→status) + GAP-10-K (CJK) → round 5 (10-14 via /gsd-plan-phase 10 --gaps)
-last_updated: "2026-06-12T15:40:00.000Z"
-last_activity: 2026-06-12 -- 10-13 round-4 gate (attempt 4): H/I approved + closed; NOT_APPROVED_QUALIFIED — GAP-10-J + GAP-10-K opened
+stopped_at: Phase 10 round-5 gap plans created + plan-checker VERIFICATION PASSED (10-14 fix = GAP-10-J baseY sampling + GAP-10-K locale/CJK font; 10-15 gate = attempt 5, BLOCKING human-verify); next = /gsd-execute-phase 10 --gaps-only
+last_updated: "2026-06-12T15:55:00.000Z"
+last_activity: 2026-06-12 -- round-5 gap-closure PLANNED (10-14 fix + 10-15 gate); plan-checker VERIFICATION PASSED; ready to execute
 progress:
   total_phases: 1
   completed_phases: 0
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-06-10 — v1.1 milestone started)
 
 ## Current Position
 
-Phase: 10 (sidebar-visual-polish) — EXECUTING (gate attempt 4 NOT_APPROVED_QUALIFIED → round 5)
-Plan: 13 of 13 executed; gate attempt 4 ran — GAP-10-H/I operator-approved + CLOSED, new GAP-10-J (scroll→status) + GAP-10-K (CJK) → round 5 (10-14)
-Status: Executing Phase 10 — round 5 gap-closure pending (`/gsd-plan-phase 10 --gaps`)
-Last activity: 2026-06-12 -- 10-13 round-4 gate (attempt 4): H/I approved + closed; NOT_APPROVED_QUALIFIED — GAP-10-J (scroll→status) + GAP-10-K (CJK) opened
+Phase: 10 (sidebar-visual-polish) — EXECUTING (round 5 planned; gate attempt 4 was NOT_APPROVED_QUALIFIED)
+Plan: 15 plans exist; 10-14 (fix GAP-10-J + GAP-10-K) + 10-15 (gate attempt 5) PLANNED + plan-checker PASSED; both incomplete
+Status: Executing Phase 10 — round 5 ready to execute (`/gsd-execute-phase 10 --gaps-only`)
+Last activity: 2026-06-12 -- round-5 gap-closure planned (10-14 + 10-15); plan-checker VERIFICATION PASSED
 
 ### v1.1 Milestone Phases (9–15)
 
