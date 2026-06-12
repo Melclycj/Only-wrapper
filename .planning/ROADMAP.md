@@ -50,6 +50,10 @@
 
 **Wave 8 (gap-closure gate; blocked on Wave 7)**
 
-  - [ ] 10-10-PLAN.md — Full suite GREEN against the packaged app + fresh packaged ui-lab capture (now 11/11, enforcing name-completeness incl. the active row, no leaked amber) + BLOCKING human re-verify of live amber / gutter / names; flips the Nyquist gate ONLY on an explicit unqualified "approved" (Wave 8)
+  - [x] 10-10-PLAN.md — Full suite GREEN against the packaged app + fresh packaged ui-lab capture (now 11/11, enforcing name-completeness incl. the active row, no leaked amber) + BLOCKING human re-verify of live amber / gutter / names; flips the Nyquist gate ONLY on an explicit unqualified "approved" (Wave 8) — **gate attempt 3 NOT_APPROVED (QUALIFIED)**: ITEM A/B/C all CONFIRMED live (GAP-10-D/E/F/G closed) but a NEW defect (GAP-10-H — duplicate Start affordance on inactive/dormant rows) qualifies the verdict → round 4 (10-12). Nyquist gate stays FALSE; UI-02 OPEN.
+
+**Gap-closure round 4** *(3rd human gate NOT_APPROVED_QUALIFIED — A/B/C confirmed; closing GAP-10-H = suppress the duplicate Start affordance on inactive/dormant rows, then re-run the gate as plan 10-12+)*
+
+**Phase status**: OPEN — UI-02 not yet satisfied; `nyquist_compliant: false`. Phase closes only on an explicit unqualified human "approved" after GAP-10-H is closed and re-verified in the running app.
 
 **UI hint**: yes

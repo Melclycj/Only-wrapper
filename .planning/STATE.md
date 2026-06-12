@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-06-10 — v1.1 milestone started)
 
 ## Current Position
 
-Phase: 10 (sidebar-visual-polish) — EXECUTING
-Plan: 2 of 11
-Status: Ready to execute
-Last activity: 2026-06-11 -- Phase 10 execution started
+Phase: 10 (sidebar-visual-polish) — EXECUTING (phase OPEN; gate attempt 3 NOT_APPROVED_QUALIFIED)
+Plan: 10-10 complete (closing gate, round 3) — all 11 plans have SUMMARYs; phase NOT closed
+Status: Awaiting round-4 gap-closure planning (GAP-10-H) — orchestrator owns routing
+Last activity: 2026-06-12 -- 10-10 gate attempt 3: A/B/C confirmed live, NOT approved (new GAP-10-H)
 
 ### v1.1 Milestone Phases (9–15)
 
@@ -186,6 +186,7 @@ Recent decisions affecting current work:
 - [Phase 10 r2]: 10-08 (GAP-10-E gutter: gap 12→8px, icon tile 32px token, drag handle 8px; WR-01 box-sizing real zero-width; WR-02 dormant trailing gap) + 10-09 (GAP-10-F: assertNameNotCrushed scrollWidth<=clientWidth + long-name ellipsis fixture; WR-03 import path; WR-04 cleanup hook; WR-05 waitUntil) merged via parallel worktrees; post-merge unit 365/365 + smoke 15/15. 10-10 Task-1 evidence chain then ran against the packaged app: unit 370/370, tsc 0, lint clean, smoke 15/15 — but `ui:shots:fresh` FAILED on the new name-completeness assertion: **GAP-10-G** (active-row controls 52px permanently revealed crush a medium name to 51px box vs 98px content; rest-state-only scoping of 10-05/10-08 fixes). Human gate intentionally NOT run (T-10-10-01: never present a known-failing app). The operator's requested harness paid for itself on its first enforced run.
 - [Phase 09-03]: Wave-3 phase gate CLOSED. SC4/D-05 packaging proof GREEN (scripts/assert-fonts-bundled.cjs: 23 woff2 emitted as relative assets, no absolute url(/ font path; verify:fonts npm script kept out of default test). End-of-phase human-verify APPROVED 2026-06-11 — 5/5 PASS: fonts render (Nunito UI + JetBrains Mono terminal), value-preserving, SC3 re-theme from one place (verified mechanically via the ui-lab green-accent demo, zero source edits), SC4 fidelity unchanged. SC1 coherence recorded HONESTLY as PASS-AT-FOUNDATION-SCOPE — operator verdict 'still ugly'; per-surface composition is Phases 10-13. 5 visual gaps logged + routed downstream (sidebar names crushed->P10, terminal pane framing->P11, Save-button accent->P12, context-menu position/danger ramp->P10/13, inactive-row card structure->P10). nyquist_compliant true; 09-VALIDATION complete. A user-directed ui-lab visual harness (commit 81192cd) built mid-session (NOT a plan task) supplied the check-4 + gap evidence.
 - [Phase ?]: [Phase 10-11]: GAP-10-G closed CSS-only — removed .sidebar-row.active from the two control-reveal selector groups in sidebar.css so the active row's Edit/Close controls collapse to zero reserved width at rest (D-02 contract restored, INCLUDING the active row), reclaiming 52px that crushed 'Parlour Claude'. Controls still reveal on :hover/:focus-within/:focus-visible. WR-04 amber precedence, collapsed-rail mirror, D-13 dormant Start exemption, active drag-handle reveal preserved. Fixture + 10-09 assertNameNotCrushed NOT relaxed. ui:shots:fresh 11/11 (was 10/11); unit 370/370, tsc 0, lint clean, smoke 15/15.
+- [Phase 10-10 round-3 gate]: Closing gate attempt 3 → **NOT_APPROVED_QUALIFIED**. Task-1 evidence GREEN against the packaged app (unit 370/370, tsc 0, scoped lint clean / 12 known spike .cjs deferred, smoke 15/15 authoritative; `ui:shots:fresh` 11/11 incl. assertNameNotCrushed PASS on the active row, tag p10-gapfix-round3-gate / gitSha 23d3af1). The BLOCKING human gate CONFIRMED all three routed items LIVE: ITEM A live amber at a real claude --rc permission prompt (GAP-10-D closed — the S1 blocker that failed attempts 1+2), ITEM B gutter compaction (GAP-10-E), ITEM C active-row name completeness (GAP-10-F/G). But the operator reported a NEW unprompted defect → **GAP-10-H** (duplicate Start affordance on inactive/dormant rows) which QUALIFIES the verdict. nyquist_compliant LEFT FALSE; UI-02 stays OPEN; 10-VALIDATION attempt-3 row recorded verbatim. Design question (state color "only as background") answered from locked history — spec conforms, no change. Backlog captured (real icons / animation system / metadata state capture). Route: round 4 (plan 10-12, GAP-10-H Start-dedup fix → re-run gate). No code changed this plan; orchestrator owns round-4 routing.
 
 ### Pending Todos
 
@@ -199,7 +200,8 @@ The 5 v1.1 todo items (3 SESS UX + 2 code-review debt) are now formal requiremen
 
 ### Blockers/Concerns
 
-- **[Phase 10 / GAP-10-G — BLOCKS the 10-10 gate] Active-row name crush.** Found 2026-06-12 by the 10-09 `assertNameNotCrushed` machine check during 10-10 Task 1 (deterministic: "Parlour Claude" scrollWidth=98 > clientWidth=51; active row's permanently-revealed Edit+Close controls reserve 52px on the 220px rail; rest-state fixes 10-05/10-08 never covered the ACTIVE state). Full evidence + fix direction in 10-VERIFICATION.md addendum. Route: `/gsd-plan-phase 10 --gaps` → 10-11 (sidebar.css active-row width reclaim) → re-run 10-10. Do NOT relax the machine check; planner must honor the operator's attempt-2 verdict as authority on fix-CSS vs adjust-fixture.
+- **[Phase 10 / GAP-10-H — BLOCKS the 10-10 gate (round 4)] Duplicate Start affordance on inactive/dormant rows.** Reported 2026-06-12 by the operator at the round-3 BLOCKING human gate (10-10 attempt 3): "the start button on the inactive task does not remove the original start button" — the dedicated Start surface and the original Start button both render on the same inactive/dormant row. ITEM A/B/C (GAP-10-D/E/F/G) were all CONFIRMED live at this gate, but this new defect QUALIFIES the verdict → NOT_APPROVED_QUALIFIED; `nyquist_compliant` stays false, UI-02 stays OPEN. Code pointers for the round-4 plan: `Sidebar.tsx` startAffordances suppression logic (lines ~208-214, ~308-324; R3 2026-06-09 added "IdleCard ▶ is the sole Start surface for the active dormant row" dedup) + `sidebar.css` `[data-dormant] .row-control-start` always-visible rules (~lines 216, 265-267, 309-325). Route: `/gsd-plan-phase 10 --gaps` → round 4 (10-12 sidebar Start-dedup fix → re-run gate). Also captured as backlog (NOT gate items): replace emoji icons with real icons; define + implement an animation system; evaluate metadata-based Claude state capture. Design-question note: operator asked whether state color is "only as the background" — answered from locked history (D-09 amber wash + edge bar together; D-06 status-colored edge bar; GAP-10-C addendum): current impl conforms; a background-only treatment would be a NEW design item, not a phase-10 change.
+- **[Phase 10 / GAP-10-G — RESOLVED at the round-3 gate] Active-row name crush.** Closed by 10-11 (CSS-only active-row control collapse); the 10-09 `assertNameNotCrushed` check passed 11/11 at the 10-10 round-3 Task-1 run and the operator confirmed ITEM C (names complete on the active row) live at the gate.
 - **[DEBT-02 / Phase 14] Automated green is NOT proof for the Phase 06.1 lifecycle fixes.** The 2026-06-09 remediation passed the suite while actively broken and was reverted. Phase 14 must redo CR-01..04 / WR-02 with tests that exercise the real failure/edge paths AND gate completion on a mandatory user re-verify in the running app (start / restart / quit→relaunch / rapid double-restart / mid-write durability).
 - **[WIN-02 / Phase 15] Windows real-hardware run is a DEFERRED human-UAT gate.** A Windows machine becomes available in a few hours; Phase 15 delivers the kit (WIN-01) and earlier phases are not blocked on the run. WIN-02 closes on the user's sign-off (mirror `08-HUMAN-UAT.md`).
 - **[Phases 9–13] Core-Value guard.** Every UI/polish phase must leave the app runnable and must not regress terminal fidelity (the v1.0 Core Value). Token/chrome work touches presentation only; the xterm/PTY data path stays untouched.
@@ -235,9 +237,9 @@ Acknowledged and deferred at v1.0 milestone close on 2026-06-10 (option B — ca
 
 ## Session Continuity
 
-Last session: 2026-06-11T14:40:27.951Z
-Stopped at: Phase 10 UI-SPEC approved
-Resume file: .planning/phases/10-sidebar-visual-polish/10-UI-SPEC.md
+Last session: 2026-06-12 -- 10-10 gate attempt 3 recorded (NOT_APPROVED_QUALIFIED)
+Stopped at: Phase 10 round-3 gate NOT approved — GAP-10-H routed to round 4
+Resume file: .planning/phases/10-sidebar-visual-polish/10-10-SUMMARY.md
 
 ## Operator Next Steps
 
