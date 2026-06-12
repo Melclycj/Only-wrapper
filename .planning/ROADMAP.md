@@ -10,7 +10,7 @@
   3. In collapsed (icon-only) mode the active session and per-row status remain identifiable, and the layout stays clean at the narrow rail width.
   4. Sidebar interactions (click-to-switch, drag-to-reorder, keyboard switching) continue to work unchanged and the terminal keep-alive on switch is not regressed.
 
-**Plans**: 11 plans (4 original + 2 gap-closure r1 + 4 gap-closure r2 + 1 gap-closure r3)
+**Plans**: 13 plans (4 original + 2 gap-closure r1 + 4 gap-closure r2 + 1 gap-closure r3 + 2 gap-closure r4)
 **Wave 1**
 
   - [x] 10-01-PLAN.md — Pure modules (row-secondary D-03 + viewport-clamp D-14) with tests + extract sidebar CSS → sidebar.css and wire the 3 touch-points (Wave 1)
@@ -52,7 +52,15 @@
 
   - [x] 10-10-PLAN.md — Full suite GREEN against the packaged app + fresh packaged ui-lab capture (now 11/11, enforcing name-completeness incl. the active row, no leaked amber) + BLOCKING human re-verify of live amber / gutter / names; flips the Nyquist gate ONLY on an explicit unqualified "approved" (Wave 8) — **gate attempt 3 NOT_APPROVED (QUALIFIED)**: ITEM A/B/C all CONFIRMED live (GAP-10-D/E/F/G closed) but a NEW defect (GAP-10-H — duplicate Start affordance on inactive/dormant rows) qualifies the verdict → round 4 (10-12). Nyquist gate stays FALSE; UI-02 OPEN.
 
-**Gap-closure round 4** *(3rd human gate NOT_APPROVED_QUALIFIED — A/B/C confirmed; closing GAP-10-H = suppress the duplicate Start affordance on inactive/dormant rows, then re-run the gate as plan 10-12+)*
+**Gap-closure round 4** *(3rd human gate NOT_APPROVED_QUALIFIED — A/B/C confirmed live; closing GAP-10-H = the duplicate Start affordance on inactive/dormant rows + the sanctioned GAP-10-I D-09 amendment = waiting wash-only, no edge bar; then a NEW gate plan 10-13 re-runs the evidence chain + BLOCKING human gate, attempt 4)*
+
+**Wave 9 (gap-closure r4 code/spec fixes; blocked on Wave 7's 10-11)**
+
+  - [ ] 10-12-PLAN.md — DIAGNOSE-FIRST GAP-10-H: reproduce + root-cause the duplicate Start affordance on an inactive/dormant row (enumerate rest / selected / hover / just-started states), fix the one broken link, pin it with a startAffordances truth-table regression (+ a ui-lab dormant-selected single-Start assertion if it was a render-path defect); AND GAP-10-I (sanctioned D-09 amendment): waiting = amber wash only, drop the amber edge bar (expanded + collapsed mirror), remove the obsolete WR-04 compound selector, update the sidebar-waiting capture expectation — renderer-only, Sidebar.tsx + sidebar.css + start-affordances.test.ts + surfaces.ts (Wave 9)
+
+**Wave 10 (gap-closure gate; blocked on Wave 9)**
+
+  - [ ] 10-13-PLAN.md — Discharge the deferred rounds 2-4 gsd-code-review delta pass (fix Critical/High pre-gate) + full suite GREEN against the packaged app + fresh packaged ui-lab capture (NEW tag, name-completeness enforced, amended wash-only waiting, dormant single-Start) + BLOCKING human re-verify (attempt 4): GAP-10-H single Start live + GAP-10-I wash-only live + the active-bar-amber confirm-or-extend question + GAP-10-D/E/F/G no-regression sweep; flips the Nyquist gate ONLY on an explicit unqualified "approved" (Wave 10)
 
 **Phase status**: OPEN — UI-02 not yet satisfied; `nyquist_compliant: false`. Phase closes only on an explicit unqualified human "approved" after GAP-10-H is closed and re-verified in the running app.
 
