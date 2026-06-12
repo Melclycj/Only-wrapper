@@ -193,3 +193,62 @@ paint timing demands it.
 _Reviewed: 2026-06-11T14:30:00Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
+
+---
+
+# Rounds 2-4 delta review (plans 10-07 / 10-08 / 10-09 / 10-11 / 10-12)
+
+**Reviewed:** 2026-06-12 (gate plan 10-13, Task 1 — discharges the round-3 DEFERRED
+delta-review obligation, extended to also cover the round-4 `10-12` deltas)
+**Depth:** standard
+**Scope:** the gap-closure source changes across commits `08dcda8^..4e03d84` for the
+reviewed surfaces — `src/renderer/Sidebar.tsx`, `src/renderer/sidebar.css`,
+`src/renderer/SessionView.tsx`, `src/renderer/agent-tick.ts`,
+`src/renderer/SessionManager.tsx`, `tests/ui-lab/surfaces.ts`,
+`src/renderer/__tests__/{agent-tick,sidebar-agent-attr,start-affordances}.test.ts`.
+`src/renderer/start-affordances.ts` and `src/shared/agent-state.ts` are **unchanged** in
+this range (verified: `git log 08dcda8^..4e03d84 -- src/renderer/start-affordances.ts`
+returns no commits — the R3 2026-06-09 dedup reducer is consumed, not changed).
+**Status:** clean — **0 Critical / 0 High / 0 Medium / 2 Low / 3 Info**.
+
+## Verdict per change
+
+| Plan | Change | Verdict | Evidence |
+|---|---|---|---|
+| 10-07 | `agentGateOpen(runningProp, sawRunningEvent)` gate-seeding fix (GAP-10-D) | **Sound** | The fix is the smallest diagnosed-link change: a pure `runningProp \|\| sawRunningEvent` helper + a `running` prop read via `runningRef` so the keep-alive mount effect (keyed on `id`) never re-binds. D-12 (close on dormant/exited) preserved — leaving 'running' flips `sawRunningEvent` false AND SessionManager flips the prop. No race re-introduced; the keep-alive xterm mount untouched. RED→GREEN proven in 10-07 by reverting the helper. |
+| 10-07 | dev trace seam `window.__AGENT_TRACE` in `agentTick` | **Sound (dev-gated, INERT in prod)** | `SessionView.tsx:425-439` — the only `console.log` in the shipped agent path is wrapped by `if (trace)` where `trace = window.__AGENT_TRACE === true`. No UNCONDITIONAL `console.*` in `agent-tick.ts` / `SessionView.tsx` / `Sidebar.tsx` / `start-affordances.ts` / `agent-state.ts` (grep confirmed). Never IPC/persisted. Satisfies CLAUDE.md no-console rule. |
+| 10-08 | gutter compaction + WR-01 `box-sizing:border-box` + WR-02 dormant-gap | **Sound** | tokens-only (no migrated literals — `tokens-completeness.test.ts` 14/14 guards it); WR-01 fix is order-independent (survives a future block reorder); WR-02 splits the combined reveal selector so dormant rest uses `gap:0`. No dead rules introduced. |
+| 10-09 | `assertNameNotCrushed` / `assertLongNameDegradesGracefully` harness + WR-03 import + WR-04 cleanup + WR-05 `waitUntil` | **Sound** | The harness assertions **throw a descriptive `Error`, NOT `SkipSurface`** (surfaces.ts:167-196), so a name-crush regression FAILS loudly; WR-04 `cleanup` records the poked id in a module-scoped var and `removeAttribute`s it so the fabricated amber never leaks to later captures; WR-05 `waitUntil` gates the no-op risk on observable `data-agent='waiting'`. WR-03 import corrected to `'../../shared/types'`. |
+| 10-11 | active-row control zero-collapse (GAP-10-G) | **Sound** | CSS-only deletion of `.sidebar-row.active` from the two control-reveal selector groups so the active row inherits the at-rest zero-collapse; keyboard reveal (`:focus-within`/`:focus-visible`) intact; the 10-09 assertion threshold and the fixture were NOT relaxed — the medium name fits because the CSS reclaimed 52px. |
+| `10-12` | GAP-10-H exactly-one-Start render-path gate + DOM assertion | **Sound** | The `Sidebar.tsx` row-local `activeIsCard` is byte-semantically identical to `SessionManager.activeIsCard` (`status === 'not_started' \|\| status === 'error'`, the Sidebar copy additionally `isActive`-scoped as documented) — confirmed at SessionManager.tsx:615-616 vs Sidebar.tsx:224-225. The change is a **comment-lock, no logic change** (the predicate was already correct per spike 004). The unit truth-table (states 2/2b + a non-active control case) and the live-DOM `assertSingleStartAffordance` (throws `Error`, counts `start-session`+`start-no-cmd-session`+`idle-start-session`, gated on the observable `idle-card` mount) pin it. No duplicate Start re-introduced on any other state. |
+| `10-12` | GAP-10-I D-09 amendment to wash-only | **Sound (sanctioned spec change, not a check relaxation)** | The expanded waiting `border-left` edge-bar rule + the now-obsolete WR-04 compound precedence selector (`.sidebar-row.active[data-agent='waiting']`) were REMOVED together — **no dead rule left** (with no waiting bar there is no precedence to arbitrate; only a comment references the removed selector, grep confirmed no live `active[data-agent` rule remains, no `border-left` waiting rule remains). The amber WASH (`--accent-waiting` color-mix) and the active row's own status-colored edge bar (D-05/D-06, expanded + collapsed) are PRESERVED. Collapsed waiting falls back to the amber `.collapsed-status-dot`. `assertNameNotCrushed`/`assertLongNameDegradesGracefully` byte-for-byte unchanged. |
+
+## Findings
+
+### Low
+
+#### LO-R24-01: `start-affordances.ts` not present in the round-2-4 diff range despite being a "changed source surface" in the plan's review list
+**File:** `src/renderer/start-affordances.ts` (no change in `08dcda8^..4e03d84`)
+**Issue:** The plan lists `start-affordances.ts` among the surfaces to review, but it was last changed by the R3 2026-06-09 dedup reducer (`1911d40 fix(06.1)`), OUTSIDE the rounds 2-4 range. 10-12 consumes it unchanged.
+**Disposition:** Not a defect — informational. The reducer was reviewed at its own R3 landing; 10-12's truth-table (`start-affordances.test.ts`) re-exercises it as the GAP-10-H pin. No action.
+
+#### LO-R24-02: spike-004 throwaway driver not yet listed in deferred-items.md lint baseline
+**File:** `.planning/spikes/004-dormant-start-dup/trace-affordances.cjs`
+**Issue:** `deferred-items.md` enumerates the 12 tolerated pre-existing spike `.cjs` lint errors across spikes 001/002/003. Spike 004 (added by 10-12) is not listed.
+**Disposition:** Verified harmless — spike-004's `.cjs` uses ESM imports (no `require()`); `npx eslint .planning/spikes/004-dormant-start-dup/trace-affordances.cjs` exits **0**. It adds NO tolerated errors, so the baseline of 12 is unchanged and the lint gate's tolerance accounting is still accurate. No remediation required; a future doc-tidy could note it for completeness. Not blocking.
+
+### Info
+
+- **IN-R24-01:** the 10-07 `running` prop is correctly threaded — `SessionManager` passes `running={s.status === 'running'}`; the gate combines it with the live event so a stale prop lagging a frame still closes on the live `'running'`-leave. Defensive and correct.
+- **IN-R24-02:** the 10-12 `assertSingleStartAffordance` counts the IdleCard `idle-start-session` globally (not row-scoped) — safe because only the active session's card is mounted, as the code comment states.
+- **IN-R24-03:** the 10-08 WR-01 `box-sizing:border-box` makes the revealed `max-width:24px` the true border-to-border width; the stale "24px = the .row-control width below" comment was corrected. Good hygiene.
+
+## Critical/High fixes applied pre-gate
+
+**None required.** Zero Critical and zero High findings across all rounds-2-4 deltas. `npx tsc --noEmit` exits **0** (no fix was needed; baseline green confirmed at review time). The two Low findings are dispositioned above (both non-blocking, no code change). The deferred round-3 review obligation is hereby discharged with a clean verdict — nothing reaches the human gate that a Critical/High should have caught first.
+
+---
+
+_Reviewed: 2026-06-12 (gate plan 10-13, Task 1)_
+_Reviewer: Claude (gsd-code-reviewer, delta pass over 08dcda8^..4e03d84)_
+_Depth: standard_
