@@ -25,7 +25,7 @@ re_verification:
 gaps:
   - truth: "A waiting row (active OR not) carries an amber left edge bar + amber tint wash (D-09) — fires in the live running app on a real claude --rc permission prompt"
     status: resolved
-    resolved_note: "[2026-06-12 round-2 execution, orchestrator] CODE-FIXED by 10-07 (commits c14c28c + efed57f): real frame captured, root cause = SessionView agentRunning gate race (spawn 'running' broadcast precedes the view's onPtyStatus bind), fixed via agentGateOpen(runningProp, sawRunningEvent); real-frame regression test RED→GREEN. LIVE confirmation still owned by the 10-10 BLOCKING human gate (incomplete — blocked by GAP-10-G below). Do NOT re-plan this gap in round 3; only the 10-10 gate re-run covers it."
+    resolved_note: "[2026-06-12 round-2 execution, orchestrator] CODE-FIXED by 10-07 (commits c14c28c + efed57f): real frame captured, root cause = SessionView agentRunning gate race (spawn 'running' broadcast precedes the view's onPtyStatus bind), fixed via agentGateOpen(runningProp, sawRunningEvent); real-frame regression test RED→GREEN. [2026-06-12 round-3 gate attempt 3] LIVE-CONFIRMED by the operator in the running packaged app (ITEM A: yes — amber fired at a real claude --rc permission prompt). FULLY CLOSED. Do NOT re-plan."
     reason: "GAP-10-D (S1 blocker): at the 2nd human gate (10-06) the row status stayed BLUE at a real Web Search permission prompt (screenshot 2). ITEM 2 failed at step 5-6. The 10-06-SUMMARY hypothesis attributes the failure to the recognizer not matching the frame, but codebase analysis shows classify() DOES match both numberedMenu (❯ 1./2./3.) and claudeFooter ('Esc to cancel · Tab to amend') for the screenshot-2 frame, AND decideAgentTick (agent-tick.ts, from Phase 6.1 080807a) has a settle-INDEPENDENT path that fires regardless of full-frame hash settling. The actual root cause is unconfirmed at the code level; the human gate verdict is the authoritative record. nyquist_compliant stays false."
     artifacts:
       - path: "src/renderer/agent-tick.ts"
@@ -37,7 +37,7 @@ gaps:
 
   - truth: "The leading gutter (drag handle + icon tile) is compactly sized so the session name gets maximum width (GAP-10-E)"
     status: resolved
-    resolved_note: "[2026-06-12 round-2 execution, orchestrator] CODE-FIXED by 10-08 (commits 14d1749 + 0849d2d): inter-item gap 12→8px, icon tile 34→32px token-sourced, drag-handle 12px→8px; WR-01 (box-sizing) + WR-02 (dormant trailing gap) folded in. Visual 'feels right' confirmation owned by the 10-10 human gate. Do NOT re-plan in round 3."
+    resolved_note: "[2026-06-12 round-2 execution, orchestrator] CODE-FIXED by 10-08 (commits 14d1749 + 0849d2d): inter-item gap 12→8px, icon tile 34→32px token-sourced, drag-handle 12px→8px; WR-01 (box-sizing) + WR-02 (dormant trailing gap) folded in. [2026-06-12 round-3 gate attempt 3] LIVE-CONFIRMED (ITEM B: yes). FULLY CLOSED. Do NOT re-plan."
     reason: "GAP-10-E (S3 design adjustment): ITEM 1 was APPROVED at the 2nd gate but the operator requested a NEW minor adjustment — 'the space in the front is too wide. compact a bit to leave more sapace'. This is a post-approval design tweak, not a gate failure, but it blocks the unqualified 'approved' the phase requires."
     artifacts:
       - path: "src/renderer/sidebar.css"
@@ -56,7 +56,8 @@ gaps:
       - "Add a deterministic assertion in the ui-lab harness (scrollWidth <= clientWidth on .row-name, or a long-name fixture asserting no visible overflow) so future name-crush regressions are caught automatically."
 
   - truth: "A medium-length session name renders in full on the ACTIVE row at rest — the always-revealed active-row controls must not crush the name (SC2; the operator's attempt-2 'Ses…' complaint was about the active/hover row)"
-    status: failed
+    status: resolved
+    resolved_note: "[2026-06-12 round-3 execution, orchestrator] CODE-FIXED by 10-11 (commit 8802a17): removed `.sidebar-row.active` from the two control-reveal selector groups in sidebar.css — the active row now inherits the rest-state zero-collapse (controls reveal on :hover/:focus-within/:focus-visible only), restoring locked D-02. Machine check `assertNameNotCrushed` passed 11/11 surfaces on BOTH the 10-11 run (tag p10-gapfix-round3) AND the 10-10 Task-1 independent run (tag p10-gapfix-round3-gate). LIVE-CONFIRMED at gate attempt 3 (ITEM C: yes — active-row medium name complete, hover/focus controls reachable). FULLY CLOSED. Do NOT re-plan in round 4."
     reason: "GAP-10-G (S2, blocks the 10-10 gate — NEW, found 2026-06-12 by the 10-09 machine check during 10-10 Task 1): `UI_LAB_TAG=p10-gapfix-round2 npm run ui:shots:fresh` FAILED on the sidebar-populated surface (10 of 11 surfaces captured), twice with identical numbers — '.row-name' for 'Parlour Claude' truncated, scrollWidth=98 > clientWidth=51. Diagnostic JSON on the failing row: rowClass='sidebar-row active', rowHasActive=true, rowMatchesFocusWithin=false, rowMatchesHover=false, activeElement=BODY, rowWidth=199, iconWidth=32, controlsWidth=52, textWidth=51. Root cause (evidence-backed): the `.sidebar-row.active .row-control` rules PERMANENTLY reveal the Edit ✎ + Close ✕ controls (52px) with no hover/focus involved. The GAP-10-A fix (10-05) and the gutter compaction (10-08) reclaimed control width ONLY in the NON-active/rest state (10-05's own spec: 'a long-name running non-active row reserves ZERO control width') — the ACTIVE row's 52px was never reclaimed, so on the 220px rail a 14-char medium name (98px content) is crushed into a 51px box. This is the same defect class as the operator's attempt-2 complaint, on the row state the operator actually looks at most."
     artifacts:
       - path: "src/renderer/sidebar.css"
@@ -64,6 +65,18 @@ gaps:
     missing:
       - "Round-3 plan (10-11) must make a medium-length name render in full on the ACTIVE row, with the 10-09 assertNameNotCrushed as the deterministic acceptance check (the run must complete 11/11 surfaces), then 10-10's evidence chain + BLOCKING human gate re-run."
       - "Planner decision (operator's attempt-2 verdict is the authority): fix the CSS so the name fits at the active state (recommended — executor + orchestrator concur) vs adjusting the fixture to exempt the active row. Do NOT relax the machine check to make the gate pass."
+
+  - truth: "An inactive (dormant) row presents exactly ONE Start affordance in every state — at rest, when selected/active, on hover, and after starting — no duplicate or stale ▶ Start co-renders (SC4 interaction integrity; R3 2026-06-09 startAffordances dedup contract)"
+    status: failed
+    reason: "GAP-10-H (S2, qualifies gate attempt 3 — NEW, found 2026-06-12 by the operator at the 3rd human gate): verbatim — 'the start button on the inactive task does not remove the original start button.' A duplicate Start affordance is visible on an inactive/dormant task row. The R3 (2026-06-09) dedup contract says the active dormant row's IdleCard '▶ Start session' pill is the SOLE Start surface (sidebar ▶ suppressed via startAffordances), and every NON-active dormant row keeps its single sidebar ▶ — the operator's observation means that suppression fails on some path. Exact repro state (which row was active, whether it appeared pre- or post-click, hover state) was not captured at the gate; round-4 diagnosis must reproduce it first. Root cause UNCONFIRMED — candidate hypotheses: (a) startAffordances/activeIsCard predicate misfires for the selected dormant row, (b) the 'Start without command' ⏵ (D-06/D-14 second affordance) co-renders where it should be gated, (c) a stale ▶ persists after the session starts (status flip race), (d) a 10-11 interaction: with active-row controls now zero-collapsed at rest, the dormant always-visible ▶ exemption may have an unintended state combination."
+    artifacts:
+      - path: "src/renderer/Sidebar.tsx"
+        issue: "startAffordances suppression logic (~lines 208-214: activeIsCard predicate; ~308-324: sidebarStart-gated ▶ render; ~343-356: ⏵ Start-without-command render). One of these paths renders a duplicate Start affordance on an inactive row."
+      - path: "src/renderer/sidebar.css"
+        issue: "[data-dormant] .row-control-start always-visible rules (~lines 216, 265-267, 309-325) interact with the 10-11 active-row zero-collapse; verify the dormant exemption does not resurrect a hidden control as a visible duplicate in the selected state."
+    missing:
+      - "Round-4 plan (10-12) must FIRST reproduce the duplicate-Start state (enumerate dormant-row states: at rest / selected / hover / just-started; capture which two affordances co-render), then root-cause against the startAffordances dedup contract, fix, and add a deterministic regression check (unit test on startAffordances truth table; ui-lab dormant-selected surface assertion if feasible)."
+      - "A new gate plan (10-13) must re-run the full evidence chain + BLOCKING human gate (attempt 4). GAP-10-D/E/F/G are all FULLY CLOSED and live-confirmed — attempt 4 verifies the GAP-10-H fix plus the standing no-regression sweep only. Do NOT relax any machine check."
 ---
 
 # Phase 10: Sidebar Visual Polish — Re-Verification Report (after plans 10-05 + 10-06)
@@ -287,6 +300,52 @@ Fix belongs in `src/renderer/sidebar.css`; acceptance check = the 10-09 `assertN
 
 ---
 
+## Addendum — Gap-closure round-3 execution outcome (2026-06-12, orchestrator)
+
+> Appended after round-3 plans 10-11 + 10-10 executed to completion. This addendum supersedes the
+> round-3 routing above: the structured `gaps:` frontmatter has been updated in place
+> (D/E/F/G → FULLY CLOSED with live confirmation, H added as the sole open gap).
+
+### Round-3 plan outcomes
+
+| Plan | Status | Outcome |
+|------|--------|---------|
+| 10-11 | ✓ complete | GAP-10-G closed (commit 8802a17): `.sidebar-row.active` removed from both control-reveal selector groups — active row inherits rest-state zero-collapse, restoring locked D-02. `assertNameNotCrushed` 11/11 (was 10/11); machine check NOT relaxed; fixture untouched. Unit 370/370, tsc 0, smoke 15/15. |
+| 10-10 | ✓ complete | Gate attempt 3 ran on fresh independent evidence (tag `p10-gapfix-round3-gate`, 11/11 surfaces) + BLOCKING human re-verify. Verdict recorded in 10-VALIDATION.md (commit 8f5214b): **NOT_APPROVED_QUALIFIED** — see below. `nyquist_compliant` stays false. |
+
+### Gate attempt 3 verdict (2026-06-12)
+
+**ITEM A (live amber, GAP-10-D): YES. ITEM B (gutter, GAP-10-E): YES. ITEM C (active-row name, GAP-10-F/G): YES.**
+All four prior gaps are now FULLY CLOSED with live operator confirmation in the running packaged app.
+
+**Qualification → NOT approved:** the operator reported a NEW defect during verification —
+**GAP-10-H**: "the start button on the inactive task does not remove the original start button"
+(duplicate Start affordance on an inactive/dormant row; full entry in the `gaps:` frontmatter).
+
+**Design question raised at the gate (answered, no gap):** operator asked to confirm whether an early
+decision said the state color appears "only as the background". Decision history says NO — locked
+D-09 specifies amber tint wash + amber left edge bar together; D-06 locks status-colored edge bars;
+the GAP-10-C addendum (operator's own 2026-06-11 decision) re-confirmed status-colored edge bars and
+pre-agreed any post-fix re-judgment is a NEW design item. Current implementation conforms to the
+locked spec. If the operator opts for a background-only treatment, that is a new design item for a
+future round/phase — not a defect.
+
+**Backlog captured (explicitly "later"/"future" — not gate items; routed to `.planning/todos/pending/`):**
+replace emoji icons with real icons · define + implement an app-wide animation system · evaluate
+metadata-based Claude state capture (operator-supplied reference app screenshot; richer than the
+TERM-09 frame heuristic — shows exact tool + args, e.g. "Wants to run WebSearch: {query…}" with a
+"Blocked" badge; operator offered to pull the reference source).
+
+**Deferred from this round:** gsd-code-review delta pass on rounds 2+3 source changes (10-07/08/09/11)
+— deliberately deferred to round 4 so one review covers all gap-closure deltas before gate attempt 4.
+
+**Routing:** `/gsd-plan-phase 10 --gaps` → round-4 plan 10-12 (GAP-10-H reproduce → root-cause →
+fix + deterministic regression check) → new gate plan 10-13 (evidence chain + BLOCKING human gate,
+attempt 4).
+
+---
+
 _Verified: 2026-06-11T22:22:00Z_
 _Verifier: Claude (gsd-verifier) — re-verification after gap-closure plans 10-05 + 10-06_
 _Addendum: 2026-06-12 — execute-phase orchestrator (round-2 outcome + GAP-10-G; evidence from 10-10 Task-1 executor run)_
+_Addendum 2: 2026-06-12 — execute-phase orchestrator (round-3 outcome: D/E/F/G live-confirmed closed; gate attempt 3 NOT_APPROVED_QUALIFIED; GAP-10-H opened; routing to round 4)_
