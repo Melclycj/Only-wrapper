@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: milestone
 status: executing
-stopped_at: Phase 10 round-5 gap plans created + plan-checker VERIFICATION PASSED (10-14 fix = GAP-10-J baseY sampling + GAP-10-K locale/CJK font; 10-15 gate = attempt 5, BLOCKING human-verify); next = /gsd-execute-phase 10 --gaps-only
-last_updated: "2026-06-12T15:55:00.000Z"
-last_activity: 2026-06-12 -- round-5 gap-closure PLANNED (10-14 fix + 10-15 gate); plan-checker VERIFICATION PASSED; ready to execute
+stopped_at: Phase 10 round-5 — 10-14 EXECUTED (GAP-10-J baseY scroll-invariance + GAP-10-K UTF-8 locale + CJK font; 45 gated tests green, tsc 0, EXPECTED_API_KEYS=20); next = 10-15 gate (attempt 5, BLOCKING human re-verify of ITEM J scroll + ITEM K CJK + GAP-10-D/E/F/G/H/I no-regression)
+last_updated: "2026-06-13T00:25:00.000Z"
+last_activity: 2026-06-13 -- 10-14 EXECUTED (GAP-10-J + GAP-10-K fixes landed, 45 gated tests green, tsc 0); next = 10-15 gate (attempt 5)
 progress:
   total_phases: 1
   completed_phases: 0
-  total_plans: 13
-  completed_plans: 13
+  total_plans: 15
+  completed_plans: 14
   percent: 0
 ---
 
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-06-10 — v1.1 milestone started)
 
 ## Current Position
 
-Phase: 10 (sidebar-visual-polish) — EXECUTING (round 5 planned; gate attempt 4 was NOT_APPROVED_QUALIFIED)
-Plan: 15 plans exist; 10-14 (fix GAP-10-J + GAP-10-K) + 10-15 (gate attempt 5) PLANNED + plan-checker PASSED; both incomplete
-Status: Executing Phase 10 — round 5 ready to execute (`/gsd-execute-phase 10 --gaps-only`)
-Last activity: 2026-06-12 -- round-5 gap-closure planned (10-14 + 10-15); plan-checker VERIFICATION PASSED
+Phase: 10 (sidebar-visual-polish) — EXECUTING (round 5; 10-14 fixes landed, 10-15 gate pending)
+Plan: 14 of 15 complete; 10-14 (GAP-10-J + GAP-10-K) EXECUTED; 10-15 (gate attempt 5) is the only incomplete plan
+Status: Executing Phase 10 — 10-15 BLOCKING human-verify gate is next (attempt 5)
+Last activity: 2026-06-13 -- 10-14 executed (scroll-invariant agent-state + UTF-8 locale + CJK font); 45 gated tests green, tsc 0
 
 ### v1.1 Milestone Phases (9–15)
 
