@@ -1,9 +1,9 @@
 ---
 phase: 10
 slug: sidebar-visual-polish
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: complete
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-06-11
 ---
 
@@ -73,7 +73,7 @@ created: 2026-06-11
 - [ ] Feedback latency < {N}s
 - [ ] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending — human gate NOT APPROVED through attempt 4 (QUALIFIED — ITEM H/I approved + closed, but a new GAP-10-J scroll→status defect; see Human Gate History below)
+**Approval:** ✅ APPROVED — human gate attempt 5 (plan 10-15, 2026-06-13): operator gave an explicit unqualified approval of all three items (ITEM J scroll-invariant status + ITEM K CJK rendering + GAP-10-D/E/F/G/H/I no-regression sweep). `nyquist_compliant: true`. UI-02 complete; Phase 10 closeable. See Human Gate History below.
 
 ---
 
@@ -87,6 +87,7 @@ created: 2026-06-11
 | 2 | 10-06 | 2026-06-11 | **NOT APPROVED (PARTIAL)** | ITEM 1 (name legibility) APPROVED with one minor adjustment; ITEM 2 (live amber waiting) FAILED — amber never fired on a real `claude --rc` permission prompt → GAP-10-D (blocker) + GAP-10-E/F (minor) routed to 10-07 |
 | 3 | 10-10 | 2026-06-12 | **NOT APPROVED (QUALIFIED)** | ITEM A/B/C all CONFIRMED working live (GAP-10-D/E/F/G closed); but a NEW defect was reported — a duplicate Start affordance on an inactive/dormant row → **GAP-10-H** (gate-qualifying) routed to round 4 (next plan 10-12). Verbatim verdict + classification below. |
 | 4 | 10-13 | 2026-06-12 | **NOT APPROVED (QUALIFIED)** | ITEM H (single Start, GAP-10-H) APPROVED + ITEM I (waiting wash-only, GAP-10-I) APPROVED — both CLOSED; operator accepts the single-Start design (sidebar ▶ suppressed when the IdleCard mounts). But a NEW defect was reported — scrolling the terminal history up flips the sidebar status (free→in-progress→waiting) → **GAP-10-J** (gate-qualifying), plus a CJK/encoding terminal-fidelity gap → **GAP-10-K**, routed to round 5 (next plan 10-14). Verbatim verdict + classification below. |
+| 5 | 10-15 | 2026-06-13 | **✅ APPROVED (unqualified)** | ITEM J (scrolling no longer flips the sidebar status — GAP-10-J) + ITEM K (Chinese renders in the terminal — GAP-10-K) + the GAP-10-D/E/F/G/H/I no-regression sweep all CONFIRMED live in the packaged app; operator: "approve all three" → `nyquist_compliant: true`, UI-02 COMPLETE, Phase 10 closeable. Verbatim verdict + classification below. |
 
 ### Attempt 3 — verbatim operator response (2026-06-12)
 
@@ -120,3 +121,19 @@ created: 2026-06-11
 | **CARRIED (pre-existing, NOT Phase-10 scope)** — `npm run make` lowdb crash | The `make` distributable build shows lowdb's browser `LocalStorage`/`WebStorage` source on open (module-resolution pulls the browser ESM in the ASAR/make path). The app uses `lowdb/node` JSONFile only; the `npm run package` build boots clean (smoke 15/15 + boot-verify GREEN). `forge.config.ts` / vite config predate Phase 10. A packaging/distribution item — capture as a todo (or fold into round 5 if the operator wants the make path fixed). |
 
 **Current state:** `nyquist_compliant: false` (verified unchanged). Requirement **UI-02 stays OPEN**. GAP-10-H and GAP-10-I are now CLOSED (operator-approved live); GAP-10-D/E/F/G remain closed (no-regression). The verdict is QUALIFIED by a new defect, so it is NOT the required unqualified "approved". New open items: **GAP-10-J** (scroll→status, gate-qualifying) + **GAP-10-K** (CJK locale/font terminal fidelity); carried: the `npm run make` lowdb packaging crash. Route: `/gsd-plan-phase 10 --gaps` → round 5 (fix plan 10-14 + a new gate plan). The gate flips true only after GAP-10-J is closed and the operator re-verifies with an explicit unqualified "approved".
+
+### Attempt 5 — verbatim operator response (2026-06-13)
+
+> "approve all three"
+
+Context: the operator was asked to confirm exactly three items in the running packaged app — ITEM J (scroll-invariant status), ITEM K (CJK rendering), and the GAP-10-D/E/F/G/H/I no-regression sweep. "approve all three" is an explicit, unqualified approval of all three — no qualification, no "but", no new defect or request.
+
+**Classification (orchestrator analysis):**
+
+| Item | Disposition |
+|------|-------------|
+| **ITEM J** — scrolling the session history no longer flips the sidebar status (GAP-10-J) | **APPROVED — CLOSED.** The classifier now samples the live tail (`buffer.baseY`) via the pure `sampleAgentFrame` helper instead of the scroll-moved `viewportY`; the sidebar status is scroll-position-independent (operator-confirmed live). |
+| **ITEM K** — Chinese renders in the terminal (GAP-10-K) | **APPROVED — CLOSED.** A UTF-8 `LANG`/`LC_ALL` reaches the spawned child when none is inherited (the Finder-launch case; an existing UTF-8 locale is honored, win32 untouched) + a CJK monospace fallback (`PingFang SC`/`Microsoft YaHei`) backs JetBrains Mono in both the CSS and xterm font stacks. CJK renders as real glyphs (operator-confirmed live). |
+| **No-regression sweep** — GAP-10-D (live amber) / E (gutter) / F+G (name completeness) / H (single Start) / I (wash-only waiting) + SC1-SC4 | **CONFIRMED unregressed** in the running app. |
+
+**Current state:** `nyquist_compliant: true`. Requirement **UI-02 COMPLETE**. All gaps GAP-10-A through GAP-10-K are CLOSED and operator-approved live. Phase 10 is closeable. The fifth human gate (attempt 5, plan 10-15) returned an explicit unqualified approval — the round-5 fixes (scroll-invariant status + CJK rendering) are confirmed in the running packaged app. Backlog items remain non-gate: real icons, an animation system, metadata-based Claude state capture, and the `npm run make` lowdb packaging crash (separate todo; `npm run package` boots clean).
