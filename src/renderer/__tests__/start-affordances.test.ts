@@ -116,4 +116,45 @@ describe('startAffordances — exactly one primary Start per dormant entry (DEFE
     expect(a.idleCardStart).toBe(true);
     expect(a.totalStartCount).toBe(1);
   });
+
+  // ── GAP-10-H regression (2026-06-12, round 4 — plan 10-12). Operator at the round-3
+  //    gate (verbatim): "the start button on the inactive task does not remove the
+  //    original start button." Spike 004 root-caused it as a RENDER-PATH verification
+  //    gap: the pure reducer is correct in every state, but no DETERMINISTIC check
+  //    pinned "the ACTIVE/selected dormant row paints EXACTLY ONE Start-labeled
+  //    control". This truth-table block makes the diagnosed states (2/2b — active
+  //    dormant card, with AND without a saved command) explicit so the predicate the
+  //    Sidebar render gate consumes can never regress to a duplicate. The companion
+  //    ui-lab `assertSingleStartAffordance` pins the live DOM count. ──
+  describe('GAP-10-H: the ACTIVE/selected dormant row collapses to exactly ONE Start', () => {
+    it('state 2 — active dormant, NO saved command → totalStartCount === 1 (the IdleCard ▶)', () => {
+      const a = startAffordances(
+        dormant({ isActive: true, activeIsCard: true, startupCommand: undefined }),
+      );
+      expect(a.sidebarStart).toBe(false); // the "original" sidebar ▶ is suppressed
+      expect(a.startNoCmd).toBe(false);
+      expect(a.idleCardStart).toBe(true);
+      expect(a.totalStartCount).toBe(1);
+    });
+
+    it('state 2b — active dormant RECIPE (saved command) → totalStartCount === 1 (the IdleCard ▶)', () => {
+      const a = startAffordances(
+        dormant({ isActive: true, activeIsCard: true, startupCommand: 'claude --rc' }),
+      );
+      expect(a.sidebarStart).toBe(false); // suppressed — the card owns the Start
+      expect(a.startNoCmd).toBe(false); // R3: ⏵ also suppressed on the active card
+      expect(a.idleCardStart).toBe(true);
+      expect(a.totalStartCount).toBe(1);
+    });
+
+    it('control — a NON-active dormant recipe row stays at totalStartCount === 2 (▶ + ⏵, D-06; not over-suppressed)', () => {
+      const a = startAffordances(
+        dormant({ isActive: false, startupCommand: 'claude --rc' }),
+      );
+      expect(a.sidebarStart).toBe(true);
+      expect(a.startNoCmd).toBe(true);
+      expect(a.idleCardStart).toBe(false);
+      expect(a.totalStartCount).toBe(2);
+    });
+  });
 });

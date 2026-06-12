@@ -199,6 +199,47 @@ async function assertLongNameDegradesGracefully(id: string): Promise<void> {
   }
 }
 
+/** GAP-10-H (spike 004): machine-check that the ACTIVE/selected dormant row presents
+ *  EXACTLY ONE Start-labeled affordance across the sidebar row + the active terminal
+ *  area. The pure `startAffordances` reducer is correct in every state, but only a unit
+ *  test pinned it — this counts the rendered Start `data-testid`s in the LIVE DOM so a
+ *  render-path regression (the operator's "the start button on the inactive task does
+ *  not remove the original start button") FAILS the run loudly instead of being
+ *  eye-scored from a PNG. Throws a descriptive Error (NOT SkipSurface). Same style as
+ *  `assertNameNotCrushed`. */
+async function assertSingleStartAffordance(id: string): Promise<void> {
+  const counts = await browser.execute((sid: string) => {
+    const row = document.querySelector<HTMLElement>(
+      `.sidebar-row[data-session-id="${sid}"]`,
+    );
+    const inRow = row
+      ? row.querySelectorAll(
+          '[data-testid="start-session"], [data-testid="start-no-cmd-session"]',
+        ).length
+      : 0;
+    // The IdleCard ▶ lives in the terminal area, not the row — count it globally
+    // (only the active session's card is mounted, so this is unambiguous).
+    const idleCard = document.querySelectorAll(
+      '[data-testid="idle-start-session"]',
+    ).length;
+    return { rowFound: row !== null, inRow, idleCard };
+  }, id);
+  if (!counts.rowFound) {
+    throw new Error(
+      `assertSingleStartAffordance: no .sidebar-row for ${id} — the selected dormant row is missing entirely`,
+    );
+  }
+  const total = counts.inRow + counts.idleCard;
+  if (total !== 1) {
+    throw new Error(
+      `duplicate-Start regression (GAP-10-H): the ACTIVE/selected dormant row ${id} ` +
+        `renders ${total} Start-labeled controls (sidebar=${counts.inRow}, ` +
+        `idle-card=${counts.idleCard}) — expected EXACTLY 1 (the IdleCard ▶; the ` +
+        `sidebar ▶ and ⏵ must be DOM-suppressed for the selected dormant row).`,
+    );
+  }
+}
+
 /** Visible labels of the open context menu's items. */
 async function contextMenuLabels(): Promise<string[]> {
   return browser.execute(() =>
@@ -332,6 +373,11 @@ export const SURFACES: Surface[] = [
       await clickMenuItem('Stop');
       await clickSidebarRow(idB);
       await waitForTestId('idle-card', 10000);
+      // GAP-10-H (spike 004): with the dormant row selected and its IdleCard observably
+      // mounted (waitForTestId above — gated on real DOM state, not a bare pause), assert
+      // the live DOM paints EXACTLY ONE Start-labeled control for it. A duplicate (the
+      // operator's round-3 report) now FAILS the run loudly.
+      await assertSingleStartAffordance(idB);
       await browser.pause(400);
     },
   },

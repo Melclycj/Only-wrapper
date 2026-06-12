@@ -211,8 +211,15 @@ function SortableSidebarRow({
   // DEFECT C (round 3): the ACTIVE dormant/error row renders an in-place IdleCard (whose
   // "▶ Start session" is the primary Start). startAffordances suppresses the duplicate
   // sidebar ▶ for that one active row so the two no longer co-render — every NON-active
-  // dormant row keeps its sidebar ▶. activeIsCard mirrors SessionManager's predicate
-  // (the active row shows the card when not_started OR error).
+  // dormant row keeps its sidebar ▶.
+  //
+  // GAP-10-H (round 4, spike 004): this row-local `activeIsCard` MUST mirror
+  // SessionManager.activeIsCard (SessionManager.tsx ~615-616) EXACTLY — `status ===
+  // 'not_started' || status === 'error'`, here additionally scoped by `isActive` (a
+  // non-active row never shows a card). Keep these two predicates byte-identical: a
+  // desync would let `startCtl.sidebarStart` stay true while the IdleCard ▶ also paints,
+  // re-introducing the duplicate Start the operator saw. The deterministic guard is the
+  // ui-lab `assertSingleStartAffordance` DOM count on the dormant-selected surface.
   const activeIsCard =
     isActive && (s.status === 'not_started' || s.status === 'error');
   const startCtl = startAffordances({
