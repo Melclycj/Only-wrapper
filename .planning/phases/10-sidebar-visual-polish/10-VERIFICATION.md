@@ -1,8 +1,8 @@
 ---
 phase: 10-sidebar-visual-polish
-verified: 2026-06-11T22:22:00Z
-status: gaps_found
-score: 7/9 must-haves verified
+verified: 2026-06-13T00:40:00Z
+status: passed
+score: 9/9 must-haves verified (all gaps GAP-10-A..K closed; gate attempt 5 APPROVED unqualified)
 overrides_applied: 0
 re_verification:
   previous_status: gaps_found
@@ -12,10 +12,7 @@ re_verification:
     - "GAP-10-B / WR-03: data-agent seam now running-gated via pure rowAgentAttr() helper; finished rows can no longer carry stale amber. 8-case unit test green."
     - "WR-04: amber-beats-active edge-bar precedence is now order-independent via compound selector .sidebar-row.active[data-agent='waiting'] (expanded + collapsed rail mirror)."
     - "IN-05: ui-lab sidebar-waiting surface unblocked — deterministic styling-only DOM poke produces a PNG; amber CSS regression now has capture coverage."
-  gaps_remaining:
-    - "GAP-10-D (S1 blocker): live amber waiting never fires on the current claude --rc permission-prompt frame shape at the human gate."
-    - "GAP-10-E (S3): leading gutter too wide — drag handle + icon tile steal too much width from session name."
-    - "GAP-10-F (S3): no deterministic name-completeness assertion in ui-lab harness."
+  gaps_remaining: []  # all round-1 gaps (D/E/F) closed in rounds 2-3; full closure incl. G/H/I/J/K confirmed live at gate attempt 5 (2026-06-13) — see Addenda 1-4
   regressions:
     - "WR-01 (code review finding, WARNING): border-width:0 at rest is dead code clobbered by the later .row-control { border: 1px solid transparent } shorthand — hidden controls still contribute ~2px each. The dominant control-cluster width reservation is gone but a residual 2-4px per hidden control remains. Functional impact is minor (name is no longer crushed) but the comment claiming zero-width is inaccurate."
     - "WR-02 (code review finding, WARNING): dormant rows still reserve ~12-18px dead trailing space from flex gap applied between zero-width hidden controls."
@@ -67,7 +64,8 @@ gaps:
       - "Planner decision (operator's attempt-2 verdict is the authority): fix the CSS so the name fits at the active state (recommended — executor + orchestrator concur) vs adjusting the fixture to exempt the active row. Do NOT relax the machine check to make the gate pass."
 
   - truth: "An inactive (dormant) row presents exactly ONE Start affordance in every state — at rest, when selected/active, on hover, and after starting — no duplicate or stale ▶ Start co-renders (SC4 interaction integrity; R3 2026-06-09 startAffordances dedup contract)"
-    status: failed
+    status: resolved
+    resolved_note: "[2026-06-12 gate attempt 4] APPROVED + CLOSED by 10-12 (activeIsCard byte-lock + totalStartCount===1 unit truth-table + live-DOM assertSingleStartAffordance); operator accepted the single-Start design live (sidebar ▶ suppressed when the IdleCard mounts). [2026-06-13 gate attempt 5] no-regression sweep re-confirmed in the running app. FULLY CLOSED."
     reason: "GAP-10-H (S2, qualifies gate attempt 3 — NEW, found 2026-06-12 by the operator at the 3rd human gate): verbatim — 'the start button on the inactive task does not remove the original start button.' A duplicate Start affordance is visible on an inactive/dormant task row. The R3 (2026-06-09) dedup contract says the active dormant row's IdleCard '▶ Start session' pill is the SOLE Start surface (sidebar ▶ suppressed via startAffordances), and every NON-active dormant row keeps its single sidebar ▶ — the operator's observation means that suppression fails on some path. Exact repro state (which row was active, whether it appeared pre- or post-click, hover state) was not captured at the gate; round-4 diagnosis must reproduce it first. Root cause UNCONFIRMED — candidate hypotheses: (a) startAffordances/activeIsCard predicate misfires for the selected dormant row, (b) the 'Start without command' ⏵ (D-06/D-14 second affordance) co-renders where it should be gated, (c) a stale ▶ persists after the session starts (status flip race), (d) a 10-11 interaction: with active-row controls now zero-collapsed at rest, the dormant always-visible ▶ exemption may have an unintended state combination."
     artifacts:
       - path: "src/renderer/Sidebar.tsx"
@@ -79,7 +77,8 @@ gaps:
       - "A new gate plan (10-13) must re-run the full evidence chain + BLOCKING human gate (attempt 4). GAP-10-D/E/F/G are all FULLY CLOSED and live-confirmed — attempt 4 verifies the GAP-10-H fix plus the standing no-regression sweep only. Do NOT relax any machine check."
 
   - truth: "A waiting row carries the amber tint wash with NO amber left edge bar (D-09 as AMENDED 2026-06-12 — wash only, expanded rows and collapsed-rail mirror alike; collapsed waiting indication = amber status dot); the active row's own status-colored edge bar (D-05/D-06, unamended) is unchanged"
-    status: failed
+    status: resolved
+    resolved_note: "[2026-06-12 gate attempt 4] APPROVED + CLOSED by 10-12 (D-09 amended to wash-only — amber edge bar + obsolete WR-04 precedence selector removed; amber wash + the active row's status-colored edge bar D-05/D-06 preserved; collapsed mirror = amber status dot). [2026-06-13 gate attempt 5] no-regression sweep re-confirmed. FULLY CLOSED."
     reason: "GAP-10-I (S3 design adjustment, operator decision 2026-06-12 post gate attempt 3): verbatim — 'waiting dont show edge for now. Later i will add more dynamic effect to show stage of agent.' This is the new-design-item path the GAP-10-C addendum pre-agreed (re-judge with amber working → operator chose wash-only). D-09 amendment recorded in 10-CONTEXT.md 'Gap-closure addendum 2'. NOT a defect — the current implementation matches the OLD locked spec; this is a sanctioned spec change for round 4."
     artifacts:
       - path: "src/renderer/sidebar.css"
@@ -418,8 +417,34 @@ only after GAP-10-J is closed and the operator re-verifies with an explicit unqu
 
 ---
 
-_Verified: 2026-06-11T22:22:00Z_
+## Addendum — Gap-closure round-5 execution outcome (2026-06-13, orchestrator) — PHASE PASSED
+
+Round-5 plans executed: **10-14** (GAP-10-J baseY scroll-invariant sampling + GAP-10-K UTF-8 spawn locale + CJK font fallback) and **10-15** (round-5 delta review + full suite + packaged capture + BLOCKING human gate, attempt 5).
+
+### Round-5 plan outcomes
+
+| Plan | Result | Notes |
+|------|--------|-------|
+| 10-14 | ✓ complete | GAP-10-J: pure `sampleAgentFrame(buffer, rows)` reads the live tail `buffer.baseY` (not the scroll-moved `viewportY`); `SessionView.viewportLines()` delegates; scroll-invariance regression GREEN (sampled frame identical across scroll positions; an OLD scrollback menu no longer classifies as waiting). GAP-10-K: pure `resolvePtyLocale` (honors inherited UTF-8 LANG/LC_ALL, defaults `en_US.UTF-8` only when absent, win32-noop) wired into the `pty.spawn` env after `process.env`; `--font-mono` + xterm `fontFamily` carry a CJK fallback (`PingFang SC`/`Microsoft YaHei`), JetBrains Mono primary, monospace last, no font bundled. tsc 0; +11 new unit cases; EXPECTED_API_KEYS stays 20; xterm/PTY data path untouched. |
+| 10-15 | ✓ complete (gate ran) | Round-5 delta code-review CLEAN (0 Critical / 0 High, 1 Info dispositioned; `10-REVIEW.md`). Full suite green against the PACKAGED app: **unit 384/384**, tsc 0, lint clean (only the 12 known spike `.cjs`), **smoke 15/15** (startup-command 5/5, no flake), `ui:shots` (tag `p10-gapfix-round5-gate`) **10/11 surfaces captured** with name-completeness enforced + wash-only waiting; the `idle-card` surface is the documented pre-existing skip. Rubric rescored (pixel-cited): SC1 active-distinct, SC2 name complete incl. active row, D-09 wash-only waiting, D-11 dashed recipe cards, GAP-10-H single Start — all PASS. Static-capture caveat recorded: GAP-10-J (live scroll) + GAP-10-K (runtime locale/fonts) are human-gate-only. |
+
+### Gate attempt 5 verdict (2026-06-13) — ✅ APPROVED (unqualified)
+
+Operator verbatim: **"approve all three"** — an explicit, unqualified approval of all three asked items.
+
+- **ITEM J** (scrolling the session history no longer flips the sidebar status — GAP-10-J): **APPROVED, CLOSED.**
+- **ITEM K** (Chinese renders in the terminal — GAP-10-K): **APPROVED, CLOSED.**
+- **No-regression sweep** (GAP-10-D/E/F/G/H/I + SC1-SC4): **CONFIRMED unregressed.**
+
+**Final state:** `nyquist_compliant: true` (10-VALIDATION.md). Requirement **UI-02 SATISFIED**. All gaps GAP-10-A through GAP-10-K are CLOSED and operator-approved live across five human gates. Phase 10 **PASSED** — closeable. P02-T3 (live amber waiting) and P04-T3 (unqualified human approval) — the two truths that FAILED in the original 7/9 report — are now both VERIFIED (live amber confirmed at gate attempt 3; unqualified approval received at gate attempt 5), bringing the score to 9/9.
+
+**Backlog (non-gate, carried forward):** replace emoji icons with real icons; define + implement an app-wide animation system; evaluate metadata-based Claude state capture; the `npm run make` lowdb `LocalStorage` crash (separate todo — `npm run package` boots clean).
+
+---
+
+_Verified: 2026-06-11T22:22:00Z (original); status flipped to passed 2026-06-13 after gate attempt 5_
 _Verifier: Claude (gsd-verifier) — re-verification after gap-closure plans 10-05 + 10-06_
 _Addendum: 2026-06-12 — execute-phase orchestrator (round-2 outcome + GAP-10-G; evidence from 10-10 Task-1 executor run)_
 _Addendum 2: 2026-06-12 — execute-phase orchestrator (round-3 outcome: D/E/F/G live-confirmed closed; gate attempt 3 NOT_APPROVED_QUALIFIED; GAP-10-H opened; routing to round 4)_
 _Addendum 3: 2026-06-12 — execute-phase orchestrator (round-4 outcome: GAP-10-H + GAP-10-I live-confirmed CLOSED at gate attempt 4; NOT_APPROVED_QUALIFIED — new GAP-10-J scroll→status + GAP-10-K CJK locale/font opened; routing to round 5)_
+_Addendum 4: 2026-06-13 — execute-phase orchestrator (round-5 outcome: GAP-10-J + GAP-10-K live-confirmed CLOSED at gate attempt 5; ✅ APPROVED unqualified; UI-02 SATISFIED; status → passed, score 9/9; Phase 10 PASSED)_

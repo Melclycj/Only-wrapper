@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: milestone
 status: executing
-stopped_at: Phase 10 round-5 — 10-14 EXECUTED (GAP-10-J baseY scroll-invariance + GAP-10-K UTF-8 locale + CJK font; 45 gated tests green, tsc 0, EXPECTED_API_KEYS=20); next = 10-15 gate (attempt 5, BLOCKING human re-verify of ITEM J scroll + ITEM K CJK + GAP-10-D/E/F/G/H/I no-regression)
-last_updated: "2026-06-13T00:25:00.000Z"
-last_activity: 2026-06-13 -- 10-14 EXECUTED (GAP-10-J + GAP-10-K fixes landed, 45 gated tests green, tsc 0); next = 10-15 gate (attempt 5)
+stopped_at: Phase 10 COMPLETE — gate attempt 5 APPROVED (unqualified); UI-02 satisfied, nyquist_compliant true, all 15 plans done. Next = /gsd-plan-phase 11 (Terminal Area Polish — UI-03, SESS-07)
+last_updated: "2026-06-13T00:45:00.000Z"
+last_activity: 2026-06-13 -- Phase 10 COMPLETE (round-5 gap-closure: GAP-10-J scroll-invariant status + GAP-10-K CJK rendering closed; gate attempt 5 APPROVED)
 progress:
   total_phases: 1
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 15
-  completed_plans: 14
-  percent: 0
+  completed_plans: 15
+  percent: 100
 ---
 
 # Project State
@@ -21,21 +21,21 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-10 — v1.1 milestone started)
 
 **Core value:** Real terminal fidelity — `claude --rc`, `codex`, `vim`, `ssh`, REPLs all behave exactly like a native terminal inside the wrapper. v1.1 polish + debt work must not regress it at any point.
-**Current focus:** Phase 10 — sidebar-visual-polish
+**Current focus:** v1.1 — Phase 10 complete; Phase 11 (Terminal Area Polish) next
 
 ## Current Position
 
-Phase: 10 (sidebar-visual-polish) — EXECUTING (round 5; 10-14 fixes landed, 10-15 gate pending)
-Plan: 14 of 15 complete; 10-14 (GAP-10-J + GAP-10-K) EXECUTED; 10-15 (gate attempt 5) is the only incomplete plan
-Status: Executing Phase 10 — 10-15 BLOCKING human-verify gate is next (attempt 5)
-Last activity: 2026-06-13 -- 10-14 executed (scroll-invariant agent-state + UTF-8 locale + CJK font); 45 gated tests green, tsc 0
+Phase: 10 (sidebar-visual-polish) — ✅ COMPLETE (UI-02 satisfied; gate attempt 5 APPROVED unqualified)
+Plan: 15 of 15 complete (round-5 gap-closure 10-14 + 10-15 done)
+Status: Phase 10 closed; next = /gsd-plan-phase 11 (Terminal Area Polish + Live Start/Restart — UI-03, SESS-07)
+Last activity: 2026-06-13 -- Phase 10 complete (GAP-10-J scroll-invariant status + GAP-10-K CJK rendering closed + approved)
 
 ### v1.1 Milestone Phases (9–15)
 
 | Phase | Name | Requirements | Status |
 |-------|------|--------------|--------|
-| 9 | Design Token Foundation | UI-01 | Not started |
-| 10 | Sidebar Visual Polish | UI-02 | Not started |
+| 9 | Design Token Foundation | UI-01 | ✅ Complete |
+| 10 | Sidebar Visual Polish | UI-02 | ✅ Complete |
 | 11 | Terminal Area Polish + Live Start/Restart | UI-03, SESS-07 | Not started |
 | 12 | Session Form — Polish + Edit UX | UI-04, SESS-05, SESS-06 | Not started |
 | 13 | State & Interaction Design | UI-05, UI-06 | Not started |
@@ -48,7 +48,7 @@ Phase 9 (UI-01 design tokens) gates the per-surface polish phases (10–13). Pha
 
 **Velocity:**
 
-- Total plans completed: 37
+- Total plans completed: 52
 - Average duration: — min
 - Total execution time: 0 hours
 
@@ -66,6 +66,7 @@ Phase 9 (UI-01 design tokens) gates the per-surface polish phases (10–13). Pha
 | 07 | 5 | - | - |
 | 8 | 3 | - | - |
 | 09 | 3 | - | - |
+| 10 | 15 | - | - |
 
 **Recent Trend:**
 
