@@ -240,13 +240,17 @@ export function SessionView({
     //    SEEDS from the global `scrollback` prop (07-03 TERM-11 / D-04, default 5000)
     //    instead of the old hardcoded 10000. The live-apply effect below keeps it in sync
     //    when the user changes the Preferences value (D-05). allowProposedApi for
-    //    unicode11, JetBrains Mono, TERMINAL_THEME otherwise unchanged.
+    //    unicode11, JetBrains Mono, TERMINAL_THEME otherwise unchanged. The fontFamily
+    //    carries the SAME CJK fallback as --font-mono (GAP-10-K) — xterm does NOT read
+    //    CSS custom properties, so its stack must be kept in sync: JetBrains Mono primary,
+    //    'PingFang SC'/'Microsoft YaHei' (OS-provided, not bundled) for CJK glyphs,
+    //    generic monospace last. unicode11 already fixes CJK cell width to 2 cells.
     const term = new Terminal({
       scrollback,
       allowProposedApi: true,
       cursorStyle: 'block',
       cursorBlink: true,
-      fontFamily: "'JetBrains Mono', monospace",
+      fontFamily: "'JetBrains Mono', 'PingFang SC', 'Microsoft YaHei', monospace",
       fontSize: 14,
       theme: TERMINAL_THEME,
     });

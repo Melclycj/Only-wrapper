@@ -64,9 +64,14 @@
   --duration-fast: 120ms;
   --ease-standard: ease;
 
-  /* Type stacks — the now-real fonts (loaded via @fontsource in index.tsx). */
+  /* Type stacks — the now-real fonts (loaded via @fontsource in index.tsx).
+   * --font-mono appends a CJK-capable monospace fallback (GAP-10-K): JetBrains Mono
+   * lacks CJK glyphs, so Chinese fell through to imperfect system fallback (tofu).
+   * 'PingFang SC' (macOS) + 'Microsoft YaHei' (Windows) are OS-provided (not bundled)
+   * and only catch glyphs JetBrains Mono lacks — JetBrains Mono stays the PRIMARY
+   * (Latin) identity; generic monospace remains the final fallback. */
   --font-ui: 'Nunito', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
+  --font-mono: 'JetBrains Mono', 'PingFang SC', 'Microsoft YaHei', monospace;
 
   /* Spacing scale — DEFINED ONLY this phase (D-01). NOT applied to existing
    * padding/gap/margin; Phases 10–13 consume it during per-surface polish.
