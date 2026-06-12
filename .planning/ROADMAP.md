@@ -10,7 +10,7 @@
   3. In collapsed (icon-only) mode the active session and per-row status remain identifiable, and the layout stays clean at the narrow rail width.
   4. Sidebar interactions (click-to-switch, drag-to-reorder, keyboard switching) continue to work unchanged and the terminal keep-alive on switch is not regressed.
 
-**Plans**: 13 plans (4 original + 2 gap-closure r1 + 4 gap-closure r2 + 1 gap-closure r3 + 2 gap-closure r4)
+**Plans**: 15 plans (4 original + 2 gap-closure r1 + 4 gap-closure r2 + 1 gap-closure r3 + 2 gap-closure r4 + 2 gap-closure r5)
 **Wave 1**
 
   - [x] 10-01-PLAN.md — Pure modules (row-secondary D-03 + viewport-clamp D-14) with tests + extract sidebar CSS → sidebar.css and wire the 3 touch-points (Wave 1)
@@ -62,6 +62,16 @@
 
   - [x] 10-13-PLAN.md — Discharge the deferred rounds 2-4 gsd-code-review delta pass (fix Critical/High pre-gate) + full suite GREEN against the packaged app + fresh packaged ui-lab capture (NEW tag, name-completeness enforced, amended wash-only waiting, dormant single-Start) + BLOCKING human re-verify (attempt 4): GAP-10-H single Start live + GAP-10-I wash-only live + the active-bar-amber confirm-or-extend question + GAP-10-D/E/F/G no-regression sweep; flips the Nyquist gate ONLY on an explicit unqualified "approved" (Wave 10) — **gate attempt 4 NOT_APPROVED (QUALIFIED)**: delta review CLEAN (0 Crit/0 High), full suite green (unit 373, smoke 15/15 w/ 1 isolated-confirmed flake), packaged capture rescored; ITEM H (GAP-10-H single Start) + ITEM I (GAP-10-I wash-only) APPROVED + CLOSED; but NEW defect **GAP-10-J** (scrolling history flips the sidebar status — `SessionView.tsx` samples `viewportY` not `baseY`) + **GAP-10-K** (terminal CJK: no UTF-8 LANG + no CJK font) → round 5 (10-14). Nyquist gate stays FALSE; UI-02 OPEN.
 
-**Phase status**: OPEN — UI-02 not yet satisfied; `nyquist_compliant: false`. GAP-10-H and GAP-10-I are CLOSED (operator-approved at gate attempt 4), but new GAP-10-J (scroll→status) + GAP-10-K (CJK) are open. Phase closes only on an explicit unqualified human "approved" after GAP-10-J is closed and re-verified in the running app (round 5 → 10-14).
+**Gap-closure round 5** *(4th human gate NOT_APPROVED_QUALIFIED — H/I confirmed live + CLOSED; closing GAP-10-J = scrolling history flips the sidebar status (sample the live tail at `baseY`, not the visible `viewportY`) + GAP-10-K = terminal CJK does not render (UTF-8 spawn locale + a CJK font fallback); then a NEW gate plan 10-15 re-runs the evidence chain + BLOCKING human gate, attempt 5. The `npm run make` lowdb crash is a SEPARATE todo, out of round-5 scope.)*
+
+**Wave 11 (gap-closure r5 code fixes; blocked on Wave 10)**
+
+  - [ ] 10-14-PLAN.md — GAP-10-J: extract a pure DOM-free `sampleAgentFrame(buffer, rows)` that reads the LIVE tail (`buffer.active.baseY`, not `viewportY`), delegate `SessionView.viewportLines()` to it so the classified agent-state is scroll-position-independent, pin with a deterministic scroll-invariance regression (sampled frame identical across viewportY; an OLD scrollback menu no longer classifies as waiting). GAP-10-K: add a pure `resolvePtyLocale(env)` (honor an inherited UTF-8 LANG, default a UTF-8 locale only when absent, return `{}` on win32 — cross-platform-safe) + wire it into the `pty.spawn` env + unit-pin its truth table; AND append a CJK-capable monospace fallback to `--font-mono` (tokens.css) + the xterm `fontFamily` (SessionView.tsx), JetBrains Mono primary, generic monospace last, NO bundled font. Renderer + main only; no data-testid/class rename; EXPECTED_API_KEYS stays 20; tokens-only CSS; GAP-10-A..I untouched (Wave 11)
+
+**Wave 12 (gap-closure gate; blocked on Wave 11)**
+
+  - [ ] 10-15-PLAN.md — Round-5 gsd-code-review delta pass (GAP-10-J + GAP-10-K deltas; fix Critical/High pre-gate) + full suite GREEN against the packaged app (incl. the two new round-5 regression tests) + fresh packaged ui-lab capture (NEW tag `p10-gapfix-round5-gate`, name-completeness enforced, wash-only waiting; the `idle-card` skip is the documented pre-existing harness limitation) + BLOCKING human re-verify (attempt 5): ITEM J (scrolling history no longer flips the status — idle AND live-waiting cases) + ITEM K (Chinese renders as real glyphs, e.g. `echo 你好世界`) + GAP-10-D/E/F/G/H/I no-regression sweep; flips the Nyquist gate ONLY on an explicit unqualified "approved" (Wave 12)
+
+**Phase status**: OPEN — UI-02 not yet satisfied; `nyquist_compliant: false`. GAP-10-A through GAP-10-I are CLOSED (operator-approved through gate attempt 4); new GAP-10-J (scroll→status) + GAP-10-K (terminal CJK) are open and planned for round 5 (10-14 fix + 10-15 gate). Phase closes only on an explicit unqualified human "approved" after GAP-10-J + GAP-10-K are closed and re-verified in the running app.
 
 **UI hint**: yes
