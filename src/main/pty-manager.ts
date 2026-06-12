@@ -27,6 +27,7 @@ import type {
 } from '../shared/types';
 import { newLogicalId } from '../shared/id-factory';
 import { resolveShell } from './shell-resolver';
+import { resolvePtyLocale } from './pty-locale';
 import { selectShellProvider, type DiscoveredShell } from './shell-discovery';
 import { selectReadinessProbe } from './readiness-probe';
 import {
@@ -329,6 +330,12 @@ export class PtyManager {
           ...process.env,
           TERM: 'xterm-256color',
           COLORTERM: 'truecolor',
+          // GAP-10-K: a Finder-launched app inherits no UTF-8 locale → CLI tools fall
+          // back to C/POSIX (ASCII) and won't emit CJK. resolvePtyLocale defaults a
+          // UTF-8 LANG/LC_ALL ONLY when none is inherited (an existing UTF-8 LANG is
+          // honored — spread AFTER process.env so it overrides nothing), and returns
+          // {} on win32 so the ConPTY/code-page path is unchanged.
+          ...resolvePtyLocale(process.env),
         },
       });
     } catch (err) {
