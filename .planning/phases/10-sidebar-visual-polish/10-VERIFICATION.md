@@ -406,11 +406,13 @@ relevant (real terminal fidelity).
 **CARRIED (pre-existing, not Phase-10): `npm run make` lowdb crash.** The `make` distributable build shows
 lowdb's browser `LocalStorage`/`WebStorage` source on open (module-resolution pulls the browser ESM in the
 ASAR/make path). The app uses `lowdb/node` JSONFile only; the `npm run package` build boots clean (smoke +
-boot-verify GREEN). `forge.config.ts` / vite config predate Phase 10. A packaging/distribution item —
-capture as a todo (or fold into round 5 if the operator wants the make path fixed).
+boot-verify GREEN). `forge.config.ts` / vite config predate Phase 10. A packaging/distribution item.
+**Operator decision 2026-06-12: SEPARATE todo** (`.planning/todos/pending/2026-06-12-npm-run-make-lowdb-localstorage-crash.md`),
+NOT folded into round 5.
 
 **Current state:** `nyquist_compliant: false` (unchanged). UI-02 stays OPEN. GAP-10-H/I CLOSED; D/E/F/G
 remain closed. New open items: GAP-10-J (scroll→status, gate-qualifying) + GAP-10-K (CJK locale/font).
+**Round-5 scope (operator-confirmed 2026-06-12): GAP-10-J + GAP-10-K only** (make-lowdb → separate todo).
 **Routing:** `/gsd-plan-phase 10 --gaps` → round 5 (fix plan 10-14 + a new gate plan). The gate flips true
 only after GAP-10-J is closed and the operator re-verifies with an explicit unqualified "approved".
 
