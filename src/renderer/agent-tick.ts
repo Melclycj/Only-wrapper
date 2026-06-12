@@ -52,6 +52,49 @@ export function initAgentTickState(now: number): AgentTickState {
   return { lastHash: null, changeAt: now, waitingStreak: 0 };
 }
 
+/**
+ * Minimal structural shape of the part of xterm's `IBuffer` the agent-frame sampler
+ * reads — `baseY` (the top line of the LIVE region) and `getLine`. Kept structural (not
+ * an xterm import) so the sampler stays DOM-free / xterm-free and is unit-testable with
+ * a fake buffer (mirrors the decideAgentTick / initAgentTickState DOM-free pattern in
+ * this module). xterm's real `IBuffer` satisfies it structurally — no cast needed.
+ */
+export interface AgentFrameBuffer {
+  /** Top line of the live (non-scrollback) region — the anchor the sampler reads. */
+  baseY: number;
+  /** Returns the buffer line at `line`, or undefined past the buffer end. */
+  getLine(line: number): { translateToString(trim: boolean): string } | undefined;
+}
+
+/**
+ * Sample the LIVE TAIL frame for the agent-state classifier (GAP-10-J fix, 10-14).
+ *
+ * Reads `rows` lines starting at `buffer.baseY` — the top of the LIVE region — NOT the
+ * visible viewport top (`viewportY`). `viewportY` MOVES into scrollback when the user
+ * scrolls the session history up, so the old `getLine(viewportY + i)` sampling re-read
+ * OLD frames and the classified status flipped (free → in-progress → waiting) purely
+ * from scrolling. `baseY` is the live-tail anchor (`baseY === viewportY` only when
+ * scrolled to the bottom; `viewportY < baseY` when scrolled up), so reading
+ * `baseY + i` makes the sampled frame — and therefore the sidebar status —
+ * scroll-position-independent.
+ *
+ * A missing line (getLine returns undefined past the buffer end) yields '' (preserves
+ * the original `ln ? ln.translateToString(true) : ''` semantics). Pure / DOM-free /
+ * xterm-free (only the structural AgentFrameBuffer type).
+ *
+ * @param buffer a structural xterm buffer (`{ baseY, getLine }`)
+ * @param rows   how many lines to sample from baseY (the terminal's visible row count)
+ * @returns `rows` trimmed line strings read from the live tail at baseY
+ */
+export function sampleAgentFrame(buffer: AgentFrameBuffer, rows: number): string[] {
+  const out: string[] = [];
+  for (let i = 0; i < rows; i++) {
+    const ln = buffer.getLine(buffer.baseY + i);
+    out.push(ln ? ln.translateToString(true) : '');
+  }
+  return out;
+}
+
 // FNV-1a — a fast, non-crypto frame-equality hash (record.cjs). NOT a security
 // control (T-06.1: this is a frame-change check, not a digest). Exported so the
 // SessionView SEAM A and the unit test hash frames identically.

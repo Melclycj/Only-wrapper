@@ -35,6 +35,7 @@ import {
   type AgentTickState,
   decideAgentTick,
   initAgentTickState,
+  sampleAgentFrame,
   TICK_MS,
 } from './agent-tick';
 import { Terminal } from '@xterm/xterm';
@@ -388,20 +389,18 @@ export function SessionView({
       onAgentStateRef.current(id, state);
     };
 
-    // Read the live VIEWPORT (not scrollback) as clean, ANSI-interpreted text —
-    // ported verbatim from the spike reference `record.cjs` (viewportLines). Reading
-    // only viewportY..+rows avoids the 001 stale-menu false positive; reading the
-    // viewport requires no WebGL context so it works on hidden panes too.
-    const viewportLines = (): string[] => {
-      const b = term.buffer.active;
-      const top = b.viewportY;
-      const out: string[] = [];
-      for (let i = 0; i < term.rows; i++) {
-        const ln = b.getLine(top + i);
-        out.push(ln ? ln.translateToString(true) : '');
-      }
-      return out;
-    };
+    // Read the LIVE TAIL frame (baseY, not the visible viewport top) as clean,
+    // ANSI-interpreted text via the pure `sampleAgentFrame` helper (GAP-10-J fix,
+    // 10-14). The OLD code sampled `b.viewportY + i`, but `viewportY` MOVES into
+    // scrollback when the user scrolls the session history up, so classify() re-read
+    // OLD frames and the sidebar status flipped (free → in-progress → waiting) purely
+    // from scrolling. `sampleAgentFrame` reads `buffer.baseY + i` — the live-tail
+    // anchor (baseY === viewportY only at the bottom) — making the classified status
+    // scroll-position-independent. Reading the buffer needs no WebGL context so it
+    // still works on hidden panes; both call sites below (decideAgentTick AND the
+    // __AGENT_TRACE block) read the same baseY source through this one helper.
+    const viewportLines = (): string[] =>
+      sampleAgentFrame(term.buffer.active, term.rows);
 
     // The frame-stability tick (D-09). Armed once per mount (the effect is keyed on
     // `id` only — Pitfall 7), gated on agentGateOpen, cleared in the effect cleanup.
