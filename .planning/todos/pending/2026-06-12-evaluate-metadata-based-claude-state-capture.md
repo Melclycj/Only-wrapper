@@ -25,14 +25,27 @@ changes and can never say WHAT the agent is waiting on.
 Metadata capture could give: exact state (blocked/working/done), the pending tool +
 args for the secondary line, and faster/zero-debounce transitions.
 
-Operator offer: "i can pull the source code for you to reference" — the reference
-app's source is available on request.
+Reference source provided (2026-06-12): **`~/Project/warp`** — the Warp terminal
+OSS codebase (Rust, AGPL/MIT dual-licensed). Initial recon pointers:
+`crates/ai/src/agent/` (orchestration_config, action_result/convert.rs),
+`crates/graphql/src/api/ai.rs` (`AgentTaskState` enum). The "Wants to run X:
+{args}" line is composed dynamically from the tool call, not a literal string.
+
+KEY INSIGHT for the spike: Warp hosts its agent loop NATIVELY (first-party
+runtime), so it has direct metadata about tool calls/approvals — that's why it can
+show exact tool + args. Just-Wrapper wraps an EXTERNAL `claude --rc` CLI, so the
+equivalent metadata path is Claude Code's own surfaces (session transcript JSONL
+under `~/.claude/projects/<cwd-slug>/`, hooks, OTel), not Warp's mechanism
+verbatim. Warp is the UX reference (what "Blocked + pending action" should look
+like), not a drop-in mechanism. LICENSE NOTE: AGPL components — fine to read for
+reference; do not copy code into this MIT-style local project without a license
+decision.
 
 ## Solution
 
 TBD — research/spike first:
-1. Ask the operator for the reference app source; identify its capture mechanism
-   (likely candidates: reading Claude Code session transcript JSONL under
+1. Read the Warp pointers above for the UX/state-model reference; identify OUR
+   capture mechanism on Claude Code's surfaces (transcript JSONL under
    `~/.claude/projects/<cwd-slug>/`, hooks, MCP, or OTel events).
 2. Spike: watch the transcript/metadata for a live `claude --rc` session in
    Just-Wrapper's cwd; map events → existing agent-state model

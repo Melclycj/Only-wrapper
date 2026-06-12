@@ -132,6 +132,22 @@ This phase directly closes the three sidebar gaps logged at the Phase-9 human ga
   visual impression at the post-gap-closure human re-verify, with amber working. If it
   still reads wrong there, that becomes a new design item — not part of this phase.
 
+### Gap-closure addendum 2 (user decision, 2026-06-12 — post gate attempt 3)
+- **D-09 AMENDED — waiting shows NO edge bar for now; wash only.** Operator verbatim:
+  "waiting dont show edge for now. Later i will add more dynamic effect to show stage of
+  agent." This is the new-design-item path the GAP-10-C addendum pre-agreed. Amended
+  waiting treatment: light amber tint wash across the row + `● Waiting for you` secondary
+  line — the amber LEFT EDGE BAR is removed (expanded rows AND the collapsed-rail mirror;
+  collapsed waiting indication falls back to the amber status dot). The WR-04
+  amber-beats-active compound precedence selector becomes obsolete with the bar gone.
+  SCOPE NOTE: D-05/D-06 are NOT amended — the ACTIVE row's own status-colored edge bar
+  stays, so an active waiting row's active bar still reads amber; if the operator wants
+  that changed too, re-judge at gate attempt 4. FUTURE: dynamic agent-stage effects are
+  the operator's stated direction (animation-system todo) — D-09's "static, no
+  pulsing/animation" lock will be revisited when that system is defined; until then the
+  amended treatment stays static. Tests/captures asserting the amber border-left update
+  to THIS amended spec (sanctioned spec change, not check relaxation).
+
 </decisions>
 
 <canonical_refs>

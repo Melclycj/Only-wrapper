@@ -77,6 +77,18 @@ gaps:
     missing:
       - "Round-4 plan (10-12) must FIRST reproduce the duplicate-Start state (enumerate dormant-row states: at rest / selected / hover / just-started; capture which two affordances co-render), then root-cause against the startAffordances dedup contract, fix, and add a deterministic regression check (unit test on startAffordances truth table; ui-lab dormant-selected surface assertion if feasible)."
       - "A new gate plan (10-13) must re-run the full evidence chain + BLOCKING human gate (attempt 4). GAP-10-D/E/F/G are all FULLY CLOSED and live-confirmed — attempt 4 verifies the GAP-10-H fix plus the standing no-regression sweep only. Do NOT relax any machine check."
+
+  - truth: "A waiting row carries the amber tint wash with NO amber left edge bar (D-09 as AMENDED 2026-06-12 — wash only, expanded rows and collapsed-rail mirror alike; collapsed waiting indication = amber status dot); the active row's own status-colored edge bar (D-05/D-06, unamended) is unchanged"
+    status: failed
+    reason: "GAP-10-I (S3 design adjustment, operator decision 2026-06-12 post gate attempt 3): verbatim — 'waiting dont show edge for now. Later i will add more dynamic effect to show stage of agent.' This is the new-design-item path the GAP-10-C addendum pre-agreed (re-judge with amber working → operator chose wash-only). D-09 amendment recorded in 10-CONTEXT.md 'Gap-closure addendum 2'. NOT a defect — the current implementation matches the OLD locked spec; this is a sanctioned spec change for round 4."
+    artifacts:
+      - path: "src/renderer/sidebar.css"
+        issue: "[data-agent='waiting'] amber border-left rules (expanded ~lines 96-108 + collapsed mirror ~line 473) must drop the edge bar, keep the color-mix wash. The WR-04 compound precedence selector (.sidebar-row.active[data-agent='waiting']) becomes obsolete with the bar gone — remove it rather than leave dead precedence rules."
+      - path: "tests/ui-lab/surfaces.ts"
+        issue: "sidebar-waiting surface expectation changes to wash-only (sanctioned spec change, NOT check relaxation; assertNameNotCrushed untouched). Any unit/CSS assertion on the waiting border-left updates to the amended spec."
+    missing:
+      - "Round-4 plan (10-12 or a sibling task) implements the D-09 amendment: waiting = wash only, no edge bar, collapsed mirror included; remove the obsolete WR-04 precedence selector; update sidebar-waiting capture expectations + any border-left assertions to the amended spec."
+      - "Gate attempt 4 (10-13) re-judges the amended waiting look live, AND confirms whether the ACTIVE row's status-colored bar reading amber while waiting is acceptable (D-05/D-06 deliberately unamended — operator to confirm or extend the amendment)."
 ---
 
 # Phase 10: Sidebar Visual Polish — Re-Verification Report (after plans 10-05 + 10-06)
@@ -339,9 +351,15 @@ TERM-09 frame heuristic — shows exact tool + args, e.g. "Wants to run WebSearc
 **Deferred from this round:** gsd-code-review delta pass on rounds 2+3 source changes (10-07/08/09/11)
 — deliberately deferred to round 4 so one review covers all gap-closure deltas before gate attempt 4.
 
-**Routing:** `/gsd-plan-phase 10 --gaps` → round-4 plan 10-12 (GAP-10-H reproduce → root-cause →
-fix + deterministic regression check) → new gate plan 10-13 (evidence chain + BLOCKING human gate,
-attempt 4).
+**Routing:** `/gsd-plan-phase 10 --gaps` → round-4 plans: 10-12 (GAP-10-H reproduce → root-cause →
+fix + deterministic regression check; GAP-10-I D-09 amendment — waiting wash-only, no edge bar —
+fits here or as a sibling task) → new gate plan 10-13 (evidence chain + BLOCKING human gate,
+attempt 4 — also re-judges the amended waiting look + the active-bar-amber question).
+
+**Post-gate operator follow-ups (2026-06-12, same session):** GAP-10-I decision above; Warp source
+located at `~/Project/warp` (metadata-state todo updated with pointers); close-reminder question
+answered from code (ConfirmModal always fires, copy is running-aware; agent-aware escalation
+captured as a new todo).
 
 ---
 

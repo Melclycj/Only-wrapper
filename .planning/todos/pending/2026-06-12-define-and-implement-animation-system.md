@@ -19,6 +19,13 @@ DESIGN.md north star is calm, low-contrast chrome). Any future motion must be
 DEFINED first (a motion spec) rather than sprinkled ad hoc, or it will fight the
 parlour calm.
 
+Direction sharpened 2026-06-12 (operator, post gate attempt 3): "waiting dont show
+edge for now. **Later i will add more dynamic effect to show stage of agent.**" —
+agent-stage motion (waiting/working/done transitions) is the primary intended use
+of this system. D-09 was amended to wash-only/static in the meantime (10-CONTEXT
+Gap-closure addendum 2); the static lock gets revisited HERE, when the motion spec
+exists.
+
 ## Solution
 
 TBD — sketch:
