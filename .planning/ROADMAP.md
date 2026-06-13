@@ -95,7 +95,7 @@
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 11-01-PLAN.md — Restart-UI deletion (sidebar ↻ + context-menu Restart) + D-04 confirm copy wiring + restart-smoke rewrites (SESS-07/D-01/D-02)
+- [x] 11-01-PLAN.md — Restart-UI deletion (sidebar ↻ + context-menu Restart) + D-04 confirm copy wiring + restart-smoke rewrites (SESS-07/D-01/D-02)
 - [ ] 11-02-PLAN.md — Unified session-card framing (terminal-area.css) + IdleCard sibling + Remove danger ramp + D-03a fidelity guardrail (UI-03/D-03)
 
 **Wave 3** *(blocked on Wave 2 completion)*

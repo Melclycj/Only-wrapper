@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: milestone
 status: executing
-stopped_at: Phase 11 UI-SPEC approved (6/6 dimensions); next = /gsd-plan-phase 11
-last_updated: "2026-06-13T15:55:12.715Z"
-last_activity: 2026-06-13 -- Phase 11 execution started
+stopped_at: Completed 11-01-PLAN.md (restart UI deleted + D-04 confirm copy wired); next = 11-02
+last_updated: "2026-06-14T02:10:00.000Z"
+last_activity: 2026-06-14 -- Completed Phase 11 Plan 01 (restart UI removal + recycle smoke lockstep)
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 19
-  completed_plans: 16
-  percent: 17
+  completed_plans: 17
+  percent: 18
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-06-10 — v1.1 milestone started)
 ## Current Position
 
 Phase: 11 (Terminal Area Polish + Live Start/Restart) — EXECUTING
-Plan: 2 of 4
-Status: Ready to execute
-Last activity: 2026-06-13 -- Phase 11 execution started
+Plan: 3 of 4
+Status: Ready to execute (11-00 + 11-01 complete)
+Last activity: 2026-06-14 -- Completed Phase 11 Plan 01 (restart UI removed; D-04 confirm copy wired; 3 smoke specs rewritten to the recycle model)
 
 ### v1.1 Milestone Phases (9–15)
 
@@ -114,6 +114,7 @@ Phase 9 (UI-01 design tokens) gates the per-surface polish phases (10–13). Pha
 | Phase 10 P11 | ~6min | 2 tasks | 1 files |
 | Phase 10 P10-12 | ~18min | 3 tasks | 6 files |
 | Phase 11 P00 | 12min | 3 tasks | 4 files |
+| Phase 11 P01 | ~18min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -193,6 +194,9 @@ Recent decisions affecting current work:
 - [Phase 10-10 round-3 gate]: Closing gate attempt 3 → **NOT_APPROVED_QUALIFIED**. Task-1 evidence GREEN against the packaged app (unit 370/370, tsc 0, scoped lint clean / 12 known spike .cjs deferred, smoke 15/15 authoritative; `ui:shots:fresh` 11/11 incl. assertNameNotCrushed PASS on the active row, tag p10-gapfix-round3-gate / gitSha 23d3af1). The BLOCKING human gate CONFIRMED all three routed items LIVE: ITEM A live amber at a real claude --rc permission prompt (GAP-10-D closed — the S1 blocker that failed attempts 1+2), ITEM B gutter compaction (GAP-10-E), ITEM C active-row name completeness (GAP-10-F/G). But the operator reported a NEW unprompted defect → **GAP-10-H** (duplicate Start affordance on inactive/dormant rows) which QUALIFIES the verdict. nyquist_compliant LEFT FALSE; UI-02 stays OPEN; 10-VALIDATION attempt-3 row recorded verbatim. Design question (state color "only as background") answered from locked history — spec conforms, no change. Backlog captured (real icons / animation system / metadata state capture). Route: round 4 (plan 10-12, GAP-10-H Start-dedup fix → re-run gate). No code changed this plan; orchestrator owns round-4 routing.
 - [Phase ?]: Phase 11 D-04 escalation keys on AgentState 'in-progress' (the working state), not the plan-prose literal 'working' (not in the union)
 - [Phase ?]: buildConfirmBody is a pure electron-free seam (Plan 01 wires it); escalation is a prefix so the idle consequence is never lost
+- [Phase 11-01]: Every restart UI entry point DELETED (sidebar ↻ restart-session button + context-menu Restart arm) — live vocabulary is now Start / Remove / Clear; recycling is Remove → Inactive List → Start ▶ (a fresh process). The ptyRestart IPC bridge key + handleRestart helper + the — restarted — separator seam are KEPT but un-surfaced (D-01 "remove the UI, keep the mechanism"); EXPECTED_API_KEYS stays 20 (security.guard 4/4), src/main untouched. handleRestart flagged // D-01: retained machinery + eslint-disable no-unused-vars
+- [Phase 11-01]: ConfirmModal body wired to the pure buildConfirmBody (D-04 agent-aware escalation) — agentState read defensively off closingSession (like errorMessage) and passed straight through; ConfirmModal stays a dumb controlled component; dangerouslySetInnerHTML → 0
+- [Phase 11-01]: Three restart-asserting smoke specs rewritten in lockstep (RESEARCH Pitfall 1): header-controls asserts the menu Restart is ABSENT; startup-command SC1+SC3 rewritten to the recycle model (no — restarted separator); alt-screen-reset's two restart-seam it-blocks retired (the menu Restart that drove them is gone — a THIRD driver the plan/RESEARCH undercounted; abnormal-exit SEAM B coverage intact). app-restart-restore.smoke unchanged = the positive recycle proof. All GREEN against a fresh packaged build
 
 ### Pending Todos
 

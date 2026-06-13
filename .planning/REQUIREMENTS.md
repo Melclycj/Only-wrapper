@@ -88,7 +88,7 @@ Each v1.1 requirement maps to exactly one phase. Phase numbering continues from 
 | UI-01 | Phase 9 — Design Token Foundation | Complete |
 | UI-02 | Phase 10 — Sidebar Visual Polish | Complete |
 | UI-03 | Phase 11 — Terminal Area Polish + Live Start/Restart | Pending |
-| SESS-07 | Phase 11 — Terminal Area Polish + Live Start/Restart | Pending |
+| SESS-07 | Phase 11 — Terminal Area Polish + Live Start/Restart | In progress (11-01 landed: restart UI removed, recycle path GREEN; gated on 11-03 human-verify) |
 | UI-04 | Phase 12 — Session Form: Polish + Edit UX | Pending |
 | SESS-05 | Phase 12 — Session Form: Polish + Edit UX | Pending |
 | SESS-06 | Phase 12 — Session Form: Polish + Edit UX | Pending |
