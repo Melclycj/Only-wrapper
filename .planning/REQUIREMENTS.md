@@ -23,7 +23,7 @@ Phase numbering continues from v1.0 (which ended at Phase 8). Each requirement m
 
 - [ ] **SESS-05**: When the user re-opens the Edit Session modal, the saved working directory and startup command are pre-filled — the form mirrors what is actually persisted in main — rather than shown empty. (pending todo: edit-modal-does-not-prefill-saved-cwd-and-startup-command)
 - [ ] **SESS-06**: The session form provides a native "Browse…" folder picker for the working directory that fills the field with an absolute path; main remains the validator of record (CR-01 path guard still gates the value). (pending todo: add-folder-picker-for-working-directory-selection)
-- [ ] **SESS-07**: A live session exposes a discoverable Start / Restart control — the user is not forced to type `exit` to recycle a session — with a control model consistent with the dormant-record Start ▶ promotion path. (pending todo: improve-start-control-discoverability-for-live-sessions)
+- [ ] **SESS-07**: The session lifecycle is simplified to Start / Remove / Clear — the restart verb is removed from the UI (the `ptyRestart` mechanism is kept hidden, so `EXPECTED_API_KEYS` stays 20). Recycling a session is the discoverable Remove → Start (fresh) path, consistent with the dormant-record Start ▶ promotion path, so the user is never forced to type `exit`. *(Amended 2026-06-13 — operator chose to remove restart rather than surface it; see Phase 11 `11-CONTEXT.md` D-01/D-02/D-05.)* (pending todo: improve-start-control-discoverability-for-live-sessions)
 
 ### Code-Review Debt
 

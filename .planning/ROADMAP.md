@@ -77,14 +77,15 @@
 **UI hint**: yes
 
 ### Phase 11: Terminal Area Polish + Live Start/Restart
-**Goal**: The terminal-area chrome is visually polished and clearly structured — session header, the Working Area vs Inactive List split, and the live-session controls (Clear / Remove / Restart, plus Start on inactive entries) — and a live session exposes a discoverable Start/Restart control so the user never has to type `exit` to recycle a session.
+> **Amended 2026-06-13** (operator decision at `11-discuss`): the **restart UI is removed**, not added. Lifecycle vocabulary becomes Start / Remove / Clear; recycling a session is Remove → Start (fresh). The original "Live Start/Restart" framing + the discoverable-restart / scrollback-preserving criteria are superseded below. The `ptyRestart` mechanism is kept hidden (`EXPECTED_API_KEYS` stays 20). See `11-CONTEXT.md` D-01/D-02/D-05. (Heading text kept verbatim so the phase dir slug stays stable.)
+**Goal**: The terminal-area chrome is visually polished and clearly structured — the active session reads as one framed, breathing session card (header + terminal), the dormant IdleCard reads as its sibling, and the live-session controls (Clear / Remove, plus Start on inactive entries) read as a designed cluster. The session lifecycle is simplified to Start / Remove / Clear — the confusing restart duality is removed, and recycling a session (Remove → Start) no longer requires typing `exit`.
 **Depends on**: Phase 9
 **Requirements**: UI-03, SESS-07
 **Success Criteria** (what must be TRUE):
-  1. A human sees a clearly structured terminal area — the session header, the Working Area, and the Inactive List are visually distinct and the live-session controls read as a designed control cluster.
-  2. The Working Area vs Inactive List boundary is obvious at a glance, and Start ▶ on inactive entries vs the live controls are unambiguous.
-  3. A live session shows a discoverable Start/Restart control (consistent with the dormant-record Start ▶ promotion path) — the user can recycle a session without typing `exit`.
-  4. Restart preserves the logical session id and scrollback, and the terminal surface keeps full native fidelity (no scroll / alt-screen regression).
+  1. A human sees a clearly structured terminal area — the active session is a framed, breathing terminal card (not an edge-to-edge rectangle), the dormant IdleCard reads as its sibling, and the live-session controls (Clear / Remove) read as a designed cluster.
+  2. The Working Area (live terminal) vs Inactive List (dormant entries) distinction is obvious at a glance, and Start ▶ on inactive entries vs the live controls are unambiguous.
+  3. The live lifecycle is Start / Remove / Clear with no restart control anywhere; recycling a session is the discoverable Remove → Start (fresh) path — the user is never forced to type `exit`.
+  4. Removing the restart UI does not regress terminal fidelity (no scroll / alt-screen / fit regression), the hidden `ptyRestart` mechanism + the IPC bridge budget (`EXPECTED_API_KEYS` = 20) are unchanged, and a configured session keeps its logical id + recipe across the Remove → Start recycle.
 **Plans**: TBD
 **UI hint**: yes
 
