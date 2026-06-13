@@ -1,0 +1,442 @@
+/* terminal-area.css — the terminal-area surface layer (Phase 11, UI-03 / D-03 / D-03a).
+ *
+ * EXTRACTED from terminal.css (mirroring the Phase-10 sidebar.css extraction) to keep
+ * terminal.css under the 800-line file discipline (CLAUDE.md hard rule). Imported AFTER
+ * terminal.css in index.tsx so the cascade order is preserved (these rules previously
+ * lived later in terminal.css; nothing else references them).
+ *
+ * Tokens (--surface, --bg, --line, --radius, --shadow-pop, --space-*, --term-bg, …) live
+ * in tokens.css (the single source of truth, imported FIRST). This file references them
+ * via var() ONLY — no literal hex/oklch/off-scale px (tokens-completeness.test.ts).
+ *
+ * D-03 (unified session card): the active IdentityHeader cap + the --term-bg viewport
+ * render as ONE rounded card floating on the cream --bg with a --space-4 gutter — not an
+ * edge-to-edge rectangle.
+ *
+ * D-03a (FIDELITY GUARDRAIL — BLOCKING, Core Value): radius / padding / shadow / overflow
+ * mask the card WRAPPER (.terminal-area) ONLY. They are NEVER applied to .viewport-stack,
+ * .term-mount, or any .xterm* element — those keep inset:0 / width:100%;height:100% exactly
+ * as shipped so no glyph is clipped by a corner and the existing ResizeObserver on
+ * .term-mount re-fits automatically against the new inner box (RESEARCH O-2). NO manual
+ * re-fit call is added in this file (CSS only). */
+
+/* ── The unified session card (D-03 / D-03a) ────────────────────────────────────
+ * .terminal-area is BOTH the flex column (identity header cap above the viewport
+ * stack — RESEARCH Q2) AND the framed card wrapper. It floats on the cream --bg
+ * (set on .ide-layout) with a --space-4 gutter (margin), framed with the Phase-10
+ * active-card token composition (--surface/--line/--radius/--shadow-pop) and
+ * overflow:hidden to MASK the container corners — never the terminal cells.
+ *
+ * GUTTER (D-03 headline geometry): --space-4 (16px) default. The ONLY permitted RUBRIC
+ * tuning axis is stepping the margin to --space-5 / --space-6 if 16px reads tight against
+ * the cream ground (UI-SPEC card-gutter contract). Do NOT introduce any other axis. */
+.terminal-area {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  /* The gutter — the breathing room between the card and the cream --bg edges. */
+  margin: var(--space-4);
+  /* The card frame (mirrors sidebar.css .sidebar-row.active token composition). */
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-pop);
+  /* Masks the container corners (NOT terminal cells — D-03a). */
+  overflow: hidden;
+}
+
+/* The viewport stack — fills the remaining card height below the identity header cap;
+ * position:relative so the absolute SessionView panes (inset:0) stack inside it.
+ * D-03a: NO border-radius / padding / margin here — the inner box must stay flush so
+ * the .term-mount ResizeObserver re-fits to it without clipping the last row. */
+.viewport-stack {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  background: var(--term-bg);
+}
+
+/* Hidden-pane rule (RESEARCH Pattern 8): hide with visibility/off-screen, never
+ * with the display property set to none — fit()/proposeDimensions() read
+ * non-numeric geometry on a non-rendered element and silently no-op. All panes
+ * stay geometrically measurable so a hidden session's buffer + fit() keep
+ * working (SC1/SC2). */
+.session-view {
+  position: absolute;
+  inset: 0;
+  background: var(--term-bg);
+}
+
+.session-view[hidden-pane] {
+  visibility: hidden;
+  z-index: 0;
+}
+
+.session-view.active {
+  visibility: visible;
+  z-index: 1;
+}
+
+/* The xterm mount is an inner div that fills the .session-view wrapper, so the
+ * SearchBar overlay can be a DOM SIBLING of the terminal (NOT inside `.xterm`) and
+ * its keystrokes never leak to the PTY (07-02 SC3 / Pitfall 3).
+ * D-03a: inset:0 ONLY — never radius/padding (the ResizeObserver is bound HERE). */
+.session-view .term-mount {
+  position: absolute;
+  inset: 0;
+}
+
+/* xterm fills its mount container; the fit addon computes cols/rows here.
+ * D-03a: width/height:100% ONLY — NEVER a border-radius/padding (would clip glyphs;
+ * there is no re-fit path that compensates for a padded/rounded cell grid). */
+.session-view .xterm,
+.session-view .xterm-viewport,
+.session-view .xterm-screen {
+  width: 100%;
+  height: 100%;
+}
+
+/* ── Identity header (D-05 / IDENT-03) — the card's top CAP, identity + controls ──
+ * Sits above the .viewport-stack inside the flex-column card. The shipped
+ * border-bottom hairline is the cap join (UI-SPEC default — re-evaluated vs RUBRIC).
+ * Cap padding from the --space scale: --space-2 vertical / --space-3 horizontal
+ * (snaps the shipped 8px / 14px). Reuses the .row-icon / .row-name / .status-badge
+ * markup so identity reads consistently with the Sidebar row. */
+.identity-header {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  box-sizing: border-box;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  font-family: var(--font-ui);
+  color: var(--ink);
+}
+
+/* The session name — the single identity weight (700, matching the Sidebar .row-name
+ * identity contract from 10-UI-SPEC; moved up from the shipped 600). */
+.identity-header .row-name {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
+}
+
+/* ── Header control cluster (D-01/D-06 — Clear + Remove ONLY) ────────────────────
+ * Right-aligned cluster after the badge. margin-left:auto pins it to the far edge;
+ * gap var(--space-1) (4px). Unlike the Sidebar cluster these controls are ALWAYS
+ * visible (the header is the always-present active-session control surface, not a
+ * hover-reveal row). No Restart, no Stop, no Start (D-06 / 06.1-04 FIX 3). */
+.identity-header .header-controls {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-left: auto;
+}
+
+/* Clear is a text-labelled button (discoverable in the header where space allows —
+ * UI-SPEC §Interaction): radius-lg, 13px/700, neutral --ink-soft warming to
+ * --ink/--bg-sunk on hover. Matches the .modal-btn footprint. */
+.identity-header .header-control-clear {
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-lg);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ink-soft);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.identity-header .header-control-clear:hover {
+  background: var(--bg-sunk);
+  color: var(--ink);
+}
+
+.identity-header .header-control-clear:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+/* The Remove (✕) glyph button reuses the Sidebar .row-control footprint (24×24,
+ * radius-sm, neutral --ink-soft). The Sidebar rules are scoped to .sidebar-row, so
+ * the header re-states the same shape here. */
+.identity-header .row-control {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ink-soft);
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.identity-header .row-control:hover {
+  background: var(--bg-sunk);
+  color: var(--ink);
+}
+
+.identity-header .row-control:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+/* D-15 danger ramp: the Remove control rests neutral (--ink-soft above) and warms to
+ * the --color-danger ramp on hover/focus with an ~8% danger wash — reads destructive
+ * without shouting red at rest. Same color-mix tint idiom as .context-menu-item-danger
+ * / sidebar .row-control-close. Tokens-first: var(--color-danger) + color-mix, no literal. */
+.identity-header .row-control-close:hover,
+.identity-header .row-control-close:focus-visible {
+  color: var(--color-danger);
+  background: color-mix(in oklch, var(--color-danger) 8%, transparent);
+  border-color: var(--color-danger);
+}
+
+/* ── Idle card (D-04) — the dormant-session placeholder shown in .terminal-area when
+ * the active session is not_started. D-03 sibling: the .idle-card-stage ground is now
+ * TRANSPARENT (was --term-bg) so the dormant card reads as the live card's sibling on
+ * the same unified card surface — not a separate dark void. Tokens only. ──────────── */
+
+/* The stage fills the viewport-stack region and centers the card. */
+.idle-card-stage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  box-sizing: border-box;
+  /* D-03 sibling: the unified card wrapper owns the ground; the stage is transparent
+   * so the card surface shows through (was var(--term-bg)). */
+  background: transparent;
+}
+
+.idle-card {
+  width: min(440px, calc(100% - 48px));
+  box-sizing: border-box;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-dialog);
+  font-family: var(--font-ui);
+  color: var(--ink);
+}
+
+/* Identity region: icon tile → name → "Idle" status badge (reuses .status-badge). */
+.idle-card-identity {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.idle-card-identity .row-icon {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.idle-card-name {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--ink);
+}
+
+/* Config region: a recessed inset block of read-only label+value pairs. */
+.idle-card-config {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 12px;
+  background: var(--bg-sunk);
+}
+
+.idle-card-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.idle-card-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+.idle-card-value {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--ink);
+  word-break: break-all;
+}
+
+/* The startup-command "prompt" glyph — visually inert, a TERM-05 boundary cue. */
+.idle-card-prompt {
+  color: var(--ink-faint);
+}
+
+/* "Saved for reference — not run automatically…" helper under the startup command. */
+.idle-card-helper {
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--ink-faint);
+}
+
+/* Empty-startup placeholder. */
+.idle-card-empty {
+  font-style: italic;
+  color: var(--ink-faint);
+}
+
+/* Error-after-start inline line (red ramp — matches the error status accent). */
+.idle-card-error {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--color-danger);
+}
+
+/* In-card Start button: blue outline/text → fills blue on hover ("go live"). */
+.idle-start-button {
+  align-self: stretch;
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--color-accent);
+  background: var(--surface);
+  color: var(--color-accent);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.idle-start-button:hover {
+  background: var(--color-accent);
+  color: var(--surface);
+}
+
+.idle-start-button:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* SC2 error-card action row (D-04): Edit (neutral) + Retry (primary blue), gap 8px. */
+.idle-card-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.idle-card-actions .idle-start-button {
+  flex: 1 1 0;
+  align-self: auto;
+}
+
+/* Error-card Edit: neutral secondary button (matches the .edit-input neutral treatment),
+ * warms toward --bg-sunk on hover. Not the primary "go" affordance (that is Retry). */
+.idle-card-edit-button {
+  flex: 1 1 0;
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-soft);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.idle-card-edit-button:hover {
+  background: var(--bg-sunk);
+  color: var(--ink);
+}
+
+.idle-card-edit-button:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* ── Welcome / empty state (D-10) — shown when there are zero sessions. Centered on
+ * the warm --bg-sunk (a "no terminal yet" state, NOT the dark gutter). The unified
+ * card frame on .terminal-area now provides the consistent gutter + framing so this
+ * reads as a sibling of the live card (D-03 — only the frame must match here; the
+ * internal restyle is Phase 13). ─────────────────────────────────────────────────── */
+.welcome-state {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 32px;
+  padding: 48px;
+  box-sizing: border-box;
+  background: var(--bg-sunk);
+  font-family: var(--font-ui);
+  text-align: center;
+}
+
+.welcome-glyph {
+  font-size: 48px;
+  line-height: 1;
+}
+
+.welcome-heading {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--ink);
+}
+
+.welcome-body {
+  margin: 0;
+  max-width: 360px;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+/* The single high-emphasis action in this state: a filled blue primary CTA. */
+.welcome-cta {
+  padding: 10px 20px;
+  border-radius: 10px;
+  border: none;
+  background: var(--color-accent);
+  color: var(--surface);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.welcome-cta:hover {
+  background: var(--color-accent-strong);
+}
+
+.welcome-cta:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}

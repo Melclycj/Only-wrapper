@@ -13,6 +13,11 @@ import '@fontsource/jetbrains-mono/700.css';
 // are defined when terminal.css parses.
 import './tokens.css';
 import './terminal.css';
+// terminal-area.css AFTER terminal.css (Phase 11 extraction): the .terminal-area card
+// frame + .viewport-stack / .session-view / .term-mount / .xterm sizing + the
+// .identity-header cluster + .idle-card family + .welcome-state. Cascade order preserved
+// (these rules previously lived later in terminal.css).
+import './terminal-area.css';
 import './sidebar.css';
 
 import { SessionManager } from './SessionManager';
