@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: milestone
 status: executing
-stopped_at: Completed 11-01-PLAN.md (restart UI deleted + D-04 confirm copy wired); next = 11-02
-last_updated: "2026-06-14T02:10:00.000Z"
-last_activity: 2026-06-14 -- Completed Phase 11 Plan 01 (restart UI removal + recycle smoke lockstep)
+stopped_at: Completed 11-02-PLAN.md (unified terminal session card D-03/D-03a + terminal-area.css extraction); next = 11-03
+last_updated: "2026-06-14T02:20:00.000Z"
+last_activity: 2026-06-14 -- Completed Phase 11 Plan 02 (unified session card frame + terminal-area.css extraction; fidelity smoke GREEN)
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 19
-  completed_plans: 17
-  percent: 18
+  completed_plans: 18
+  percent: 19
 ---
 
 # Project State
@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-06-10 — v1.1 milestone started)
 
 Phase: 11 (Terminal Area Polish + Live Start/Restart) — EXECUTING
 Plan: 3 of 4
-Status: Ready to execute (11-00 + 11-01 complete)
-Last activity: 2026-06-14 -- Completed Phase 11 Plan 01 (restart UI removed; D-04 confirm copy wired; 3 smoke specs rewritten to the recycle model)
+Status: Ready to execute (11-00 + 11-01 + 11-02 complete)
+Last activity: 2026-06-14 -- Completed Phase 11 Plan 02 (unified terminal session card D-03/D-03a; terminal-area.css extracted; Remove danger ramp; fidelity smoke GREEN)
 
 ### v1.1 Milestone Phases (9–15)
 
@@ -197,6 +197,7 @@ Recent decisions affecting current work:
 - [Phase 11-01]: Every restart UI entry point DELETED (sidebar ↻ restart-session button + context-menu Restart arm) — live vocabulary is now Start / Remove / Clear; recycling is Remove → Inactive List → Start ▶ (a fresh process). The ptyRestart IPC bridge key + handleRestart helper + the — restarted — separator seam are KEPT but un-surfaced (D-01 "remove the UI, keep the mechanism"); EXPECTED_API_KEYS stays 20 (security.guard 4/4), src/main untouched. handleRestart flagged // D-01: retained machinery + eslint-disable no-unused-vars
 - [Phase 11-01]: ConfirmModal body wired to the pure buildConfirmBody (D-04 agent-aware escalation) — agentState read defensively off closingSession (like errorMessage) and passed straight through; ConfirmModal stays a dumb controlled component; dangerouslySetInnerHTML → 0
 - [Phase 11-01]: Three restart-asserting smoke specs rewritten in lockstep (RESEARCH Pitfall 1): header-controls asserts the menu Restart is ABSENT; startup-command SC1+SC3 rewritten to the recycle model (no — restarted separator); alt-screen-reset's two restart-seam it-blocks retired (the menu Restart that drove them is gone — a THIRD driver the plan/RESEARCH undercounted; abnormal-exit SEAM B coverage intact). app-restart-restore.smoke unchanged = the positive recycle proof. All GREEN against a fresh packaged build
+- [Phase 11-02]: UI-03 / D-03 unified session card landed (renderer-CSS-only). NEW src/renderer/terminal-area.css = the terminal-area surface layer EXTRACTED from terminal.css (mirroring the Phase-10 sidebar.css extraction): .terminal-area card frame + .viewport-stack + .session-view* + .term-mount + .xterm* sizing + the .identity-header cluster + .idle-card family + .welcome-state, imported AFTER terminal.css in index.tsx so cascade order is preserved. terminal.css 873 → 494 lines (under the 800 hard rule). The card frame is on .terminal-area DIRECTLY (NOT a new .terminal-card wrapper div — SessionManager.tsx is out of this plan's files_modified; framing the existing container avoids the ResizeObserver re-bind walk read_first warned against): margin: var(--space-4) gutter + background var(--surface) + border 1px var(--line) + border-radius var(--radius) + box-shadow var(--shadow-pop) + overflow:hidden (masks the WRAPPER corners). The cream ground moved up to .ide-layout { background: var(--bg) }. D-03a BLOCKING fidelity guardrail HELD: NO radius/padding/overflow on .viewport-stack/.term-mount/.xterm* (they keep inset:0 / width:100%;height:100%); NO manual fit call added — the existing .term-mount ResizeObserver re-fits to the new framed inner box (O-2 PROVEN GREEN by pty-resize.smoke reporting correct tput cols + alt-screen-reset scroll/exit + app-restart-restore + header-controls + search-bar; 8 fidelity smoke specs GREEN). .idle-card-stage ground flipped --term-bg → transparent (D-03 sibling); .identity-header .row-control-close danger ramp added (D-15 color-mix wash); header .row-name weight 600 → 700 (single identity weight). IdentityHeader.tsx = doc-comment refresh ONLY to the Phase-11 D-01 lifecycle (Clear + Remove; recycle via dormant ▶ go glyph) — no structural/JSX/testid change; identity-header/clear-terminal/header-remove all preserved. color #ffffff → var(--surface) on idle/welcome buttons (value-preserving tokens-first). EXPECTED_API_KEYS stays 20 (renderer-only, src/main untouched). 401 unit GREEN, tsc + eslint clean, tokens-completeness + status-colors GREEN. VISUAL proof (card looks framed, no clipped row) is STRUCTURAL → owned by Plan 11-03's packaged ui:shots:fresh capture, NOT an injection preview.
 
 ### Pending Todos
 
