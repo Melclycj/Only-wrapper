@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: milestone
-status: Phase 10 closed; next = /gsd-plan-phase 11 (Terminal Area Polish + Live Start/Restart — UI-03, SESS-07)
-stopped_at: Phase 11 UI-SPEC approved (6/6 dimensions); next = /gsd-plan-phase 11
+status: Phase 11 planned (4 plans, 3 waves; plan-checker 12/12 PASS); next = /gsd-execute-phase 11
+stopped_at: Phase 11 planned — 4 plans, all gates passed; next = /gsd-execute-phase 11
 last_updated: "2026-06-13T13:47:01.462Z"
 last_activity: 2026-06-13 -- Phase 10 complete (GAP-10-J scroll-invariant status + GAP-10-K CJK rendering closed + approved)
 progress:
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-10 — v1.1 milestone started)
 
 **Core value:** Real terminal fidelity — `claude --rc`, `codex`, `vim`, `ssh`, REPLs all behave exactly like a native terminal inside the wrapper. v1.1 polish + debt work must not regress it at any point.
-**Current focus:** v1.1 — Phase 10 complete; Phase 11 (Terminal Area Polish) next
+**Current focus:** v1.1 — Phase 11 (Terminal Area Polish) planned, 4 plans ready to execute
 
 ## Current Position
 
-Phase: 10 (sidebar-visual-polish) — ✅ COMPLETE (UI-02 satisfied; gate attempt 5 APPROVED unqualified)
-Plan: 15 of 15 complete (round-5 gap-closure 10-14 + 10-15 done)
-Status: Phase 10 closed; next = /gsd-plan-phase 11 (Terminal Area Polish + Live Start/Restart — UI-03, SESS-07)
-Last activity: 2026-06-13 -- Phase 10 complete (GAP-10-J scroll-invariant status + GAP-10-K CJK rendering closed + approved)
+Phase: 11 (terminal-area-polish-live-start-restart) — PLANNED (4 plans, 3 waves; ready to execute)
+Plan: 0 of 4 executed (11-00 Wave 1 · 11-01 + 11-02 Wave 2 parallel/disjoint · 11-03 Wave 3 blocking human gate)
+Status: Phase 11 planned — discuss + UI-SPEC (6/6) + research + 4 plans (plan-checker 12/12 dims PASS); next = /gsd-execute-phase 11
+Last activity: 2026-06-13 -- Phase 11 planned: restart UI removed per operator decision (D-01/D-02), unified terminal card (D-03), agent-aware close copy (D-04); ROADMAP SC4 + SESS-07 amended (D-05)
 
 ### v1.1 Milestone Phases (9–15)
 
@@ -36,7 +36,7 @@ Last activity: 2026-06-13 -- Phase 10 complete (GAP-10-J scroll-invariant status
 |-------|------|--------------|--------|
 | 9 | Design Token Foundation | UI-01 | ✅ Complete |
 | 10 | Sidebar Visual Polish | UI-02 | ✅ Complete |
-| 11 | Terminal Area Polish + Live Start/Restart | UI-03, SESS-07 | Not started |
+| 11 | Terminal Area Polish + Live Start/Restart | UI-03, SESS-07 | Planned (4 plans) |
 | 12 | Session Form — Polish + Edit UX | UI-04, SESS-05, SESS-06 | Not started |
 | 13 | State & Interaction Design | UI-05, UI-06 | Not started |
 | 14 | Code-Review Debt Closure | DEBT-01, DEBT-02 | Not started |
