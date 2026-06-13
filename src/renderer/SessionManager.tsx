@@ -24,6 +24,7 @@ import type { AgentState } from '../shared/agent-state';
 import { SessionView } from './SessionView';
 import { Sidebar } from './Sidebar';
 import { ConfirmModal } from './ConfirmModal';
+import { buildConfirmBody } from './confirm-copy';
 import { ContextMenu } from './ContextMenu';
 import { SessionEditModal } from './SessionEditModal';
 import { PreferencesModal } from './PreferencesModal';
@@ -232,6 +233,12 @@ export function SessionManager(): React.JSX.Element {
   //    its xterm instance (scrollback preserved) and writes the '— restarted HH:MM —'
   //    separator on the resulting fresh 'running' status (hasRunBefore seam). We thread
   //    the new ptyPid into the row so the record mirrors main's source of truth. ──
+  // D-01: retained machinery, no UI entry point. SESS-07 / Phase 11 removed every restart
+  // affordance (sidebar ↻ + context-menu Restart), but the `ptyRestart` IPC bridge key +
+  // main's restart machinery stay (EXPECTED_API_KEYS unchanged at 20). This helper is now
+  // un-surfaced dead code — kept (not deleted) so the mechanism can be re-surfaced without
+  // re-plumbing IPC. No UI surface calls it; the grep gates confirm zero callers.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- D-01: retained machinery, intentionally un-surfaced
   const handleRestart = useCallback((id: LogicalId) => {
     void (async () => {
       const { pid } = await window.api.ptyRestart(id);
@@ -633,7 +640,6 @@ export function SessionManager(): React.JSX.Element {
         onAdd={onAdd}
         onClose={handleCloseRequest}
         onDelete={handleDeleteRequest}
-        onRestart={handleRestart}
         onStart={handleStart}
         onStartNoCmd={handleStartNoCmd}
         onContextMenu={handleContextMenu}
@@ -702,15 +708,19 @@ export function SessionManager(): React.JSX.Element {
             ? `Delete “${closingSession?.name ?? ''}” permanently?`
             : `Remove “${closingSession?.name ?? ''}”?`
         }
-        body={
-          removeMode === 'delete'
-            ? 'This permanently deletes the saved session — its recipe is gone for good.'
-            : closingSession?.configured === true
-              ? 'This ends its running process and moves the session to the Inactive List. You can start it again later.'
-              : closingIsRunning
-                ? 'This ends its running process and removes the session.'
-                : 'This removes the session from the sidebar.'
-        }
+        // D-04: the body is built by the pure, unit-tested buildConfirmBody (confirm-copy.ts)
+        // — it reproduces the four idle bodies byte-for-byte and prepends the agent-aware
+        // escalation prefix when the target row is mid-run ('in-progress') or 'waiting'. The
+        // renderer-only agentState rides the row (read defensively, like errorMessage); pass
+        // it straight through — the builder keys on the canonical AgentState values. ConfirmModal
+        // stays a dumb controlled component (receives the computed string, renders it as a text node).
+        body={buildConfirmBody({
+          removeMode,
+          configured: closingSession?.configured === true,
+          isRunning: closingIsRunning,
+          agentState: (closingSession as { agentState?: AgentState } | null)
+            ?.agentState,
+        })}
         confirmLabel={removeMode === 'delete' ? 'Delete' : 'Remove'}
         onConfirm={confirmClose}
         onCancel={cancelClose}
@@ -722,12 +732,13 @@ export function SessionManager(): React.JSX.Element {
           onClose={closeMenu}
           items={[
             { label: 'Edit', onSelect: () => setEditingId(menuState.id) },
-            // D-03 parity: a dormant (not_started) target offers "Start" (promote);
-            // a has-run target offers "Restart". This is the collapsed-rail control
-            // surface where the per-row ▶/↻ buttons are hidden.
-            menuIsDormant
-              ? { label: 'Start', onSelect: () => handleStart(menuState.id) }
-              : { label: 'Restart', onSelect: () => handleRestart(menuState.id) },
+            // SESS-07 / D-01 (Phase 11): a dormant (not_started) target offers "Start"
+            // (promote); a live (non-dormant) target offers NO restart — recycle is
+            // Remove → Inactive List → Start ▶. The Restart arm was removed; the live
+            // branch simply omits the entry (no null in the ContextMenuItem[] array).
+            ...(menuIsDormant
+              ? [{ label: 'Start', onSelect: () => handleStart(menuState.id) }]
+              : []),
             // D-14: "Start without command" — only for a startable row with a saved
             // startupCommand. Spawns a bare shell skipping the TERM-05 auto-run for this
             // launch (the primary Start above runs the command).

@@ -80,12 +80,11 @@ export interface SidebarProps {
    * same confirm modal as Remove (T-06.1-14). Only offered on Inactive-List entries.
    */
   onDelete: (id: LogicalId) => void;
-  /** Restart a session (TERM-07 / IDENT-02) — same identity, new ptyPid. */
-  onRestart: (id: LogicalId) => void;
   /**
    * Start a dormant (`not_started`) session (D-03/D-06) — promotes the restored
-   * record to live via the existing ptyCreate/create({id}) path (Plan 05-02). The
-   * row control flips ▶ Start (not_started) ↔ ↻ Restart (has run).
+   * record to live via the existing ptyCreate/create({id}) path (Plan 05-02). Per
+   * SESS-07 / D-01 (Phase 11) there is NO restart affordance: a non-dormant live row
+   * shows only Remove ✕; recycling is Remove → Inactive List → Start ▶ (a fresh process).
    */
   onStart: (id: LogicalId) => void;
   /**
@@ -129,14 +128,6 @@ export interface SidebarProps {
   onReorder: (fromId: LogicalId, toId: LogicalId) => void;
 }
 
-// A session has a live PTY only while 'running'. The RESTART affordance is offered
-// once it is no longer running (stopped/exited/error/not_started) so a self-exited
-// session can be relaunched with its identity preserved (D-03a restart-identity half).
-// The destructive Close is offered on every row regardless of status.
-function isRunning(status: SessionRecord['status']): boolean {
-  return status === 'running';
-}
-
 // Props for a single sortable row — the per-session subset of SidebarProps plus the
 // row's own record + active flag. Split out so each row can call useSortable() (a hook
 // must run at the top level of a component, not inside a .map() callback).
@@ -146,7 +137,6 @@ interface SortableRowProps {
   onSelect: (id: LogicalId) => void;
   onClose: (id: LogicalId) => void;
   onDelete: (id: LogicalId) => void;
-  onRestart: (id: LogicalId) => void;
   onStart: (id: LogicalId) => void;
   onStartNoCmd: (id: LogicalId) => void;
   onContextMenu: (id: LogicalId, x: number, y: number) => void;
@@ -166,7 +156,6 @@ function SortableSidebarRow({
   onSelect,
   onClose,
   onDelete,
-  onRestart,
   onStart,
   onStartNoCmd,
   onContextMenu,
@@ -197,7 +186,6 @@ function SortableSidebarRow({
   // even if a stale agentState lingered. Emitted below only when the value is defined.
   const agentAttr = rowAgentAttr(s.status, agentState);
   const stat = presentation(s.status, agentState);
-  const running = isRunning(s.status);
   // SC2 (D-03): a renderer-only spawn-error message rides the SessionRow (not the
   // shared SessionRecord). When the row is in 'error' with a captured message, surface
   // it as the row's title= tooltip so the failure is visible in the sidebar too — the
@@ -205,8 +193,9 @@ function SortableSidebarRow({
   const errorMessage = (s as { errorMessage?: string }).errorMessage;
   const rowTitle =
     s.status === 'error' && errorMessage ? errorMessage : undefined;
-  // A dormant (never-run) session shows Start ▶; a has-run non-running session
-  // (stopped/exited/error) shows Restart ↻ (D-03). Dormant rows also dim slightly.
+  // A dormant (never-run) session shows Start ▶. Per SESS-07 / D-01 (Phase 11) a
+  // has-run non-running row shows NO restart control — only Remove ✕ (recycle is
+  // Remove → Inactive List → Start ▶). Dormant rows also dim slightly.
   const dormant = s.status === 'not_started';
   // DEFECT C (round 3): the ACTIVE dormant/error row renders an in-place IdleCard (whose
   // "▶ Start session" is the primary Start). startAffordances suppresses the duplicate
@@ -314,7 +303,8 @@ function SortableSidebarRow({
       <span className="row-controls">
         {/* DEFECT C: the sidebar ▶ primary Start renders ONLY when startAffordances says
             so — i.e. NOT for the active dormant row whose IdleCard already owns the primary
-            Start. The Restart ↻ shows on a has-run non-running row (not dormant). */}
+            Start. SESS-07 / D-01 (Phase 11): there is NO restart ↻ control — a has-run
+            non-running row offers only Remove ✕ (recycle = Remove → Inactive List → Start ▶). */}
         {startCtl.sidebarStart && (
           <button
             type="button"
@@ -329,22 +319,6 @@ function SortableSidebarRow({
             }}
           >
             <span aria-hidden="true">▶</span>
-          </button>
-        )}
-        {!running && !dormant && (
-          <button
-            type="button"
-            className="row-control"
-            data-testid="restart-session"
-            data-action="restart"
-            title="Restart session"
-            aria-label={`Restart ${s.name}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              onRestart(s.logicalId);
-            }}
-          >
-            <span aria-hidden="true">↻</span>
           </button>
         )}
         {/* D-06/D-14: "Start without command" ⏵ on an Inactive-List entry that has a saved
@@ -432,7 +406,6 @@ export function Sidebar({
   onAdd,
   onClose,
   onDelete,
-  onRestart,
   onStart,
   onStartNoCmd,
   onContextMenu,
@@ -481,7 +454,6 @@ export function Sidebar({
       onSelect={onSelect}
       onClose={onClose}
       onDelete={onDelete}
-      onRestart={onRestart}
       onStart={onStart}
       onStartNoCmd={onStartNoCmd}
       onContextMenu={onContextMenu}

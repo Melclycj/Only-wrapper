@@ -161,10 +161,12 @@
   background: var(--accent);
 }
 
-/* Per-row quick controls (D-03a): a destructive Close on every row, plus a Restart
- * control once a session is no longer running. Revealed on row hover/active to keep
- * the basic list calm (DESIGN.md §"Session header / quick controls"); always present
- * in the DOM so the E2E driver can address data-testid="close-session"/"restart-session". */
+/* Per-row quick controls (D-03a): a destructive Close (Remove ✕) on every Working-Area
+ * row, plus Start ▶ on a dormant Inactive-List entry. SESS-07 / D-01 (Phase 11) removed
+ * the restart control entirely (recycle = Remove → Inactive List → Start ▶). Revealed on
+ * row hover/active to keep the basic list calm (DESIGN.md §"Session header / quick
+ * controls"); always present in the DOM so the E2E driver can address
+ * data-testid="close-session"/"start-session". */
 .sidebar-row .row-controls {
   flex: 0 0 auto;
   display: inline-flex;
