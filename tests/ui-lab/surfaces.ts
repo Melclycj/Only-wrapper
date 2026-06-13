@@ -576,6 +576,57 @@ export const SURFACES: Surface[] = [
     },
   },
   {
+    id: 'terminal-card',
+    title: 'Unified framed session card (UI-03, Phase 11)',
+    designRefs: [
+      'DESIGN.md §Aesthetic direction (18px card, breathing room)',
+      '11-UI-SPEC.md §Interaction Contract (live unified card)',
+    ],
+    expects:
+      'Active terminal reads as ONE framed, rounded card on cream --bg: ' +
+      'header cap (--surface) + charcoal terminal body; gutter visible; ' +
+      'no glyph clipped by a corner; Clear + Remove cluster always visible; no Restart.',
+    prepare: async (ctx) => {
+      // Reuse the terminal-running idiom: activate the first running session so the shot
+      // shows a live focal terminal inside the new framed card. Pause for the WebGL/term
+      // paint to flush before capture.
+      await clickSidebarRow(ctx.ids[0]);
+      await browser.pause(400);
+    },
+  },
+  // PLANNER-NOTE (agent-busy-confirm seam): this surface is a VISUAL confirmation of the
+  // modal CHROME only (the 18px card-family dialog renders correctly). The D-04 copy BRANCH is proven by
+  // the Task-1 unit test — `agentState` is renderer-only state in the sessions array, NOT a
+  // DOM attribute a pure DOM poke can set, so a styling seam cannot drive the escalated copy.
+  // The unit truth-table (confirm-copy.test.ts) is the machine-checkable proof of the
+  // escalation prefix; this capture scores the modal frame against the RUBRIC.
+  {
+    id: 'agent-busy-confirm',
+    title: 'Agent-busy Remove confirm modal (D-04, escalated copy)',
+    designRefs: [
+      '11-UI-SPEC.md §Copywriting Contract (confirm-modal copy)',
+      'DESIGN.md §Design tokens (--radius, --shadow-dialog)',
+    ],
+    expects:
+      'The Remove confirm modal for a busy agent shows the escalated copy prefix before ' +
+      'the normal consequence sentence; the modal chrome is the same 18px card family ' +
+      '(--radius, --shadow-dialog).',
+    prepare: async (ctx) => {
+      // Drive the live Remove confirm via the IdentityHeader Remove glyph (header-remove),
+      // following the inactive-recipes confirm-driving idiom. The escalated COPY itself is
+      // unit-proven (see PLANNER-NOTE above); this drives the modal open for a chrome shot.
+      await clickSidebarRow(ctx.ids[0]);
+      await browser.pause(200);
+      await clickByTestId('header-remove');
+      await waitForTestId('confirm-modal');
+      await browser.pause(300);
+    },
+    cleanup: async () => {
+      await clickByTestId('confirm-cancel');
+      await waitForTestIdGone('confirm-modal');
+    },
+  },
+  {
     id: 'sidebar-collapsed',
     title: 'Collapsed icon rail',
     designRefs: [
