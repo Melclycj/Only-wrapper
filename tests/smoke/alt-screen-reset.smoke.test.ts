@@ -1,20 +1,24 @@
-// SEAM B — alt-screen + mouse-mode-safe frame reset at the restart + abnormal-exit
-// seams (Plan 06.1-02; supersedes the Plan 06-04 term.reset() behavior).
+// SEAM B — alt-screen + mouse-mode-safe frame reset at the ABNORMAL-EXIT seam
+// (Plan 06.1-02; supersedes the Plan 06-04 term.reset() behavior).
 //
 // A kept-alive xterm can be stuck in the alternate-screen buffer AND/OR have mouse
 // tracking left hot if a TUI (vim/less/claude --rc) was killed without sending its own
-// rmcup / mouse-disable. SessionView SEAM B handles two seams (D-07/D-13):
-//   - RESTART (second 'running' transition): write MOUSE_RESET (disable every mouse-
-//     tracking + encoding mode — D-13) and, ONLY when actually in the alternate buffer,
-//     \x1b[?1049l (exit alt-screen, preserve primary scrollback — D-07), then the
-//     "— restarted —" separator. NEVER a full terminal reset. We assert prior primary-
-//     screen scrollback SURVIVES ≥3 restarts (D-07) and mouseTrackingMode reads 'none'
-//     after a restart (D-13).
+// rmcup / mouse-disable. SessionView SEAM B handles this on:
 //   - ABNORMAL EXIT (status 'exited'/'error' from a crash/kill, NOT a user stop):
 //     MOUSE_RESET + \x1b[?1049l (scrollback-PRESERVING — RESEARCH Open Q1) so a frozen
 //     alt-screen frame never survives the reopen AND the scroll-wheel scrolls the buffer
 //     instead of garbling as `[%30/]` mouse-report bytes (D-13). We assert the alt-screen
 //     frame marker is GONE after the kill and the wheel scrolls the buffer.
+//
+// NOTE (Phase 11 — SESS-07 / D-01 / D-05): SEAM B ALSO runs on the in-place RESTART
+// 'running' transition (MOUSE_RESET + gated \x1b[?1049l + the "— restarted —" separator),
+// but Phase 11 removed every restart UI entry point (sidebar ↻ + context-menu Restart).
+// That seam machinery is KEPT but un-surfaced (D-01 "remove the UI, keep the mechanism"),
+// so it is no longer reachable from any user action and cannot be driven from an E2E. The
+// two restart-driving it-blocks that exercised it were removed in lockstep with the UI
+// deletion (Plan 11-01). The recycle path (Remove → Inactive List → Start ▶) spawns a
+// FRESH process which by design writes NO separator — covered by app-restart-restore.smoke
+// + startup-command.smoke. The abnormal-exit coverage below is unaffected.
 //
 // We drive the alternate screen + mouse tracking portably via the raw DECSET escapes
 // \x1b[?1049h / \x1b[?1002h (the same sequences vim/less/claude use) rather than
@@ -31,15 +35,12 @@ import {
   clickAddSession,
   clickSidebarRow,
   sendKeysTo,
-  activeSessionId,
   ptyPidOf,
   killProcess,
   mouseTrackingModeOf,
   viewportYOf,
   scrollViewportUp,
   bufferTypeOf,
-  openContextMenu,
-  clickMenuItem,
 } from './helpers/xterm-driver';
 
 /** data-session-id of the LAST sidebar row (a freshly-added session is appended). */
@@ -52,7 +53,7 @@ async function lastSessionId(): Promise<string> {
   });
 }
 
-describe('Alt-screen + mouse-mode reset on restart + abnormal exit smoke (SEAM B — D-07/D-13, Plan 06.1-02)', () => {
+describe('Alt-screen + mouse-mode reset on abnormal exit smoke (SEAM B — D-07/D-13, Plan 06.1-02; restart-seam coverage retired in Plan 11-01 — restart UI removed)', () => {
   before(async () => {
     await ensureSession();
   });
@@ -106,100 +107,16 @@ describe('Alt-screen + mouse-mode reset on restart + abnormal exit smoke (SEAM B
     expect(await mouseTrackingModeOf(id)).toBe('none'); // mouse released (D-13)
   });
 
-  it('repeated Restart (≥3×) preserves primary-screen scrollback every time (D-07 — MOUSE_RESET + gated 1049l, never RIS)', async () => {
-    await clickAddSession();
-    const id = await lastSessionId();
-    await clickSidebarRow(id);
-
-    // Lay down a distinctive PRIMARY-screen scrollback marker we expect to SURVIVE
-    // EVERY restart (SEAM B preserves the primary buffer — D-07 — and gates the
-    // alt-screen exit on actually being in the alternate buffer so a plain-shell
-    // restart never toggles/trims it; it NEVER calls a full terminal reset which
-    // would wipe it).
-    const keep = `KEEP_${Date.now()}`;
-    await sendKeysTo(id, `echo ${keep}`);
-    await browser.keys(['Enter']);
-    await waitForTextIn(id, keep, 10000);
-
-    // D-07 fix: the previous suite only restarted twice. Restart ≥3 times and assert
-    // the marker survives ALL of them (a cumulative scrollback trim would drop it by
-    // the 3rd restart).
-    const RESTARTS = 3;
-    for (let i = 0; i < RESTARTS; i++) {
-      const before = await ptyPidOf(id);
-      expect(before).toBeGreaterThan(0);
-      // Header ↻ removed (06.1-04 FIX 3); drive restart-in-place via the row context menu.
-      await openContextMenu(id);
-      await clickMenuItem('Restart');
-      await browser.waitUntil(
-        async () => {
-          const n = await ptyPidOf(id);
-          return n > 0 && n !== before;
-        },
-        {
-          timeout: 15000,
-          timeoutMsg: `Restart #${i + 1} did not yield a new ptyPid`,
-        },
-      );
-      expect(await activeSessionId()).toBe(id);
-      // The marker must still be present after THIS restart (asserted every iteration,
-      // not just at the end).
-      await waitForTextIn(id, keep, 10000);
-    }
-
-    await waitForTextIn(id, '— restarted', 10000);
-    const buf = await readBufferOf(id);
-    expect(buf).toContain('— restarted'); // the separator painted on the clean primary screen
-    expect(buf).toContain(keep); // …and the prior scrollback SURVIVED all N restarts (D-07)
-  });
-
-  it('restart resets mouse-tracking mode to none (D-13 — a TUI that turned mouse reporting ON does not leave the wheel hot)', async () => {
-    await clickAddSession();
-    const id = await lastSessionId();
-    await clickSidebarRow(id);
-
-    // Make the session live + interactive first.
-    const marker = `MOUSEON_${Date.now()}`;
-    await sendKeysTo(id, `echo ${marker}`);
-    await browser.keys(['Enter']);
-    await waitForTextIn(id, marker, 10000);
-
-    // Turn ON button-event mouse tracking (\x1b[?1002h) — what an alt-screen TUI does.
-    // printf emits the raw DECSET into the PTY → xterm interprets it → mouseTrackingMode
-    // becomes non-'none'. We assert it actually engaged before restarting.
-    await sendKeysTo(id, `printf '\\033[?1002h'`);
-    await browser.keys(['Enter']);
-    await browser.waitUntil(
-      async () => (await mouseTrackingModeOf(id)) !== 'none',
-      {
-        timeout: 10000,
-        timeoutMsg: 'mouse tracking never engaged after \\x1b[?1002h',
-      },
-    );
-
-    // Restart (via the row context menu — the header ↻ was removed in 06.1-04 FIX 3)
-    // kills + respawns under the same logical id. SEAM B writes MOUSE_RESET on the
-    // restart's 'running' transition → mouseTrackingMode must read 'none' (the killed
-    // TUI never sent its own mouse-disable; D-13).
-    const before = await ptyPidOf(id);
-    await openContextMenu(id);
-    await clickMenuItem('Restart');
-    await browser.waitUntil(
-      async () => {
-        const n = await ptyPidOf(id);
-        return n > 0 && n !== before;
-      },
-      { timeout: 15000, timeoutMsg: 'Restart did not yield a new ptyPid' },
-    );
-    await browser.waitUntil(
-      async () => (await mouseTrackingModeOf(id)) === 'none',
-      {
-        timeout: 10000,
-        timeoutMsg: 'mouseTrackingMode was not reset to none after restart (D-13)',
-      },
-    );
-    expect(await mouseTrackingModeOf(id)).toBe('none');
-  });
+  // NOTE (Plan 11-01): the two restart-seam it-blocks that previously lived here
+  // ("repeated Restart ≥3× preserves scrollback" and "restart resets mouse-tracking to
+  // none") drove the in-place restart via the context-menu Restart item. Phase 11
+  // (SESS-07 / D-01) removed every restart UI entry point, so that seam is no longer
+  // reachable from any user action and cannot be exercised in an E2E. The seam MACHINERY
+  // is kept (D-01 "remove the UI, keep the mechanism") but is now dead at the UI surface.
+  // The MOUSE_RESET + scrollback-preserving \x1b[?1049l logic is still covered below via
+  // the ABNORMAL-EXIT half of SEAM B (the same write path, triggered by a kill instead of
+  // a restart). The recycle path's no-separator fresh spawn is proven by
+  // app-restart-restore.smoke + startup-command.smoke.
 
   it('scroll-wheel scrolls the buffer after a killed alt-screen + mouse-tracking TUI (D-13 — no [%30/] garble)', async () => {
     await clickAddSession();

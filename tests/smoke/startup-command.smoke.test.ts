@@ -5,7 +5,9 @@
 //          and lands in shell history (ArrowUp recalls it).
 //   - D-02: the readiness probe leaves NO visible artifact — the `__JW_READY_`
 //          nonce sentinel never appears in the rendered buffer (invisibility).
-//   - SC3: Restart re-runs the command after the `— restarted` separator.
+//   - SC3: the recycle model (SESS-07 / D-01 / D-05) — Remove → Inactive List →
+//          Start ▶ re-runs the stored command on a FRESH process, with no
+//          `— restarted` separator (the restart verb was removed in Phase 11).
 //   - SC2: a session with NO startupCommand starts as a bare shell (no injection).
 //   - SC4/D-04: the timeout-fallback (bare prompt + ready-fail notice, never inject)
 //          is proven deterministically by the unit state machine
@@ -15,9 +17,11 @@
 // Spawn model (SessionManager): `+ Add session` issues ONE live ptyCreate
 // immediately (T-03-09) — a brand-new row is already RUNNING, not dormant. The
 // edited `startupCommand` is stored-only and takes effect on the NEXT create() for
-// that id, so the deterministic auto-run path here is: Add (live) → Edit (set
-// command) → Save → Restart (re-spawns under the same id WITH the stored command →
-// probe-then-inject fires).
+// that id, so the deterministic auto-run-WITH-command path here is: Add (live) →
+// Edit (set command) → Save → Remove (→ dormant Inactive-List recipe) → Start ▶
+// (the dormant cold spawn runs create()'s probe-then-inject with the stored command).
+// Phase 11 (SESS-07 / D-01 / D-05) removed the in-place restart verb; the dormant
+// Start ▶ is the sole cold-spawn-with-command surface.
 //
 // R1 (2026-06-09): the DORMANT Start ▶ path (IdleCard handleStart) is now driven
 // END-TO-END by its own test below — Add → Edit → Save → Remove (→ dormant recipe)
@@ -30,7 +34,6 @@
 
 import {
   readBuffer,
-  waitForText,
   clickAddSession,
   openContextMenu,
   clickMenuItem,
@@ -69,7 +72,7 @@ async function setStartupCommand(value: string): Promise<void> {
   }, value);
 }
 
-/** Open the row context menu for `id` and click `label` (Edit / Restart / Close). */
+/** Open the row context menu for `id` and click `label` (Edit / Remove / Start). */
 async function menuAction(id: string, label: string): Promise<void> {
   await openContextMenu(id);
   await clickMenuItem(label);
@@ -77,9 +80,12 @@ async function menuAction(id: string, label: string): Promise<void> {
 
 describe('Startup-command auto-run smoke (TERM-05: SC1/SC2/SC3/D-02/D-04)', () => {
   it('auto-runs a non-empty startupCommand — output visible, command typed (SC1) + nonce invisible (D-02)', async () => {
-    // Add a live session, set a benign visible startup command via the edit modal,
-    // then Restart — the re-spawn runs create()'s probe-then-inject with the stored
-    // command (the cold-spawn path; the dormant Start ▶ uses the same hook — D-05).
+    // Add a live session, set a benign visible startup command via the edit modal, then
+    // recycle it to drive the cold-spawn-WITH-command path: a brand-new Add spawns live
+    // BEFORE the command is stored, so the deterministic auto-run path is now Remove →
+    // Inactive List → Start ▶ (the dormant cold spawn runs create()'s probe-then-inject
+    // with the stored command). SESS-07 / D-01 / D-05 (Phase 11) removed the restart verb;
+    // this is the only auto-run-on-cold-spawn surface.
     await clickAddSession();
     const id = await sessionIdAt(0);
 
@@ -87,11 +93,38 @@ describe('Startup-command auto-run smoke (TERM-05: SC1/SC2/SC3/D-02/D-04)', () =
     await setStartupCommand('echo JW_STARTUP_OK');
     await clickMenuItem('Save');
 
-    await menuAction(id, 'Restart');
+    // Recycle: Remove (keeps the recipe → Inactive List) → select → dormant Start ▶.
+    await menuAction(id, 'Remove');
+    await clickByTestId('confirm-close');
+    await browser.waitUntil(
+      async () =>
+        browser.execute((sid: string) => {
+          const container = document.querySelector(
+            '[data-testid="inactive-list"]',
+          );
+          return !!container?.querySelector(
+            `.sidebar-row[data-session-id="${sid}"]`,
+          );
+        }, id),
+      {
+        timeout: 8000,
+        timeoutMsg: 'Removed configured session did not move into the Inactive List',
+      },
+    );
+    await clickSidebarRow(id);
+    await browser.waitUntil(
+      async () =>
+        browser.execute(
+          () =>
+            document.querySelector('[data-testid="idle-start-session"]') !== null,
+        ),
+      { timeout: 6000, timeoutMsg: 'IdleCard ▶ Start did not render for the dormant row' },
+    );
+    await clickByTestId('idle-start-session');
 
     // SC1: the command's OUTPUT appears AND the command text was typed at the prompt.
-    await waitForText('JW_STARTUP_OK', 8000);
-    const buf = await readBuffer();
+    await waitForTextIn(id, 'JW_STARTUP_OK', 10000);
+    const buf = await readBufferOf(id);
     expect(buf).toContain('JW_STARTUP_OK'); // command output (SC1)
     expect(buf).toContain('echo JW_STARTUP_OK'); // the command typed at the prompt (SC1)
 
@@ -111,26 +144,58 @@ describe('Startup-command auto-run smoke (TERM-05: SC1/SC2/SC3/D-02/D-04)', () =
     await browser.keys(['Escape']);
   });
 
-  it('Restart re-runs the startupCommand after the "— restarted —" separator (SC3)', async () => {
+  it('SC3 (recycle model): Remove → Inactive List → Start ▶ re-runs the stored startupCommand on a fresh process — no "— restarted" separator', async () => {
+    // SESS-07 / D-01 / D-05 (Phase 11): the restart verb is gone. The recycle path is now
+    // Remove → Inactive List → Start ▶ (a FRESH process), NOT an in-place restart. The SC1
+    // session at index 0 carries the stored `echo JW_STARTUP_OK` recipe (a startupCommand →
+    // identity), so Remove retires it to the Inactive List rather than dropping it. Re-running
+    // it via the dormant Start ▶ must re-run the SAME command WITHOUT any '— restarted'
+    // separator (a fresh PTY, not a relaunch of the kept-alive xterm).
     const id = await sessionIdAt(0);
-    await menuAction(id, 'Restart');
 
-    // SC3 / IN-03: anchor on the FULL '— restarted ' separator literal (not a bare
-    // indexOf('restarted')), so the assertion is robust to incidental occurrences of
-    // the word "restarted" in shell output. The command must run AGAIN after the
-    // separator (output reappears below it).
-    const SEPARATOR = '— restarted ';
+    // Remove the configured live session → keeps the recipe → lands in the Inactive List.
+    await menuAction(id, 'Remove');
+    await clickByTestId('confirm-close'); // confirm the Remove
+
+    // Assert the row moved into the Inactive List (dormant recipe).
     await browser.waitUntil(
-      async () => {
-        const b = await readBuffer();
-        const sep = b.indexOf(SEPARATOR);
-        return sep !== -1 && b.lastIndexOf('JW_STARTUP_OK') > sep;
+      async () =>
+        browser.execute((sid: string) => {
+          const container = document.querySelector(
+            '[data-testid="inactive-list"]',
+          );
+          return !!container?.querySelector(
+            `.sidebar-row[data-session-id="${sid}"]`,
+          );
+        }, id),
+      {
+        timeout: 8000,
+        timeoutMsg: 'Removed configured session did not move into the Inactive List',
       },
-      { timeout: 8000, timeoutMsg: 'Startup command did not re-run after restart (SC3)' },
     );
-    expect(await readBuffer()).toContain('JW_STARTUP_OK');
-    // D-02 holds across the restart too — the probe stays invisible.
-    expect(await readBuffer()).not.toContain('__JW_READY_');
+
+    // Select the dormant row so its IdleCard takes the terminal area, then drive the
+    // IdleCard ▶ Start (handleStart → fresh cold spawn that runs the stored command).
+    await clickSidebarRow(id);
+    await browser.waitUntil(
+      async () =>
+        browser.execute(
+          () =>
+            document.querySelector('[data-testid="idle-start-session"]') !== null,
+        ),
+      { timeout: 6000, timeoutMsg: 'IdleCard ▶ Start did not render for the dormant row' },
+    );
+    await clickByTestId('idle-start-session');
+
+    // The stored command re-runs on the fresh process — output + typed command reappear.
+    await waitForTextIn(id, 'JW_STARTUP_OK', 10000);
+    const buf = await readBufferOf(id);
+    expect(buf).toContain('JW_STARTUP_OK'); // command output re-ran (SC3 recycle)
+    expect(buf).toContain('echo JW_STARTUP_OK'); // the command typed at the prompt
+    // A fresh process is NOT a restart: the '— restarted' separator must NOT appear.
+    expect(buf).not.toContain('— restarted');
+    // D-02 holds across the recycle too — the probe stays invisible.
+    expect(buf).not.toContain('__JW_READY_');
   });
 
   // ── R1 regression (2026-06-09): the DORMANT Start ▶ path (the IdleCard's big

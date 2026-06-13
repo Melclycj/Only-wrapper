@@ -1,5 +1,6 @@
 // SC5 / TERM-12 — header Clear/Remove controls + the Clear chord (Plan 06-04, D-11..D-13;
-// 06.1-04 FIX 3 removed the header Restart ↻ button — user decision).
+// 06.1-04 FIX 3 removed the header Restart ↻ button; Phase 11 / SESS-07 / D-01 removed the
+// LAST restart entry point — the row context-menu Restart item).
 //
 // Asserts:
 //   - The header Clear control wipes the visible buffer (drops scrollback) WITHOUT
@@ -9,10 +10,10 @@
 //     before-input-event (matchClearKey → {kind:'clear'} on the EXISTING session:switch
 //     channel), produces the same Clear effect — proving it never reaches xterm/PTY.
 //   - The header has NO Restart (↻) button and NO Start button (06.1-04 FIX 3 / D-06):
-//     the live header is Clear + Remove only. Restart-in-place still exists via the
-//     row/context-menu Restart (covered here via the context menu + by
-//     startup-command.smoke.test.ts) — it re-spawns under the SAME logicalId with a NEW
-//     ptyPid and renders the "— restarted —" separator.
+//     the live header is Clear + Remove only.
+//   - SESS-07 / D-01 (Phase 11): a live (running) row's context menu offers NO 'Restart'
+//     item — every restart affordance is gone. Recycling is Remove → Inactive List →
+//     Start ▶ (a fresh process), proven by startup-command.smoke + app-restart-restore.smoke.
 
 /// <reference types="@wdio/electron-service" />
 /// <reference types="@wdio/mocha-framework" />
@@ -22,31 +23,23 @@ import {
   waitForText,
   sendKeys,
   ensureSession,
-  clickAddSession,
-  clickSidebarRow,
-  sendKeysTo,
-  readBufferOf,
-  waitForTextIn,
   pressClearChord,
   clickByTestId,
   hasTestId,
   activeSessionId,
-  ptyPidOf,
   openContextMenu,
-  clickMenuItem,
 } from './helpers/xterm-driver';
 
-/** data-session-id of the LAST sidebar row (a freshly-added session is appended). */
-async function lastSessionId(): Promise<string> {
-  return browser.execute(() => {
-    const rows = document.querySelectorAll<HTMLElement>(
-      '.sidebar-row[data-session-id]',
-    );
-    return rows[rows.length - 1]?.getAttribute('data-session-id') ?? '';
-  });
+/** Visible text labels of the currently-open context menu's items. */
+async function contextMenuLabels(): Promise<string[]> {
+  return browser.execute(() =>
+    Array.from(
+      document.querySelectorAll<HTMLElement>('.context-menu-item'),
+    ).map((el) => (el.textContent ?? '').trim()),
+  );
 }
 
-describe('Header Clear/Restart controls + Clear chord smoke (SC5 — Plan 06-04)', () => {
+describe('Header Clear/Remove controls + Clear chord smoke (SC5 — Plan 06-04)', () => {
   before(async () => {
     await ensureSession();
   });
@@ -112,61 +105,25 @@ describe('Header Clear/Restart controls + Clear chord smoke (SC5 — Plan 06-04)
     expect(await hasTestId('header-remove')).toBe(true);
   });
 
-  it('Restart (via the row context menu) re-spawns under the same logicalId with a new ptyPid + the — restarted — separator', async () => {
-    // Add a FRESH session so this SessionView captures its FIRST 'running' transition
-    // (which arms the hasRunBefore restart seam) before we restart it — a reused/restored
-    // session can mount AFTER its initial 'running' and miss it (the dormant-start seam
-    // gap), which is out of scope here. Mirrors the startup-command smoke's restart setup.
-    await clickAddSession();
-    const id = await lastSessionId();
+  it('the row context menu offers NO Restart item — every restart affordance is gone (SESS-07 / D-01)', async () => {
+    // The session ensured above is running (a live Working-Area row). Phase 11 deleted the
+    // last restart entry point: the context-menu 'Restart' arm. Open the live row's menu
+    // and assert its item labels do NOT include 'Restart' (recycle is Remove → Inactive
+    // List → Start ▶, covered by startup-command.smoke + app-restart-restore.smoke).
+    const id = await activeSessionId();
     expect(id).not.toBe('');
-    await clickSidebarRow(id);
 
-    // Drive a marker into the fresh session and wait for its echo — this proves the
-    // SessionView is mounted, active, and has seen its first 'running' (so hasRunBefore
-    // is armed). With multiple sessions mounted the single-pane __term fallback is
-    // ambiguous, so address THIS pane by id (sendKeysTo/waitForTextIn).
-    const marker = `PRERESTART_${Date.now()}`;
-    await sendKeysTo(id, `echo ${marker}`);
-    await browser.keys(['Enter']);
-    await waitForTextIn(id, marker, 10000);
-
-    const before = await ptyPidOf(id);
-    expect(before).toBeGreaterThan(0);
-
-    // Restart #1: re-spawns under the SAME logicalId with a NEW pid. The initial spawn's
-    // 'running' is broadcast SYNCHRONOUSLY during ptyCreate — before SessionView's
-    // onPtyStatus subscription binds — so this stopped→running transition is the one that
-    // ARMS the hasRunBefore restart seam (the same behavior the startup-command smoke
-    // relies on for its separator assertion). Proves the same-id/new-pid restart. The
-    // header ↻ was removed (FIX 3); Restart now lives on the row context menu.
     await openContextMenu(id);
-    await clickMenuItem('Restart');
+    // The menu paints synchronously off the contextmenu event; wait until its items render.
     await browser.waitUntil(
-      async () => {
-        const now = await ptyPidOf(id);
-        return now > 0 && now !== before;
-      },
-      { timeout: 15000, timeoutMsg: 'Restart did not yield a new ptyPid for the same logicalId' },
+      async () => (await contextMenuLabels()).length > 0,
+      { timeout: 5000, timeoutMsg: 'context menu did not open for the live row' },
     );
-    expect(await activeSessionId()).toBe(id);
-    const afterFirst = await ptyPidOf(id);
-
-    // Restart #2: now that hasRunBefore is armed, the second 'running' transition writes
-    // the SC3 seam — \x1b[?1049l (exit any alt-screen, preserve scrollback) THEN the dim
-    // "— restarted HH:MM —" separator into the kept-alive xterm (Phase-3 D-03 / D-15).
-    await openContextMenu(id);
-    await clickMenuItem('Restart');
-    await browser.waitUntil(
-      async () => {
-        const now = await ptyPidOf(id);
-        return now > 0 && now !== afterFirst;
-      },
-      { timeout: 15000, timeoutMsg: 'Second restart did not yield a new ptyPid' },
-    );
-    expect(await activeSessionId()).toBe(id);
-
-    await waitForTextIn(id, '— restarted', 10000);
-    expect(await readBufferOf(id)).toContain('— restarted');
+    const labels = await contextMenuLabels();
+    expect(labels).not.toContain('Restart');
+    // A live row still offers Edit + Remove (the surviving destructive verb); no Start either
+    // (Start is a dormant-only arm). Close the menu so it cannot intercept later keystrokes.
+    expect(labels).toContain('Remove');
+    await browser.keys(['Escape']);
   });
 });
