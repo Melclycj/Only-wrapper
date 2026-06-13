@@ -86,7 +86,11 @@
   2. The Working Area (live terminal) vs Inactive List (dormant entries) distinction is obvious at a glance, and Start ▶ on inactive entries vs the live controls are unambiguous.
   3. The live lifecycle is Start / Remove / Clear with no restart control anywhere; recycling a session is the discoverable Remove → Start (fresh) path — the user is never forced to type `exit`.
   4. Removing the restart UI does not regress terminal fidelity (no scroll / alt-screen / fit regression), the hidden `ptyRestart` mechanism + the IPC bridge budget (`EXPECTED_API_KEYS` = 20) are unchanged, and a configured session keeps its logical id + recipe across the Remove → Start recycle.
-**Plans**: TBD
+**Plans**: 4 plans
+- [ ] 11-00-PLAN.md — Wave-0 foundation: pure `buildConfirmBody` (D-04) + O-1 A1 recycle-path guard + ui-lab evidence surfaces
+- [ ] 11-01-PLAN.md — Restart-UI deletion (sidebar ↻ + context-menu Restart) + D-04 confirm copy wiring + restart-smoke rewrites (SESS-07/D-01/D-02)
+- [ ] 11-02-PLAN.md — Unified session-card framing (terminal-area.css) + IdleCard sibling + Remove danger ramp + D-03a fidelity guardrail (UI-03/D-03)
+- [ ] 11-03-PLAN.md — Phase gate: full packaged suite + fresh ui:shots:fresh capture + BLOCKING end-of-phase human-verify
 **UI hint**: yes
 
 ### Phase 12: Session Form — Polish + Edit UX
