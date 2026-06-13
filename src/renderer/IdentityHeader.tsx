@@ -10,13 +10,12 @@
 // .terminal-area above the .viewport-stack (RESEARCH Open Q2). The .row-name flex:1
 // pushes the badge + controls to the right edge.
 //
-// D-06 (two-bucket header — supersedes Phase-6 D-11): the header is LIVE-ONLY. It shows
-// Clear (always) + a Remove affordance. There is NO header Start (Start now lives on
-// every Inactive-List entry — D-01/D-06) and NO Stop verb. The header Restart (↻) was
-// REMOVED (06.1-04 FIX 3, user decision): restart capability lives via Remove →
-// Start-from-Inactive-List (a fresh process per D-04). A dormant/errored active session
-// renders the IdleCard instead, so the header simply returns null when the active
-// session is not running.
+// D-06 / D-01 (Phase 11 — the unified card cap): the header is LIVE-ONLY and carries
+// exactly two controls — Clear (always) + a Remove affordance. The lifecycle verb set is
+// Clear / Remove only; the recycle model is Remove → Inactive List → the dormant ▶ go
+// glyph (a fresh process per D-04), so no recycle verb lives in this cap. A dormant or
+// errored active session renders the IdleCard instead, so the header simply returns null
+// when the active session is not running.
 // D-03 (Remove vs Delete): Remove (this header) kills the PTY but KEEPS the recipe for a
 // configured session → it lands in the Inactive List; for an ephemeral session it is
 // gone. Permanent Delete lives on the Inactive-List entry (the sidebar), behind a confirm.
@@ -49,9 +48,10 @@ export interface IdentityHeaderProps {
   onClear: (id: LogicalId) => void;
   /**
    * Remove the active LIVE session (D-03/D-06): kill the PTY but KEEP the recipe — a
-   * configured session lands in the Inactive List (restartable), an ephemeral session is
-   * gone. This is the live header's destructive action; permanent Delete lives on the
-   * Inactive-List entry. SessionManager.handleRemoveRequest opens the confirm flow.
+   * configured session lands in the Inactive List (recyclable via the dormant ▶ go glyph),
+   * an ephemeral session is gone. This is the live header's destructive action; permanent
+   * Delete lives on the Inactive-List entry. SessionManager.handleRemoveRequest opens the
+   * confirm flow.
    */
   onRemove: (id: LogicalId) => void;
 }
@@ -63,8 +63,8 @@ export function IdentityHeader({
   onRemove,
 }: IdentityHeaderProps): React.JSX.Element | null {
   // D-06: the header is LIVE-ONLY. A null active session OR a non-running one (dormant /
-  // errored — which renders the IdleCard instead) shows no header. This is what drops the
-  // contextual header Start entirely (it now lives on every Inactive-List entry).
+  // errored — which renders the IdleCard instead) shows no header. This is what drops any
+  // contextual go-verb from the cap (the dormant ▶ go glyph lives on the Inactive-List entry).
   if (session === null || session.status !== 'running') return null;
   const style = presentation(session.status, agentState);
   const id = session.logicalId;
@@ -80,12 +80,12 @@ export function IdentityHeader({
         <span className="status-dot" />
         {style.label}
       </span>
-      {/* Right-aligned control cluster (D-06): Clear + Remove — live-only, NO Start, NO
-          Stop, NO Restart (the header ↻ was removed in 06.1-04 FIX 3). margin-left:auto
-          sits it at the far edge after the badge (the .row-name flex already consumes
-          the middle). Buttons copy the Sidebar .row-control shape verbatim; Clear is a
-          text-labelled button. All are native Tab-focusable <button>s (keyboard-focus
-          fix lives in SessionView). */}
+      {/* Right-aligned control cluster (D-06 / D-01): Clear + Remove — live-only; the cap
+          carries no go-verb and no stop-verb (recycle is Remove → Inactive List → the
+          dormant ▶ go glyph). margin-left:auto sits it at the far edge after the badge (the
+          .row-name flex already consumes the middle). Buttons copy the Sidebar .row-control
+          shape verbatim; Clear is a text-labelled button. All are native Tab-focusable
+          <button>s (keyboard-focus fix lives in SessionView). */}
       <span className="header-controls">
         <button
           type="button"
