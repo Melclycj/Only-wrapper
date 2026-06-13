@@ -77,65 +77,87 @@
 **UI hint**: yes
 
 ### Phase 11: Terminal Area Polish + Live Start/Restart
+
 > **Amended 2026-06-13** (operator decision at `11-discuss`): the **restart UI is removed**, not added. Lifecycle vocabulary becomes Start / Remove / Clear; recycling a session is Remove → Start (fresh). The original "Live Start/Restart" framing + the discoverable-restart / scrollback-preserving criteria are superseded below. The `ptyRestart` mechanism is kept hidden (`EXPECTED_API_KEYS` stays 20). See `11-CONTEXT.md` D-01/D-02/D-05. (Heading text kept verbatim so the phase dir slug stays stable.)
 **Goal**: The terminal-area chrome is visually polished and clearly structured — the active session reads as one framed, breathing session card (header + terminal), the dormant IdleCard reads as its sibling, and the live-session controls (Clear / Remove, plus Start on inactive entries) read as a designed cluster. The session lifecycle is simplified to Start / Remove / Clear — the confusing restart duality is removed, and recycling a session (Remove → Start) no longer requires typing `exit`.
 **Depends on**: Phase 9
 **Requirements**: UI-03, SESS-07
 **Success Criteria** (what must be TRUE):
+
   1. A human sees a clearly structured terminal area — the active session is a framed, breathing terminal card (not an edge-to-edge rectangle), the dormant IdleCard reads as its sibling, and the live-session controls (Clear / Remove) read as a designed cluster.
   2. The Working Area (live terminal) vs Inactive List (dormant entries) distinction is obvious at a glance, and Start ▶ on inactive entries vs the live controls are unambiguous.
   3. The live lifecycle is Start / Remove / Clear with no restart control anywhere; recycling a session is the discoverable Remove → Start (fresh) path — the user is never forced to type `exit`.
-  4. Removing the restart UI does not regress terminal fidelity (no scroll / alt-screen / fit regression), the hidden `ptyRestart` mechanism + the IPC bridge budget (`EXPECTED_API_KEYS` = 20) are unchanged, and a configured session keeps its logical id + recipe across the Remove → Start recycle.
-**Plans**: 4 plans
+  4. Removing the restart UI does not regress terminal fidelity (no scroll / alt-screen / fit regression), the hidden `ptyRestart` mechanism + the IPC bridge budget (`EXPECTED_API_KEYS` = 20) are unchanged, and a configured session keeps its logical id + recipe across the Remove → Start recycle.**Plans**: 4 plans
+
+**Wave 1**
+
 - [ ] 11-00-PLAN.md — Wave-0 foundation: pure `buildConfirmBody` (D-04) + O-1 A1 recycle-path guard + ui-lab evidence surfaces
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 11-01-PLAN.md — Restart-UI deletion (sidebar ↻ + context-menu Restart) + D-04 confirm copy wiring + restart-smoke rewrites (SESS-07/D-01/D-02)
 - [ ] 11-02-PLAN.md — Unified session-card framing (terminal-area.css) + IdleCard sibling + Remove danger ramp + D-03a fidelity guardrail (UI-03/D-03)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 11-03-PLAN.md — Phase gate: full packaged suite + fresh ui:shots:fresh capture + BLOCKING end-of-phase human-verify
+
 **UI hint**: yes
 
 ### Phase 12: Session Form — Polish + Edit UX
+
 **Goal**: The create/edit session form reads as one designed surface (grouped fields, clear labels, icon/color picker, inline validation), the Edit modal pre-fills the actually-persisted working directory and startup command, and the working-directory field offers a native Browse… folder picker.
 **Depends on**: Phase 9
 **Requirements**: UI-04, SESS-05, SESS-06
 **Success Criteria** (what must be TRUE):
+
   1. A human opening the create/edit form sees one cohesive designed surface — grouped fields, clear labels, a real icon/color picker, and inline validation feedback rather than a raw stack of inputs.
   2. Re-opening the Edit Session modal shows the saved working directory and startup command already filled in, matching exactly what is persisted in main (the renderer record is refreshed from main after spawn / save, fixing the empty-field root cause).
   3. A native "Browse…" folder picker fills the working-directory field with an absolute path, and main still validates the value (the CR-01 path guard still gates it).
   4. Any new IPC bridge surface added for the folder picker is accounted for against the security key budget, and the EXPECTED_API_KEYS guard stays green.
+
 **Plans**: TBD
 **UI hint**: yes
 
 ### Phase 13: State & Interaction Design
+
 **Goal**: Empty, loading, and error states across the app are intentionally designed and informative, and every interactive control has consistent, designed hover / focus / active states with a visible keyboard-focus indicator.
 **Depends on**: Phase 10, Phase 11, Phase 12
 **Requirements**: UI-05, UI-06
 **Success Criteria** (what must be TRUE):
+
   1. A human sees designed, informative empty / loading / error states — no-sessions-yet, session-starting, spawn/error cards, and the ready-fail notice all communicate clearly instead of appearing raw or blank.
   2. Hovering, focusing, and activating any control produces consistent, intentional visual feedback across the whole app.
   3. Keyboard-only navigation shows a visible focus indicator on every actionable element, so a human tabbing through can always see where focus is.
   4. These interaction states layer onto the existing surfaces without regressing terminal focus behavior or the app-wins keyboard switching.
+
 **Plans**: TBD
 **UI hint**: yes
 
 ### Phase 14: Code-Review Debt Closure
+
 **Goal**: The Phase 05.1 deferred code-review findings are resolved or explicitly closed with rationale, and the Phase 06.1 lifecycle criticals are correctly redone with tests that exercise the real code path (including failure/edge paths) followed by a mandatory user re-verify in the running app. Automated green is explicitly NOT accepted as proof of the lifecycle fixes — the 2026-06-09 remediation passed the suite while broken and was reverted.
 **Depends on**: Phase 8 (reads `05.1-REVIEW.md` + `06.1-REVIEW.md` artifacts; independent of the UI phases)
 **Requirements**: DEBT-01, DEBT-02
 **Success Criteria** (what must be TRUE):
+
   1. Every Phase 05.1 deferred finding (WR-01..05, IN-01..03) is either fixed or explicitly closed with written rationale — notably WR-01 (dead D-02 invisibility-scrub path) and WR-02 (probe-matcher same-chunk-echo false-positive), tuned against real cold zsh/bash captures.
   2. The Phase 06.1 criticals (CR-01 dock-relaunch quit-flag reset, CR-02 concurrent-restart lock cleared in `finally`, CR-03 failed-write-does-not-clear-dirty + follow-up write, CR-04 setOrder id-validate + clamp, WR-02 handleRestart `pid > 0` guard) are redone with tests that exercise the real failure/edge paths (failed respawn, write rejection), not a suite that can pass while broken.
   3. A human re-verifies the lifecycle in the running app — start / restart / quit→relaunch round-trip / rapid double-restart / mid-write durability — and signs off; the fix is not considered done on automated green alone.
   4. No regression in persistence or lifecycle, and terminal fidelity is unchanged.
+
 **Plans**: TBD
 
 ### Phase 15: Formal Validation + Windows Verification Kit
+
 **Goal**: The Nyquist validation flags for phases 01/02/03 are flipped to compliant with backing evidence (formal closure only — the functional behavior already passed during v1.0), and a ready-to-run Windows real-hardware verification kit is delivered. The actual Windows real-hardware run (WIN-02) is carried as an explicit deferred human-UAT sign-off gate the user executes on real Windows hardware (mirroring the existing `08-HUMAN-UAT.md` pattern); it does not block this phase's delivery.
 **Depends on**: Phase 8 (reads phase 01/02/03 evidence + phase 08 packaging artifacts); independent of the UI phases
 **Requirements**: VAL-01, WIN-01, WIN-02
 **Success Criteria** (what must be TRUE):
+
   1. The `nyquist_compliant` flags for phases 01, 02, and 03 are flipped to true with the backing evidence cited (the functional verification that already passed during v1.0).
   2. A Windows real-hardware verification kit exists and is ready to execute without further setup — a UAT checklist (installer run, shell-dropdown enumeration, per-shell `claude --rc` auto-run, pre-1809 ConPTY dialog), the build artifacts, and run instructions.
   3. WIN-02 is recorded as an explicit deferred human-UAT gate (e.g. a `HUMAN-UAT.md`) the user runs on real Windows hardware and signs off, mirroring the `08-HUMAN-UAT.md` precedent; the milestone delivers the kit and earlier phases are not blocked on it.
   4. The kit-building work leaves the app runnable on macOS and does not regress terminal fidelity.
-**Plans**: TBD
 
+**Plans**: TBD
