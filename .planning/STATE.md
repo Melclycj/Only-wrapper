@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: milestone
 status: Phase 10 closed; next = /gsd-plan-phase 11 (Terminal Area Polish + Live Start/Restart — UI-03, SESS-07)
-stopped_at: Phase 11 context gathered — restart UI removal decided (D-01/D-02), unified terminal card (D-03), agent-aware close copy (D-04); ROADMAP SC4 + REQUIREMENTS SESS-07 to be amended (D-05). Next = UI bridge / /gsd-ui-phase 11
-last_updated: "2026-06-13T10:59:11.483Z"
+stopped_at: Phase 11 UI-SPEC approved (6/6 dimensions); next = /gsd-plan-phase 11
+last_updated: "2026-06-13T11:08:24.189Z"
 last_activity: 2026-06-13 -- Phase 10 complete (GAP-10-J scroll-invariant status + GAP-10-K CJK rendering closed + approved)
 progress:
   total_phases: 6
@@ -240,9 +240,9 @@ Acknowledged and deferred at v1.0 milestone close on 2026-06-10 (option B — ca
 
 ## Session Continuity
 
-Last session: 2026-06-13T10:59:11.472Z
-Stopped at: Phase 11 context gathered — restart UI removal decided (D-01/D-02), unified terminal card (D-03), agent-aware close copy (D-04); ROADMAP SC4 + REQUIREMENTS SESS-07 to be amended (D-05). Next = UI bridge / /gsd-ui-phase 11
-Resume file: .planning/phases/11-terminal-area-polish-live-start-restart/11-CONTEXT.md
+Last session: 2026-06-13T11:08:24.184Z
+Stopped at: Phase 11 UI-SPEC approved (6/6 dimensions); next = /gsd-plan-phase 11
+Resume file: .planning/phases/11-terminal-area-polish-live-start-restart/11-UI-SPEC.md
 
 ## Operator Next Steps
 
