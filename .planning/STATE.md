@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: milestone
-status: executing
-stopped_at: Phase 10 COMPLETE — gate attempt 5 APPROVED (unqualified); UI-02 satisfied, nyquist_compliant true, all 15 plans done. Next = /gsd-plan-phase 11 (Terminal Area Polish — UI-03, SESS-07)
-last_updated: "2026-06-13T00:45:00.000Z"
-last_activity: 2026-06-13 -- Phase 10 COMPLETE (round-5 gap-closure: GAP-10-J scroll-invariant status + GAP-10-K CJK rendering closed; gate attempt 5 APPROVED)
+status: Phase 10 closed; next = /gsd-plan-phase 11 (Terminal Area Polish + Live Start/Restart — UI-03, SESS-07)
+stopped_at: Phase 11 context gathered — restart UI removal decided (D-01/D-02), unified terminal card (D-03), agent-aware close copy (D-04); ROADMAP SC4 + REQUIREMENTS SESS-07 to be amended (D-05). Next = UI bridge / /gsd-ui-phase 11
+last_updated: "2026-06-13T10:59:11.483Z"
+last_activity: 2026-06-13 -- Phase 10 complete (GAP-10-J scroll-invariant status + GAP-10-K CJK rendering closed + approved)
 progress:
-  total_phases: 1
+  total_phases: 6
   completed_phases: 1
   total_plans: 15
   completed_plans: 15
-  percent: 100
+  percent: 17
 ---
 
 # Project State
@@ -240,9 +240,9 @@ Acknowledged and deferred at v1.0 milestone close on 2026-06-10 (option B — ca
 
 ## Session Continuity
 
-Last session: 2026-06-12 -- 10-12 round-4 gap-closure code fixes executed (GAP-10-H + GAP-10-I)
-Stopped at: Phase 10 plan 10-12 executed — GAP-10-H fix + GAP-10-I amendment landed; awaiting the 10-13 round-4 gate (attempt 4)
-Resume file: .planning/phases/10-sidebar-visual-polish/10-12-SUMMARY.md
+Last session: 2026-06-13T10:59:11.472Z
+Stopped at: Phase 11 context gathered — restart UI removal decided (D-01/D-02), unified terminal card (D-03), agent-aware close copy (D-04); ROADMAP SC4 + REQUIREMENTS SESS-07 to be amended (D-05). Next = UI bridge / /gsd-ui-phase 11
+Resume file: .planning/phases/11-terminal-area-polish-live-start-restart/11-CONTEXT.md
 
 ## Operator Next Steps
 
