@@ -91,7 +91,7 @@
 
 **Wave 1**
 
-- [ ] 11-00-PLAN.md — Wave-0 foundation: pure `buildConfirmBody` (D-04) + O-1 A1 recycle-path guard + ui-lab evidence surfaces
+- [x] 11-00-PLAN.md — Wave-0 foundation: pure `buildConfirmBody` (D-04) + O-1 A1 recycle-path guard + ui-lab evidence surfaces
 
 **Wave 2** *(blocked on Wave 1 completion)*
 

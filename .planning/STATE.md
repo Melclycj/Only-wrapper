@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: milestone
-status: Phase 11 planned (4 plans, 3 waves; plan-checker 12/12 PASS); next = /gsd-execute-phase 11
-stopped_at: Phase 11 planned — 4 plans, all gates passed; next = /gsd-execute-phase 11
-last_updated: "2026-06-13T13:47:01.462Z"
-last_activity: 2026-06-13 -- Phase 10 complete (GAP-10-J scroll-invariant status + GAP-10-K CJK rendering closed + approved)
+status: executing
+stopped_at: Phase 11 UI-SPEC approved (6/6 dimensions); next = /gsd-plan-phase 11
+last_updated: "2026-06-13T15:55:12.715Z"
+last_activity: 2026-06-13 -- Phase 11 execution started
 progress:
   total_phases: 6
   completed_phases: 1
-  total_plans: 15
-  completed_plans: 15
+  total_plans: 19
+  completed_plans: 16
   percent: 17
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-10 — v1.1 milestone started)
 
 **Core value:** Real terminal fidelity — `claude --rc`, `codex`, `vim`, `ssh`, REPLs all behave exactly like a native terminal inside the wrapper. v1.1 polish + debt work must not regress it at any point.
-**Current focus:** v1.1 — Phase 11 (Terminal Area Polish) planned, 4 plans ready to execute
+**Current focus:** Phase 11 — Terminal Area Polish + Live Start/Restart
 
 ## Current Position
 
-Phase: 11 (terminal-area-polish-live-start-restart) — PLANNED (4 plans, 3 waves; ready to execute)
-Plan: 0 of 4 executed (11-00 Wave 1 · 11-01 + 11-02 Wave 2 parallel/disjoint · 11-03 Wave 3 blocking human gate)
-Status: Phase 11 planned — discuss + UI-SPEC (6/6) + research + 4 plans (plan-checker 12/12 dims PASS); next = /gsd-execute-phase 11
-Last activity: 2026-06-13 -- Phase 11 planned: restart UI removed per operator decision (D-01/D-02), unified terminal card (D-03), agent-aware close copy (D-04); ROADMAP SC4 + SESS-07 amended (D-05)
+Phase: 11 (Terminal Area Polish + Live Start/Restart) — EXECUTING
+Plan: 2 of 4
+Status: Ready to execute
+Last activity: 2026-06-13 -- Phase 11 execution started
 
 ### v1.1 Milestone Phases (9–15)
 
@@ -113,6 +113,7 @@ Phase 9 (UI-01 design tokens) gates the per-surface polish phases (10–13). Pha
 | Phase 10 P10-07 | ~40min | 2 tasks | 8 files |
 | Phase 10 P11 | ~6min | 2 tasks | 1 files |
 | Phase 10 P10-12 | ~18min | 3 tasks | 6 files |
+| Phase 11 P00 | 12min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -190,6 +191,8 @@ Recent decisions affecting current work:
 - [Phase ?]: [Phase 10-11]: GAP-10-G closed CSS-only — removed .sidebar-row.active from the two control-reveal selector groups in sidebar.css so the active row's Edit/Close controls collapse to zero reserved width at rest (D-02 contract restored, INCLUDING the active row), reclaiming 52px that crushed 'Parlour Claude'. Controls still reveal on :hover/:focus-within/:focus-visible. WR-04 amber precedence, collapsed-rail mirror, D-13 dormant Start exemption, active drag-handle reveal preserved. Fixture + 10-09 assertNameNotCrushed NOT relaxed. ui:shots:fresh 11/11 (was 10/11); unit 370/370, tsc 0, lint clean, smoke 15/15.
 - [Phase 10-12 round-4 fixes]: Two renderer-only round-4 gap closures landed (3 commits: 9d316f7 diagnose, ab4a0e5 GAP-10-H fix, 4e03d84 GAP-10-I amend). **GAP-10-H** diagnosed-first (spike 004): per-state matrix + transition trace prove the pure `startAffordances` reducer + the Sidebar `activeIsCard`/`isActive` inputs are correct in EVERY state (rest/selected/hover/just-after-Start, ±cmd) — all 4 candidate hypotheses REJECTED. Confirmed 5th classification: a render-path VERIFICATION gap, not a pure-predicate defect — there was no deterministic live-DOM guarantee that the selected dormant row paints exactly one Start. Fix = lock the Sidebar row-local `activeIsCard` byte-identical to `SessionManager.activeIsCard` (comment-hardened; the predicate was already correct) + a unit truth-table (`totalStartCount===1` for the active dormant card row with/without a saved cmd; non-active recipe stays ===2; 8→11 tests) + a live-DOM `assertSingleStartAffordance(id)` in surfaces.ts (assertNameNotCrushed style, wired into the idle-card surface gated on the observable mount). **GAP-10-I** = sanctioned D-09 amendment (operator 2026-06-12 "waiting dont show edge for now"): removed the waiting amber border-left edge bar (expanded + collapsed mirror) + the now-obsolete WR-04 compound selector; KEPT the amber wash; KEPT the active row's own status-colored edge bar (D-05/D-06 unamended); collapsed waiting falls back to the amber status dot; sidebar-waiting `expects` updated to wash-only. tsc 0; start-affordances unit 11/11; tokens-completeness 14/14; bridge untouched (EXPECTED_API_KEYS stays 20); GAP-10-D/E/F/G untouched; no data-testid/class rename. The full suite + packaged `ui:shots:fresh` run in the 10-13 gate plan (attempt 4).
 - [Phase 10-10 round-3 gate]: Closing gate attempt 3 → **NOT_APPROVED_QUALIFIED**. Task-1 evidence GREEN against the packaged app (unit 370/370, tsc 0, scoped lint clean / 12 known spike .cjs deferred, smoke 15/15 authoritative; `ui:shots:fresh` 11/11 incl. assertNameNotCrushed PASS on the active row, tag p10-gapfix-round3-gate / gitSha 23d3af1). The BLOCKING human gate CONFIRMED all three routed items LIVE: ITEM A live amber at a real claude --rc permission prompt (GAP-10-D closed — the S1 blocker that failed attempts 1+2), ITEM B gutter compaction (GAP-10-E), ITEM C active-row name completeness (GAP-10-F/G). But the operator reported a NEW unprompted defect → **GAP-10-H** (duplicate Start affordance on inactive/dormant rows) which QUALIFIES the verdict. nyquist_compliant LEFT FALSE; UI-02 stays OPEN; 10-VALIDATION attempt-3 row recorded verbatim. Design question (state color "only as background") answered from locked history — spec conforms, no change. Backlog captured (real icons / animation system / metadata state capture). Route: round 4 (plan 10-12, GAP-10-H Start-dedup fix → re-run gate). No code changed this plan; orchestrator owns round-4 routing.
+- [Phase ?]: Phase 11 D-04 escalation keys on AgentState 'in-progress' (the working state), not the plan-prose literal 'working' (not in the union)
+- [Phase ?]: buildConfirmBody is a pure electron-free seam (Plan 01 wires it); escalation is a prefix so the idle consequence is never lost
 
 ### Pending Todos
 
@@ -240,7 +243,7 @@ Acknowledged and deferred at v1.0 milestone close on 2026-06-10 (option B — ca
 
 ## Session Continuity
 
-Last session: 2026-06-13T11:08:24.184Z
+Last session: 2026-06-13T15:54:52.939Z
 Stopped at: Phase 11 UI-SPEC approved (6/6 dimensions); next = /gsd-plan-phase 11
 Resume file: .planning/phases/11-terminal-area-polish-live-start-restart/11-UI-SPEC.md
 
