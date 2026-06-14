@@ -31,8 +31,13 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
-  margin: var(--space-6);
+  /* GAP-11-A round 3 ("leaves too much background space"): the outer cream gutter is
+   * tightened --space-6 (24px) -> --space-4 (16px) so the working-area card fills more of
+   * the window (less cream showing) while still reading as a floating card. The single
+   * child is now .terminal-card (the StatusSummary strip that used to sit above it was
+   * removed 2026-06-14 — wrong placement/counting, deferred for redesign), so the prior
+   * inter-child gap is dropped. */
+  margin: var(--space-4);
   box-sizing: border-box;
 }
 
@@ -40,10 +45,10 @@
  * The WHITE --surface card that floats on the cream field. GAP-11-A headline fix
  * (operator 2026-06-14, "忠实对齐 mockup" → switchboard-ide-view.png): the charcoal
  * terminal is no longer flush edge-to-edge — it is an INSET ROUNDED WELL (.terminal-well
- * below) sitting inside this card with generous WHITE --space-5 padding around it (the
+ * below) sitting inside this card with generous WHITE --space-7 padding around it (the
  * --surface shows ALL THE WAY AROUND the well). Breathing room lives INSIDE the card too.
  *
- * The card: --surface fill, --line hairline, --radius corners, --shadow-pop lift, --space-5
+ * The card: --surface fill, --line hairline, --radius corners, --shadow-pop lift, --space-7
  * inner padding (the white gutter the header + well float in). A flex column (RESEARCH Q2):
  * the breadcrumb header cap above the well; the well flexes to fill the rest; gap --space-4.
  * No card-level overflow:hidden — the inset .terminal-well owns the only clip the terminal
@@ -56,59 +61,15 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  padding: var(--space-5);
+  /* GAP-11-A round 2 ("还有别的要改"): widened --space-5 (20px) -> --space-7 (28px), the
+   * reserved white-gutter token, so the charcoal well visibly FLOATS in the card instead of
+   * near-filling it (the round-1 thin gutter is the "no breathing room" miss). */
+  padding: var(--space-7);
   box-sizing: border-box;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: var(--shadow-pop);
-}
-
-/* ── Status summary strip (GAP-11-A — top per-status pill counts) ─────────────────
- * A slim row of pills aggregating live session counts by status ("2 Waiting · 5 Running ·
- * 2 Done · 1 Idle" — mockup). Sits on the cream field ABOVE the white card. Each pill =
- * a status dot (colored from the status ramp via presentation()'s --accent, NOT re-derived)
- * + count + label. The StatusSummary component hides zero groups + renders nothing when
- * empty, so this strip never shows an empty bar. */
-.status-summary {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  padding: 0 var(--space-1);
-  font-family: var(--font-ui);
-}
-
-.status-summary-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1_5);
-  font-size: 13px;
-  line-height: 1;
-  color: var(--ink-soft);
-}
-
-/* The count reads as the emphasis weight; the label is the quiet descriptor. */
-.status-summary-pill .status-summary-count {
-  font-weight: 700;
-  color: var(--ink);
-}
-
-.status-summary-pill .status-summary-label {
-  font-weight: 600;
-  color: var(--ink-soft);
-}
-
-/* The pill dot mirrors the sidebar .row-secondary .status-dot shape (8px round) and reads
- * its color from the pill's inline --accent custom property — the SAME runtime channel
- * (presentation().accent) the sidebar/header dots use (D-03, no re-derived color). The
- * sidebar dot rule is scoped to .sidebar-row, so the strip re-states the shape here. */
-.status-summary-pill .status-dot {
-  flex: 0 0 auto;
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  background: var(--accent);
 }
 
 /* ── The inset terminal WELL (GAP-11-A — the headline fix) ───────────────────────
@@ -138,6 +99,15 @@
   background: var(--term-bg);
   border-radius: var(--radius);
   overflow: hidden;
+  /* GAP-11-A round 2 ("还有别的要改"): inner charcoal padding so the xterm content BREATHES
+   * inside the well instead of jamming into the rounded corners (round-1 miss — the first
+   * glyph sat hard in the top-left corner). D-03a-SAFE: padding is on THIS wrapper, never on
+   * .viewport-stack / .term-mount / .xterm (those stay flush at inset:0 / 100%). The fit addon
+   * measures .term-mount, which now fills the well's smaller content box; the ResizeObserver on
+   * .term-mount re-fits cols/rows to it automatically — NO manual fit(). The dormant
+   * .idle-card-stage bleeds back over this padding (negative inset below) so an idle session
+   * shows NO charcoal ring (D-04 no-dark-void). */
+  padding: var(--space-3);
 }
 
 /* The viewport stack — a relative flex child of the well (its ORIGINAL box model, restored
@@ -247,6 +217,18 @@
   padding: 0 var(--space-1);
 }
 
+/* GAP-11-A round 3 — cwd distinguishment (operator: the breadcrumb path is the CONFIGURED
+ * working directory from the session record, NOT the shell's live pwd, so it must read as a
+ * hint rather than a live location). A faint dotted underline + help cursor marks it as
+ * annotated; the IdentityHeader title attribute carries the full explanation on hover.
+ * (Tracking the real live pwd is a separate OSC-7 shell-integration feature — a v2 idea.) */
+.identity-header .identity-breadcrumb .breadcrumb-cwd {
+  text-decoration: underline dotted;
+  text-decoration-color: var(--ink-faint);
+  text-underline-offset: 2px;
+  cursor: help;
+}
+
 /* ── Header right cluster (GAP-11-A): status badge + Clear/Remove, grid column 3 ──
  * The breadcrumb grid puts this whole group in the auto-sized right column so the badge
  * + controls hug the far edge (the .row-name 1fr column consumes the middle). */
@@ -347,7 +329,13 @@
  * the stack sat directly on the unified card surface.) */
 .idle-card-stage {
   position: absolute;
-  inset: 0;
+  /* GAP-11-A round 2: bleed OUT by the well's inner padding (--space-3) so this white stage
+   * covers the well's charcoal padding ring too — otherwise a dormant session shows a charcoal
+   * frame around the white card (D-04 no-dark-void regression). The stage is positioned in
+   * .viewport-stack (the well's content box); -(--space-3) expands it to the well's inner edge,
+   * where the well's overflow:hidden + --radius clip it to the rounded shape. Keep this token in
+   * sync with the .terminal-well padding above. */
+  inset: calc(-1 * var(--space-3));
   display: flex;
   align-items: center;
   justify-content: center;

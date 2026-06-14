@@ -73,12 +73,14 @@ a visible cream gutter to the `--bg` background — NOT an edge-to-edge rectangl
 evidence: `artifacts/ui-lab/p11-gate/terminal-card.png` + `terminal-running.png` (framed card,
 gutter, shadow, no clipped row) vs the BEFORE `artifacts/ui-lab/phase9-baseline/terminal-running.png`
 (unframed edge-to-edge). `tokens-completeness` GREEN.
-result: [FAIL] — operator 2026-06-14: "没看出来呼吸感 … 很丑,甚至不如那个 html draft 的效果". The
-framed card lacks perceptible breathing room and reads uglier than the `switchboard-mockup.html`
-north-star: the terminal is flush edge-to-edge inside the card rather than an inset rounded
-*well* sitting inside a white `--surface` with breathing room around it (mockup IDE view, now
-rendered at `.planning/design/rendered/switchboard-ide-view.png`). → **GAP-11-A** (visual
-gap-closure round — see ## Gaps).
+result: [PASS] — operator approved 2026-06-14 after the GAP-11-A redesign (rounds 2-3). The
+terminal is now an inset rounded WELL floating inside the white card with breathing room on all
+sides (the xterm content no longer jams the rounded corner), matching the mockup IDE view; the
+outer cream gutter was tightened and the `--bg` cream lightened to the operator's taste; the
+status-pill strip was removed (wrong placement/counting — deferred) and the breadcrumb cwd now
+reads as the CONFIGURED dir (dotted-underline hint). Evidence:
+`artifacts/ui-lab/p11-gapfix-a-final/terminal-running.png` + `inactive-recipes.png` (floating
+well, no charcoal ring); 401 unit + fidelity smoke (pty-resize/roundtrip/alt-screen/startup) GREEN.
 
 ### SC1-CV. CORE-VALUE FIDELITY — terminal still native (UI-03, BLOCKING)
 steps: Type in the terminal; run `claude --rc` (the canonical 🛋️ scenario), `vim`, and a
@@ -141,23 +143,24 @@ result: [PASS] — operator approved LIVE 2026-06-14: the agent-busy confirm cop
 ## Summary
 
 total: 6
-passed: 5
-issues: 1
+passed: 6
+issues: 0
 pending: 0
 partial: 0
 skipped: 0
 blocked: 0
 
-(NOT_APPROVED_QUALIFIED 2026-06-14: SC1-CV / SC2 / SC3 / SC4 / D-04 operator-approved LIVE — the
-functional + Core-Value + SESS-07 work is CONFIRMED and stays done. SC1 FAILED on visual quality
-→ GAP-11-A. `nyquist_compliant` stays FALSE in 11-VALIDATION.md; UI-03 + SESS-07 stay OPEN until
-the GAP-11-A redesign lands + re-gates and the operator approves SC1.)
+(APPROVED 2026-06-14: all six gates — SC1 / SC1-CV / SC2 / SC3 / SC4 / D-04 — operator-approved
+LIVE. SC1 passed after the GAP-11-A redesign (rounds 2-3: inset floating well + breathing +
+tightened gutter + lightened cream + status-pills removed + cwd hint). `nyquist_compliant` flips
+TRUE in 11-VALIDATION.md; UI-03 + SESS-07 CLOSED. The fixed-bottom-input-line raised during the
+mockup compare was deferred to v2 — see `.planning/v2-ideas/command-composer-agent-shell.md`.)
 
 ## Gaps
 
 | # | Gap | Severity | Surface | status | route |
 |---|-----|----------|---------|--------|-------|
-| GAP-11-A | Terminal card lacks breathing room + does not match the `switchboard-mockup.html` north-star — the terminal sits flush edge-to-edge inside the card instead of an inset rounded *well* inside a white surface; reads "很丑,甚至不如那个 html draft" | S1 | terminal area (UI-03) | open | Phase 11 gap-closure round 2 (11-04 redesign + 11-05 re-gate) |
+| GAP-11-A | Terminal card lacks breathing room + does not match the `switchboard-mockup.html` north-star — the terminal sits flush edge-to-edge inside the card instead of an inset rounded *well* inside a white surface; reads "很丑,甚至不如那个 html draft" | S1 | terminal area (UI-03) | closed | Closed 2026-06-14 (rounds 2-3): 11-04 inset well + r3 status-pills-removed / cwd-hint / tightened-gutter / lightened-cream; operator approved SC1 |
 
 ### GAP-11-A scope (operator decision 2026-06-14 — "忠实对齐 mockup")
 
@@ -179,3 +182,29 @@ Faithfully match `.planning/design/rendered/switchboard-ide-view.png` (the mocku
 
 (The functional gates SC1-CV / SC2 / SC3 / SC4 / D-04 stay PASSED — the redesign must NOT
 regress terminal fidelity, the Remove→Start recycle, or re-introduce any restart control.)
+
+### GAP-11-A resolution (2026-06-14 — rounds 2-3)
+
+What actually shipped, vs the original scope above:
+
+1. **Inset rounded terminal well** — DONE (`.terminal-well` wrapper owns radius + overflow + a
+   `--space-3` inner charcoal pad so the xterm content breathes inside the block; D-03a fidelity
+   guardrail held — xterm / term-mount / viewport-stack stay flush, ResizeObserver re-fits, smoke
+   GREEN). The dormant `.idle-card-stage` bleeds back over the well pad (negative inset) so an
+   idle session shows NO charcoal ring.
+2. **Outer breathing** — round 2 stepped the card gutter to `--space-7`; round 3 then *tightened*
+   the OUTER cream margin `--space-6` → `--space-4` (operator: "leaves too much background
+   space") so the card fills more of the window while still floating.
+3. **Cream background** — round 2 warmed `--bg` toward the mockup; round 3 *lightened* it to
+   `oklch(0.95 0.022 74)` (operator: "背景颜色改的淡一点").
+4. **Breadcrumb header** — kept as `local · name · cwd` (no literal tab shape — session switching
+   is the sidebar, not tabs). Round 3 added a cwd *distinguishment*: the path is the CONFIGURED
+   working dir (dotted-underline + title hint), not the live pwd.
+5. **Status summary pills (top)** — REVERSED. Built in round 2, then REMOVED in round 3 at operator
+   request ("位置不对、计数也错,先移除") — component + reducer + test + ui-lab surface deleted;
+   deferred for a clean redesign later (git history holds it).
+
+Out-of-scope item surfaced during the mockup compare: a **fixed bottom input line / command
+composer** (Warp-style). It conflicts with the v1 Core Value (real-terminal fidelity for TUI
+agents) and was **deferred to v2** — full analysis in
+`.planning/v2-ideas/command-composer-agent-shell.md` (`REQUIREMENTS.md` COMP-01).

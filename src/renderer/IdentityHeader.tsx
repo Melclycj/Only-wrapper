@@ -133,7 +133,17 @@ export function IdentityHeader({
         {cwdTail !== '' && (
           <>
             <span className="breadcrumb-sep" aria-hidden="true">·</span>
-            <span className="breadcrumb-seg">{cwdTail}</span>
+            {/* The cwd is the session's CONFIGURED working directory (from the saved record),
+                NOT the shell's live pwd — which drifts as the user cd's around. Mark it as a
+                hint (faint dotted underline + help cursor + title tooltip) so it never reads as
+                a live location. Making it track the real pwd is a separate OSC-7 shell-
+                integration feature, parked as a v2 idea. */}
+            <span
+              className="breadcrumb-seg breadcrumb-cwd"
+              title="Configured working directory — where this session starts, not the shell's live location"
+            >
+              {cwdTail}
+            </span>
           </>
         )}
       </span>

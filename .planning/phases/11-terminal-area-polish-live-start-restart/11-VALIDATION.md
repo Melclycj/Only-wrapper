@@ -1,8 +1,8 @@
 ---
 phase: 11
 slug: terminal-area-polish-live-start-restart
-status: draft
-nyquist_compliant: false
+status: complete
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-06-13
 ---
@@ -36,7 +36,7 @@ created: 2026-06-13
 - **After every plan wave:** full `npm run test` (unit + smoke)
 - **Before `/gsd-verify-work`:** full suite GREEN + fresh packaged capture
 - **Max feedback latency:** unit loop < ~30s
-- **`nyquist_compliant` stays false** until the BLOCKING human-verify sign-off (operator confirms LIVE: framed card + Clear/Remove cluster + no-restart-anywhere + agent-busy copy)
+- **`nyquist_compliant` flipped TRUE 2026-06-14** on the operator BLOCKING human-verify sign-off (LIVE: framed inset-well card + Clear/Remove cluster + no-restart-anywhere + agent-busy copy; SC1 visual approved after the GAP-11-A rounds 2-3 redesign — inset floating well, tightened gutter, lightened cream, status-pills removed, cwd hint)
 
 ---
 
@@ -98,6 +98,6 @@ The test-surface churn that must land in lockstep with the code changes (11-RESE
 - [ ] Wave 0 covers all MISSING references
 - [ ] No watch-mode flags
 - [ ] Feedback latency < 30s (unit loop)
-- [ ] `nyquist_compliant: true` set in frontmatter (only on operator BLOCKING human-verify sign-off)
+- [x] `nyquist_compliant: true` set in frontmatter (only on operator BLOCKING human-verify sign-off)
 
-**Approval:** pending
+**Approval:** APPROVED 2026-06-14 (operator LIVE sign-off; all 6 UAT gates PASS — see 11-HUMAN-UAT.md)

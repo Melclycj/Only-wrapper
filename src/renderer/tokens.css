@@ -20,7 +20,7 @@
    * so the white --surface card visibly floats on a warm ground (was 0.975 0.008 85 —
    * near-white, which read flat against the card). oklch(0.93 0.024 78) ≈ #f3e6d6: a
    * higher-chroma, lower-L warm cream. Stays a var() token (no literal leaks). */
-  --bg: oklch(0.915 0.032 74); /* warm cream field (≈ #f3e6d6) — GAP-11-A */
+  --bg: oklch(0.95 0.022 74); /* pale warm cream field — GAP-11-A r3 (operator: lighter) */
   --bg-sunk: oklch(0.955 0.01 85);
   --ink: oklch(0.32 0.012 70);
   --ink-soft: oklch(0.5 0.012 70);

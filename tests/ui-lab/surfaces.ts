@@ -577,41 +577,23 @@ export const SURFACES: Surface[] = [
   },
   {
     id: 'terminal-card',
-    title: 'Inset terminal well + breathing + breadcrumb + status pills (UI-03, GAP-11-A)',
+    title: 'Inset terminal well + breathing + breadcrumb header (UI-03, GAP-11-A)',
     designRefs: [
       '.planning/design/rendered/switchboard-ide-view.png (the mockup IDE view)',
       '11-UI-SPEC.md §Interaction Contract (live unified card)',
     ],
     expects:
-      'Matches the mockup: a top status-summary pill strip (Running/Done/Idle counts) on ' +
-      'the warm cream --bg; a white --surface card with the breadcrumb header (tab + ' +
-      'local · name · cwd + status) above an INSET ROUNDED charcoal WELL with white ' +
-      'breathing room around it (NOT flush edge-to-edge); no glyph clipped by a corner; ' +
-      'Clear + Remove cluster visible; no Restart.',
+      "A white --surface card on the warm cream --bg with the breadcrumb header " +
+      "(local / name / cwd + status) above an INSET ROUNDED charcoal WELL with white " +
+      "breathing room around it (NOT flush edge-to-edge); the cwd segment reads as the " +
+      "configured working dir (dotted-underline hint), not the live pwd; no glyph clipped " +
+      "by a corner; Clear + Remove cluster visible; no Restart; no top status-pill strip " +
+      "(removed 2026-06-14).",
     prepare: async (ctx) => {
       // Reuse the terminal-running idiom: activate the first running session so the shot
       // shows a live focal terminal inside the inset well. Pause for the WebGL/term paint.
       await clickSidebarRow(ctx.ids[0]);
       await browser.pause(400);
-    },
-  },
-  {
-    id: 'status-summary',
-    title: 'Top status-summary pill strip (GAP-11-A — live per-status counts)',
-    designRefs: [
-      '.planning/design/rendered/switchboard-ide-view.png (top pills "2 Waiting · 5 Running · 2 Done · 1 Idle")',
-      'DESIGN.md §Status system (the status ramp colors)',
-    ],
-    expects:
-      'A slim strip of pills aggregating live session counts by status — each a colored ' +
-      'dot (from the status ramp) + count + label (Running / Done / Idle), on the cream --bg ' +
-      'above the card. Zero-count groups are hidden.',
-    prepare: async (ctx) => {
-      // The sidebar-populated surface already created running + finished sessions; activate
-      // the first running session so the strip shows a representative multi-status mix.
-      await clickSidebarRow(ctx.ids[0]);
-      await waitForTestId('status-summary');
-      await browser.pause(300);
     },
   },
   // PLANNER-NOTE (agent-busy-confirm seam): this surface is a VISUAL confirmation of the

@@ -35,9 +35,6 @@ import { clampScrollback, SCROLLBACK_DEFAULT } from './scrollback-clamp';
 import { IdentityHeader } from './IdentityHeader';
 import { IdleCard } from './IdleCard';
 import { WelcomeEmptyState } from './WelcomeEmptyState';
-// StatusSummary — the top strip of live per-status pill counts (GAP-11-A; aggregation is
-// the pure React-free summarizeStatuses reducer in status-summary.ts).
-import { StatusSummary } from './StatusSummary';
 // addSession is the SOLE spawn path (T-03-09) — kept in a React/xterm-free module
 // so the no-double-spawn invariant is unit-testable in the Node env.
 import { addSession } from './session-add';
@@ -652,12 +649,13 @@ export function SessionManager(): React.JSX.Element {
         onReorder={handleReorder}
         onOpenPreferences={handleOpenPreferences}
       />
-      {/* Terminal area: a top StatusSummary strip (GAP-11-A — live per-status counts,
-          mockup placement) above the framed card. The breadcrumb IdentityHeader caps the
-          card above the .viewport-stack; a dormant active session shows the IdleCard;
-          zero sessions → WelcomeEmptyState (D-04/D-10). */}
+      {/* Terminal area: the framed white card on the cream field. The breadcrumb
+          IdentityHeader caps the card above the .viewport-stack; a dormant active session
+          shows the IdleCard; zero sessions → WelcomeEmptyState (D-04/D-10).
+          NOTE (2026-06-14): the top StatusSummary pill strip was REMOVED at operator
+          request — its placement + per-status counting were wrong; deferred for a clean
+          redesign later (git history holds the prior version). */}
       <div className="terminal-area">
-        <StatusSummary sessions={sessions} />
         <div className="terminal-card">
           {isEmpty ? (
             <WelcomeEmptyState onCreate={onAdd} />

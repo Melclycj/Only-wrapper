@@ -54,6 +54,10 @@ Acknowledged but deferred. Not in the v1.1 roadmap.
 - **BROW-02**: App displays the linked tab's title, URL/domain, favicon, and active/closed status
 - **BROW-03**: (Exploratory) For ChatGPT, detect whether the page is idle or generating — without reading conversation content
 
+### Command Composer / Agent Shell (v2 — to evaluate)
+
+- **COMP-01** *(evaluate whether to do)*: A Warp-style command composer — a fixed bottom input editor (multi-line, expand-to-~7-lines then scroll) at the shell prompt, backed by shell integration (OSC 133) for command blocks, with an **automatic fall-back to a raw pass-through terminal whenever a full-screen TUI (`claude --rc` / `codex` / `vim`) takes the alt-screen**. This is a deliberate evolution of the Core Value (from "keystroke-identical to a native terminal" → "TUI full-fidelity **+** an enhanced shell-prompt layer") and would overturn the "Warp-style blocks" out-of-scope line below. Full mechanism + work breakdown: [`.planning/v2-ideas/command-composer-agent-shell.md`](v2-ideas/command-composer-agent-shell.md). *(Raised + deferred 2026-06-14 during Phase 11; the alt-screen fall-back already has a foundation in `SessionView.tsx`.)*
+
 ## Out of Scope
 
 Explicitly excluded for v1.1. Documented to prevent scope creep.
