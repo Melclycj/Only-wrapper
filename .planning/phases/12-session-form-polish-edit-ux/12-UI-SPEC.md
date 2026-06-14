@@ -1,7 +1,7 @@
 ---
 phase: 12
 slug: session-form-polish-edit-ux
-status: draft
+status: approved
 shadcn_initialized: false
 preset: none
 created: 2026-06-15
