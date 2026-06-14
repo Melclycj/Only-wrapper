@@ -31,22 +31,24 @@ created: 2026-06-15
 
 ## Spacing Scale
 
-The form geometry MUST be expressed with the `--space-*` tokens. The current form CSS (`terminal.css` L378–489) carries several pre-token one-off literals (4 / 8 / 10 / 12 / 16 px) that already align to the scale and a few odd-balls (22px dialog top-pad, 2px restart-group bottom-pad) — snap these to the nearest scale step during the ui-lab polish loop (Discretion). New geometry uses the formal scale only.
+The form geometry MUST be expressed with the `--space-*` tokens. The current form CSS (`terminal.css` L378–489) carries several pre-token one-off literals (4 / 8 / 10 / 12 / 16 px) that already align to the scale and a few odd-balls (22px dialog top-pad, 2px restart-group bottom-pad) — snap these to the nearest formal scale step during the ui-lab polish loop (Discretion). New geometry uses the formal scale only.
+
+**Formal Spacing Scale (4-multiple steps ONLY):**
 
 | Token | Value | Usage in this phase |
 |-------|-------|---------------------|
 | `--space-1` | 4px | Label-to-input micro gap; emoji-grid cell gap |
-| `--space-1_5` | 6px | Color-swatch row gap (migration alias — carried from existing 6px; snap-on-tune allowed) |
-| `--space-2` | 8px | Field internal padding rhythm; cwd ↔ Browse… gap; modal-actions button gap; picker section gaps |
-| `--space-2_5` | 10px | Input vertical padding (migration alias — carried from existing 10px) |
-| `--space-3` | 12px | **Inter-field vertical rhythm within a group** (`.edit-field` margin-bottom); group inner padding |
+| `--space-2` | 8px | Color-swatch row gap; field internal padding rhythm; cwd ↔ Browse… gap; modal-actions button gap; picker section gaps |
+| `--space-3` | 12px | **Inter-field vertical rhythm within a group** (`.edit-field` margin-bottom); group inner padding; input vertical padding |
 | `--space-4` | 16px | Input horizontal padding rhythm; default block spacing |
 | `--space-5` | 20px | **Inter-GROUP spacing** (Identity group ↔ Launch group); dialog inner padding rhythm |
 | `--space-6` | 24px | Dialog outer padding; major vertical break above the section subhead |
 
-**8-point compliance:** Every value in the formal scale is a multiple of 4 (canonical 4/8/16/24 steps present as `--space-1`/`--space-2`/`--space-4`/`--space-6`, with 12/20 px on-scale intermediates). The two migration aliases (`--space-1_5`=6px, `--space-2_5`=10px) exist ONLY to carry the shipped form geometry into the token system without changing rendered pixels — they are not new design-contract steps; prefer snapping to the nearest formal step where the ui-lab loop shows it does not harm the layout (same policy the Phase-10 UI-SPEC established).
+**8-point compliance:** Every value in the formal scale is a multiple of 4 (canonical 4/8/16/24 steps present as `--space-1`/`--space-2`/`--space-4`/`--space-6`, with 12/20 px on-scale intermediates). The contract declares ONLY these clean steps for the form surface.
 
-**Exceptions:**
+**Legacy note (NOT canonical design steps):** `tokens.css` also exposes `--space-1_5` (6px) and `--space-2_5` (10px). These are **pre-existing migration aliases** carried from shipped form geometry — they are not part of this surface's spacing contract. Where the shipped form currently renders a 6px swatch gap or 10px input vertical padding, the form polish **SNAPS to the nearest clean step (8 or 12)** during the ui-lab loop. 6px/10px are NOT introduced as canonical design steps for this surface.
+
+**Exceptions (element dimensions, not spacing-scale steps):**
 - Dialog width `min(460px, calc(100vw - 48px))` is a layout dimension, not a spacing step — keep (small-laptop-friendly single column, D-02).
 - Emoji-cell tile (~`aspect-ratio 1/1`, grid cell) and color-swatch (~26px) are sized elements, not spacing gaps — retune to a token-expressible size during the picker polish (Discretion D-03).
 - 999px pill radius (none used in the form today) stays literal if introduced — a full-round shape, not a scale step.
@@ -57,18 +59,22 @@ The form geometry MUST be expressed with the `--space-*` tokens. The current for
 
 Form typography is composed from `--font-ui` (Nunito) only. The set below is value-preserving from the existing form block (`terminal.css` L170–489), retuned only where the two-group restructure (D-02) and the validation line (D-04) need it. **Two weights total: 400 (regular) and 700 (bold)** — matching the loaded Nunito faces. (The shipped form uses 600 for labels/buttons; this contract promotes those to 700 to hold the two-weight discipline the Phase-10 UI-SPEC locked, OR keeps 600 only if the ui-lab pass shows 700 reads too heavy for the 12px label — 600 is then the single permitted alternative for that one role. No third *distinct* weight is introduced beyond 400 + the bold step.)
 
+**Type scale — 3 distinct font sizes (12 / 14 / 17px).** `tokens.css` does not expose `--font-size-*` / `--text-*` tokens today (sizes are CSS literals in the form CSS), so the consolidated role set is declared explicitly. Hierarchy is carried by **size + weight + case**, not by 1px size deltas:
+
 | Role | Size | Weight | Line Height | Where |
 |------|------|--------|-------------|-------|
 | Dialog title | 17px | 700 | 1.2 | `.modal-title` — "Edit session" |
-| Section subhead | 11px | 700 | 1 | NEW — the two group headers ("Identity", "Launch") + the existing `.applies-on-restart-hint`: small-caps, letter-spaced (`0.02em`), `--ink-faint` |
-| Field label | 12px | 700 | 1.2 | `.edit-label` — persistent, above each field (NOT placeholder-only) |
+| Section subhead | 12px | 700 | 1 | NEW — the two group headers ("Identity", "Launch") + the existing `.applies-on-restart-hint`. Differentiated from the field label (same 12px) by `text-transform: uppercase` + letter-spacing (`0.02em`) + `--color-faint`/`--ink-faint` — NOT by a unique size |
+| Field label | 12px | 700 | 1.2 | `.edit-label` — persistent, above each field (NOT placeholder-only); soft ink, no uppercase |
 | Input / select text | 14px | 400 | 1.3 | `.edit-input` / `.edit-select` / `.emoji-input` — the user's typed value |
-| Button text | 13px | 700 | 1 | `.modal-btn` (Save / Cancel) + `.edit-browse-button` |
-| Validation helper | 12px | 400 | 1.3 | NEW — inline hint/error text under a field (`--ink-faint` for a hint, `--color-danger` for a genuine error — D-04) |
+| Button text | 14px | 700 | 1 | `.modal-btn` (Save / Cancel) + `.edit-browse-button`. Shares the 14px input size; differentiated from input text by weight 700 |
+| Validation helper | 12px | 400 | 1.3 | NEW — inline hint/error text under a field. Shares the 12px label size; differentiated by weight 400 + tone (`--ink-faint` for a hint, `--color-danger` for a genuine error — D-04) |
+
+**Distinct-size count = 3 (12 / 14 / 17px).** The 12px size carries three roles (section subhead, field label, validation helper) separated by case/weight/tone; the 14px size carries two roles (input text @400, button text @700). This holds a real ≥2px hierarchy between every adjacent size step rather than a 1px-apart cluster.
 
 **Line-height policy:** body/label text runs tight (1.2–1.3, calm chrome — DESIGN.md north star, not the generic 1.5 web default). Single-line glyph rows (section subheads, buttons) use 1 to avoid baseline jitter (existing Pitfall-6 guard). Inputs keep a comfortable 1.3 so a long cwd path stays legible.
 
-**Discretion (CONTEXT):** Exact section-subhead styling and the label weight (600 vs 700) are tuned in the ui-lab look→edit→re-look loop against `DESIGN-RUBRIC.md §edit-modal` line "Fields: labeled clearly in soft ink."
+**Discretion (CONTEXT):** Exact section-subhead styling (uppercase + tracking amount) and the label weight (600 vs 700) are tuned in the ui-lab look→edit→re-look loop against `DESIGN-RUBRIC.md §edit-modal` line "Fields: labeled clearly in soft ink."
 
 ---
 
@@ -130,7 +136,7 @@ The form's owned copy is the group subheads, the field labels, the buttons, and 
 | Field label — shell | `Shell` |
 | Field label — startup | `Startup command` |
 | Browse button | `Browse…` (native folder picker — SESS-06; unchanged label) |
-| Primary CTA | `Save` — accent-blue pill (`edit-save`); the constructive action |
+| Primary CTA | `Save changes` — accent-blue pill (`edit-save` testid UNCHANGED); the constructive action. (Label promoted from `Save` for a clearer constructive verb-noun; the `data-testid` stays `edit-save`.) |
 | Secondary action | `Cancel` — quiet/neutral (`edit-cancel`) |
 | Inline hint — empty name | `Keeps the current name` — NEUTRAL `--ink-faint` helper under the name field when it is empty (Phase-4 discretion; not an error — D-04) |
 | Inline hint — cwd format | `Enter an absolute path, or use Browse…` — NEUTRAL helper when the cwd is non-absolute/malformed (renderer-cheap format check only; main's CR-01 stays the validator of record — D-04) |
@@ -165,7 +171,7 @@ This phase is presentation + lightweight-validation; the data-flow behavior (liv
 **Keep-alive guard (Core Value):** the form is a **modal** — renderer-only, it never touches the xterm / PTY / fit path. Terminal fidelity is safe by construction, but the full suite (incl. the fidelity smokes) must stay GREEN. `EXPECTED_API_KEYS` stays **20** — no bridge change (D-04).
 
 **Selector contract (frozen-or-update-in-lockstep — Rule-1 discipline):** the modal's `data-testid`s must SURVIVE the restructure, or be renamed WITH their tests in the same plan:
-`session-edit-modal`, `edit-name`, `edit-cwd`, `browse-cwd`, `edit-shell`, `edit-startup`, `applies-on-restart`, `edit-save`, `edit-cancel`, plus the picker testids `icon-picker` / `edit-emoji-text`. Consumers: the `session-edit` smoke (`tests/smoke/`) and the ui-lab `edit-modal` surface (`tests/ui-lab/surfaces.ts` L400–417, and the `sidebar-populated` / `inactive-recipes` surfaces that drive the modal). Any rename ripples to all of them in the same plan.
+`session-edit-modal`, `edit-name`, `edit-cwd`, `browse-cwd`, `edit-shell`, `edit-startup`, `applies-on-restart`, `edit-save`, `edit-cancel`, plus the picker testids `icon-picker` / `edit-emoji-text`. Consumers: the `session-edit` smoke (`tests/smoke/`) and the ui-lab `edit-modal` surface (`tests/ui-lab/surfaces.ts` L400–417, and the `sidebar-populated` / `inactive-recipes` surfaces that drive the modal). Any rename ripples to all of them in the same plan. (The `Save changes` copy change touches the visible label ONLY — `edit-save` / `edit-cancel` testids are unchanged.)
 
 ---
 
@@ -176,7 +182,7 @@ The ui-lab loop is the visual source of truth. No visual claim without a capture
 - **Baseline tag before first edit:** `UI_LAB_TAG=before-phase12 npm run ui:shots` (capture the current raw-stack form).
 - **CSS-only value tweaks** may preview via `UI_LAB_LIVE_CSS=1`; **the structural TSX regroup (two semantic groups, polished picker) MUST use `npm run ui:shots:fresh`** — live-CSS injection previews old markup.
 - **Surfaces (O-3):** the `edit-modal` surface already exists (`surfaces.ts` L400–417) with a `DESIGN-RUBRIC.md §edit-modal` section. This phase MUST **add a validation-error variant surface** (e.g. `edit-modal-validation`: open the modal, drive an invalid cwd, capture the inline danger-ramp error) so the D-04 inline-validation claim has a capture to score, AND **update the `edit-modal` rubric lines** to reflect the two-group structure + the picker polish + the blue Save (currently the rubric does not assert grouping or the accent-Save fix).
-- **Phase gate:** full `npm run test` GREEN + a **packaged no-injection** capture scored against `tests/ui-lab/DESIGN-RUBRIC.md §edit-modal` (+ the new validation variant) + a **BLOCKING end-of-phase human-verify** for the visual SC1 (the canonical scan-test: "one cohesive designed surface"). The Nyquist gate flips ONLY on an explicit unqualified operator "approved."
+- **Phase gate:** full `npm run test` GREEN + a **packaged no-injection** capture scored against `tests/ui-lab/DESIGN-RUBRIC.md §edit-modal` (+ the new validation variant) + a **BLOCKING end-of-phase human-verify** for the visual SC1 (the canonical scan-test: "one cohesive designed surface") that covers SESS-05 O-1 (first-open default-cwd display) and SESS-06 O-2 (Browse… end-to-end on the packaged app). The Nyquist gate flips ONLY on an explicit unqualified operator "approved."
 - **Guard tests stay GREEN in lockstep:** `tokens-completeness.test.ts` (every `var(--token)` resolves; no banned literals — new form CSS uses `var()` only), `security.guard.test.ts` (`EXPECTED_API_KEYS` === 20), the `session-edit` smoke, and the fidelity smokes.
 - **SESS-05 / SESS-06 are live-verify, not unit-only:** O-2 requires Browse… proven end-to-end on the **packaged** app (native dialog → fills field → CR-01 gates at Start). O-1 requires confirming the first-open default-cwd display live. These are part of the blocking human-verify, not satisfied by green unit tests alone.
 
