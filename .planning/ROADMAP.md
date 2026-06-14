@@ -100,12 +100,12 @@
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 11-03-PLAN.md — Phase gate: full packaged suite + fresh ui:shots:fresh capture + BLOCKING end-of-phase human-verify
+- [x] 11-03-PLAN.md — Phase gate: full packaged suite + fresh ui:shots:fresh capture + BLOCKING end-of-phase human-verify (DONE 2026-06-14 — first gate NOT_APPROVED_QUALIFIED: SC1-CV/SC2/SC3/SC4/D-04 PASS, SC1 FAIL → GAP-11-A)
 
 **Wave 4** *(gap-closure r2 — GAP-11-A mockup-faithful redesign)*
 
-- [x] 11-04-PLAN.md — GAP-11-A: inset terminal well + breathing + warmer cream (≈#f3e6d6) + breadcrumb header + top status-summary pills (faithfully matching the mockup IDE view; fidelity held, full gate GREEN, fresh proof tag p11-gapfix-a) — awaiting the 11-05 re-gate
-- [ ] 11-05-PLAN.md — GAP-11-A re-gate: BLOCKING end-of-phase human-verify (operator approves SC1 LIVE on the packaged app)
+- [x] 11-04-PLAN.md — GAP-11-A: inset terminal well + breathing + warmer cream (≈#f3e6d6) + breadcrumb header + top status-summary pills (faithfully matching the mockup IDE view; fidelity held, full gate GREEN, fresh proof tag p11-gapfix-a) — round-3 refinements then removed the top status pills + tightened the outer gutter + lightened the cream + added the cwd hint; operator approved SC1 at the re-gate 2026-06-14
+- [x] 11-05-PLAN.md — GAP-11-A re-gate: BLOCKING end-of-phase human-verify (DONE — operator approved SC1 LIVE 2026-06-14 after rounds 2-3; nyquist_compliant TRUE; UI-03 + SESS-07 CLOSED)
 
 **UI hint**: yes
 
