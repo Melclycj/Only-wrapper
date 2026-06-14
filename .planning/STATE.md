@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: milestone
-status: paused
-stopped_at: "Phase 11 COMPLETE — GAP-11-A closed over rounds 2-3, operator approved SC1 LIVE 2026-06-14 (inset rounded terminal WELL + breathing; round 3 tightened the outer gutter, lightened --bg to oklch(0.95 0.022 74), REMOVED the status-summary pills (deferred), added the cwd configured-dir hint). nyquist_compliant TRUE; UI-03 + SESS-07 CLOSED; 11-VERIFICATION.md PASSED; committed 2f32abf + phase-close docs. NEXT = Phase 12 (Session Form: Polish + Edit UX — UI-04/SESS-05/SESS-06). Fixed-input-line/command composer deferred to v2 (COMP-01)."
-last_updated: "2026-06-14T11:30:00.000Z"
-last_activity: 2026-06-14 -- Phase 11 CLOSED (GAP-11-A SC1 approved; status pills removed, gutter tightened, cream lightened, cwd hint; nyquist TRUE; UI-03 + SESS-07 complete)
+status: planning
+stopped_at: Phase 12 context gathered
+last_updated: "2026-06-14T15:13:38.617Z"
+last_activity: 2026-06-14 -- Phase 11 CLOSED (GAP-11-A SC1 approved; nyquist TRUE; UI-03 + SESS-07 complete; v2 composer deferred)
 progress:
   total_phases: 6
   completed_phases: 3
@@ -251,9 +251,9 @@ Acknowledged and deferred at v1.0 milestone close on 2026-06-10 (option B — ca
 
 ## Session Continuity
 
-Last session: 2026-06-14T11:30:00.000Z
-Stopped at: Phase 11 COMPLETE — GAP-11-A SC1 approved LIVE 2026-06-14 (inset terminal well + breathing; round 3 removed the status pills, tightened the outer gutter, lightened --bg to oklch(0.95 0.022 74), added the cwd configured-dir hint). nyquist_compliant TRUE; UI-03 + SESS-07 CLOSED; committed 2f32abf + phase-close docs (11-VERIFICATION.md PASSED). NEXT = Phase 12 (Session Form: Polish + Edit UX — UI-04 / SESS-05 / SESS-06).
-Resume file: .planning/ROADMAP.md (Phase 12 — Session Form: Polish + Edit UX; plan with /gsd-plan-phase 12)
+Last session: 2026-06-14T15:13:38.607Z
+Stopped at: Phase 12 context gathered
+Resume file: .planning/phases/12-session-form-polish-edit-ux/12-CONTEXT.md
 
 ## Operator Next Steps
 
