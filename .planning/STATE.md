@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: milestone
-status: awaiting-human-verify
-stopped_at: 11-03 Task 1 automated gate GREEN (committed bf08c48); STOPPED at the BLOCKING Task 2 human-verify — awaiting operator LIVE sign-off (nyquist_compliant stays false)
-last_updated: "2026-06-14T02:30:00.000Z"
-last_activity: 2026-06-14 -- 11-03 Task 1 packaged gate GREEN (full suite 401 unit + 15/15 smoke, EXPECTED_API_KEYS=20, restart-session absent, fresh capture framed card no clipped row); 11-HUMAN-UAT.md authored; BLOCKING human-verify NOT yet run
+status: paused
+stopped_at: "Phase 11 gate attempt 1 NOT_APPROVED_QUALIFIED — SC1-CV/SC2/SC3/SC4/D-04 approved LIVE (functional + SESS-07 + fidelity confirmed); SC1 visual FAIL → GAP-11-A (terminal not inset-well, no breathing room, doesn't match mockup). nyquist stays FALSE. Next = 11-04 redesign (忠实对齐 mockup: inset well + breathing + warmer cream + breadcrumb header + status pills) + 11-05 re-gate."
+last_updated: "2026-06-14T05:24:55.790Z"
+last_activity: 2026-06-14 -- Completed Phase 11 Plan 02 (unified terminal session card D-03/D-03a; terminal-area.css extracted; Remove danger ramp; fidelity smoke GREEN)
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 19
   completed_plans: 18
-  percent: 19
+  percent: 17
 ---
 
 # Project State
@@ -249,9 +249,9 @@ Acknowledged and deferred at v1.0 milestone close on 2026-06-10 (option B — ca
 
 ## Session Continuity
 
-Last session: 2026-06-13T15:54:52.939Z
-Stopped at: Phase 11 UI-SPEC approved (6/6 dimensions); next = /gsd-plan-phase 11
-Resume file: .planning/phases/11-terminal-area-polish-live-start-restart/11-UI-SPEC.md
+Last session: 2026-06-14T05:24:55.781Z
+Stopped at: Phase 11 gate attempt 1 NOT_APPROVED_QUALIFIED — SC1-CV/SC2/SC3/SC4/D-04 approved LIVE (functional + SESS-07 + fidelity confirmed); SC1 visual FAIL → GAP-11-A (terminal not inset-well, no breathing room, doesn't match mockup). nyquist stays FALSE. Next = 11-04 redesign (忠实对齐 mockup: inset well + breathing + warmer cream + breadcrumb header + status pills) + 11-05 re-gate.
+Resume file: .planning/phases/11-terminal-area-polish-live-start-restart/11-HUMAN-UAT.md
 
 ## Operator Next Steps
 
