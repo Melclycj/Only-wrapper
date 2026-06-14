@@ -102,6 +102,11 @@
 
 - [ ] 11-03-PLAN.md — Phase gate: full packaged suite + fresh ui:shots:fresh capture + BLOCKING end-of-phase human-verify
 
+**Wave 4** *(gap-closure r2 — GAP-11-A mockup-faithful redesign)*
+
+- [x] 11-04-PLAN.md — GAP-11-A: inset terminal well + breathing + warmer cream (≈#f3e6d6) + breadcrumb header + top status-summary pills (faithfully matching the mockup IDE view; fidelity held, full gate GREEN, fresh proof tag p11-gapfix-a) — awaiting the 11-05 re-gate
+- [ ] 11-05-PLAN.md — GAP-11-A re-gate: BLOCKING end-of-phase human-verify (operator approves SC1 LIVE on the packaged app)
+
 **UI hint**: yes
 
 ### Phase 12: Session Form — Polish + Edit UX
