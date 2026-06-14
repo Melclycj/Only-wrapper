@@ -20,46 +20,95 @@
  * .term-mount re-fits automatically against the new inner box (RESEARCH O-2). NO manual
  * re-fit call is added in this file (CSS only). */
 
-/* ── The unified session card (D-03 / D-03a / GAP-11-A) ──────────────────────────
- * .terminal-area is the WHITE --surface card that floats on the warm cream --bg with
- * a generous OUTER margin. GAP-11-A headline fix (operator 2026-06-14, "忠实对齐 mockup"
- * → .planning/design/rendered/switchboard-ide-view.png): the charcoal terminal is no
- * longer flush edge-to-edge inside this card — it is an INSET ROUNDED WELL (.terminal-well
- * below) sitting inside the card with generous WHITE padding around it (the --surface
- * shows ALL THE WAY AROUND the well). Breathing room now lives INSIDE the card, not just
- * outside it.
- *
- * The card itself: --surface fill, --line hairline, --radius corners, --shadow-pop lift,
- * a stepped-up OUTER --space-5 margin (was --space-4), and --space-5 INNER padding that
- * becomes the white gutter the header + well float in. overflow:hidden masks the card's
- * own corners (NOT the terminal cells — D-03a).
- *
- * FLEX (RESEARCH Q2): a column — the breadcrumb identity header cap sits above the
- * terminal well; the well flexes to fill the rest. The gap between them is --space-4. */
+/* ── The terminal area (D-03 / D-03a / GAP-11-A) ─────────────────────────────────
+ * .terminal-area is a TRANSPARENT flex-column CONTAINER on the warm cream --bg (the
+ * mockup's cream field). It holds, top-to-bottom: the StatusSummary pill strip (GAP-11-A)
+ * + the white .terminal-card. The OUTER --space-6 margin keeps the cream field present
+ * all around. NOT a card itself — the card surface lives on .terminal-card below so the
+ * status pills sit on the cream ABOVE the card (mockup placement). */
 .terminal-area {
   flex: 1 1 auto;
   min-width: 0;
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  /* Outer gutter — the card floats on the warm cream --bg with a generous --space-6 margin
-   * so the cream field is clearly present all around the card (GAP-11-A breathing). */
   margin: var(--space-6);
-  /* Inner gutter — the WHITE breathing room the header + well sit in (GAP-11-A). The
-   * --surface shows all around the well, so the terminal is an inset block, not flush. */
+  box-sizing: border-box;
+}
+
+/* ── The white session card (D-03 / GAP-11-A) ────────────────────────────────────
+ * The WHITE --surface card that floats on the cream field. GAP-11-A headline fix
+ * (operator 2026-06-14, "忠实对齐 mockup" → switchboard-ide-view.png): the charcoal
+ * terminal is no longer flush edge-to-edge — it is an INSET ROUNDED WELL (.terminal-well
+ * below) sitting inside this card with generous WHITE --space-5 padding around it (the
+ * --surface shows ALL THE WAY AROUND the well). Breathing room lives INSIDE the card too.
+ *
+ * The card: --surface fill, --line hairline, --radius corners, --shadow-pop lift, --space-5
+ * inner padding (the white gutter the header + well float in). A flex column (RESEARCH Q2):
+ * the breadcrumb header cap above the well; the well flexes to fill the rest; gap --space-4.
+ * No card-level overflow:hidden — the inset .terminal-well owns the only clip the terminal
+ * needs (it sits well inside the padding, away from the card's rounded corners), keeping the
+ * resize reflow path one constraint lighter for the pty-resize.smoke SC3 timing budget. */
+.terminal-card {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
   padding: var(--space-5);
   box-sizing: border-box;
-  /* The card frame (mirrors sidebar.css .sidebar-row.active token composition). */
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: var(--shadow-pop);
-  /* GAP-11-A: the CARD no longer needs overflow:hidden to mask the terminal — the inset
-   * .terminal-well (which DOES clip) sits inside the --space-5 white padding, well away
-   * from the card's rounded corners, so nothing reaches them. Dropping the card-level clip
-   * keeps the resize reflow path one constraint lighter (the well owns the only clip the
-   * terminal needs), preserving the .term-mount ResizeObserver → fit → ptyResize timing the
-   * pty-resize.smoke SC3 budget depends on. min-width:0 already lets the card shrink. */
+}
+
+/* ── Status summary strip (GAP-11-A — top per-status pill counts) ─────────────────
+ * A slim row of pills aggregating live session counts by status ("2 Waiting · 5 Running ·
+ * 2 Done · 1 Idle" — mockup). Sits on the cream field ABOVE the white card. Each pill =
+ * a status dot (colored from the status ramp via presentation()'s --accent, NOT re-derived)
+ * + count + label. The StatusSummary component hides zero groups + renders nothing when
+ * empty, so this strip never shows an empty bar. */
+.status-summary {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: 0 var(--space-1);
+  font-family: var(--font-ui);
+}
+
+.status-summary-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1_5);
+  font-size: 13px;
+  line-height: 1;
+  color: var(--ink-soft);
+}
+
+/* The count reads as the emphasis weight; the label is the quiet descriptor. */
+.status-summary-pill .status-summary-count {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.status-summary-pill .status-summary-label {
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+/* The pill dot mirrors the sidebar .row-secondary .status-dot shape (8px round) and reads
+ * its color from the pill's inline --accent custom property — the SAME runtime channel
+ * (presentation().accent) the sidebar/header dots use (D-03, no re-derived color). The
+ * sidebar dot rule is scoped to .sidebar-row, so the strip re-states the shape here. */
+.status-summary-pill .status-dot {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--accent);
 }
 
 /* ── The inset terminal WELL (GAP-11-A — the headline fix) ───────────────────────

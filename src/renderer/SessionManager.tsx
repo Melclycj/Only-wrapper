@@ -35,6 +35,9 @@ import { clampScrollback, SCROLLBACK_DEFAULT } from './scrollback-clamp';
 import { IdentityHeader } from './IdentityHeader';
 import { IdleCard } from './IdleCard';
 import { WelcomeEmptyState } from './WelcomeEmptyState';
+// StatusSummary — the top strip of live per-status pill counts (GAP-11-A; aggregation is
+// the pure React-free summarizeStatuses reducer in status-summary.ts).
+import { StatusSummary } from './StatusSummary';
 // addSession is the SOLE spawn path (T-03-09) — kept in a React/xterm-free module
 // so the no-double-spawn invariant is unit-testable in the Node env.
 import { addSession } from './session-add';
@@ -649,15 +652,16 @@ export function SessionManager(): React.JSX.Element {
         onReorder={handleReorder}
         onOpenPreferences={handleOpenPreferences}
       />
-      {/* Flex-column terminal area (RESEARCH Open Q2): the identity header sits above
-          the .viewport-stack; SessionView panes keep inset:0 inside the stack. When the
-          active session is dormant (not_started) we render its IdleCard IN PLACE OF a
-          live xterm (D-04) — only started sessions get a SessionView (Pitfall 4). When
-          there are zero sessions, WelcomeEmptyState fills the area (D-10). */}
+      {/* Terminal area: a top StatusSummary strip (GAP-11-A — live per-status counts,
+          mockup placement) above the framed card. The breadcrumb IdentityHeader caps the
+          card above the .viewport-stack; a dormant active session shows the IdleCard;
+          zero sessions → WelcomeEmptyState (D-04/D-10). */}
       <div className="terminal-area">
-        {isEmpty ? (
-          <WelcomeEmptyState onCreate={onAdd} />
-        ) : (
+        <StatusSummary sessions={sessions} />
+        <div className="terminal-card">
+          {isEmpty ? (
+            <WelcomeEmptyState onCreate={onAdd} />
+          ) : (
           <>
             <IdentityHeader
               session={activeRecord}
@@ -665,13 +669,11 @@ export function SessionManager(): React.JSX.Element {
               onClear={handleClear}
               onRemove={handleCloseRequest}
             />
-            {/* GAP-11-A: the charcoal terminal is an INSET ROUNDED WELL inside the white
-                card (mockup) — the .terminal-well WRAPPER owns radius/overflow/charcoal
-                fill (D-03a: NEVER on .viewport-stack/.term-mount/.xterm). The stack stays
-                flush (inset:0) so the ResizeObserver re-fits — NO manual fit(). The well is
-                ALWAYS mounted with ALL SessionViews so backgrounded sessions keep buffering
-                (SC1/SC2). A dormant active session overlays the IdleCard on a --surface
-                stage (D-03/D-04 sibling — white card, not a dark void). */}
+            {/* GAP-11-A: the charcoal terminal is an INSET ROUNDED WELL — the .terminal-well
+                WRAPPER owns radius/overflow/fill (D-03a: NEVER on .viewport-stack/.term-mount/
+                .xterm). The well is ALWAYS mounted with ALL SessionViews so backgrounded
+                sessions keep buffering (SC1/SC2); a dormant active session overlays the
+                IdleCard on a --surface stage (D-03/D-04 white-card sibling). */}
             <div className="terminal-well" data-testid="terminal-well">
               <div className="viewport-stack">
                 {startedSessions.map((s) => (
@@ -704,7 +706,8 @@ export function SessionManager(): React.JSX.Element {
               </div>
             </div>
           </>
-        )}
+          )}
+        </div>
       </div>
       <ConfirmModal
         open={closingSession !== null}
