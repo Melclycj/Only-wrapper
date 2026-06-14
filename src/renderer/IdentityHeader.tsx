@@ -68,25 +68,32 @@ export function IdentityHeader({
   if (session === null || session.status !== 'running') return null;
   const style = presentation(session.status, agentState);
   const id = session.logicalId;
+  // GAP-11-A breadcrumb path line (mockup switchboard-ide-view.png): "local · {name} ·
+  // {cwdTail}". cwdTail keeps only the trailing 2 path segments (e.g. ~/apps/orchard →
+  // apps/orchard) so a long absolute cwd does not blow out the line; the .identity-breadcrumb
+  // ellipsis is the final guard. Pure presentation off the existing record fields — no new
+  // bridge key, no IPC. The "local" segment reflects the local-only nature of every session
+  // (the app is local-only by CLAUDE.md constraint).
+  const cwdTail = formatCwdTail(session.cwd);
   return (
     <div className="identity-header" data-testid="identity-header">
       {renderIcon(session.icon, session.name)}
       <span className="row-name">{session.name}</span>
-      <span
-        className="status-badge"
-        style={{ '--accent': style.accent } as React.CSSProperties}
-        title={style.label}
-      >
-        <span className="status-dot" />
-        {style.label}
-      </span>
-      {/* Right-aligned control cluster (D-06 / D-01): Clear + Remove — live-only; the cap
-          carries no go-verb and no stop-verb (recycle is Remove → Inactive List → the
-          dormant ▶ go glyph). margin-left:auto sits it at the far edge after the badge (the
-          .row-name flex already consumes the middle). Buttons copy the Sidebar .row-control
-          shape verbatim; Clear is a text-labelled button. All are native Tab-focusable
-          <button>s (keyboard-focus fix lives in SessionView). */}
-      <span className="header-controls">
+      {/* Right-aligned cluster: status badge + the Clear/Remove control cluster (D-06 /
+          D-01). Grid column 3 (auto) hugs the right edge; the .row-name 1fr column consumes
+          the middle. Live-only — no go-verb, no stop-verb (recycle is Remove → Inactive
+          List → the dormant ▶). Buttons copy the Sidebar .row-control shape verbatim; Clear
+          is a text-labelled button. All native Tab-focusable <button>s. */}
+      <span className="header-right">
+        <span
+          className="status-badge"
+          style={{ '--accent': style.accent } as React.CSSProperties}
+          title={style.label}
+        >
+          <span className="status-dot" />
+          {style.label}
+        </span>
+        <span className="header-controls">
         <button
           type="button"
           className="header-control-clear"
@@ -115,7 +122,43 @@ export function IdentityHeader({
         >
           <span aria-hidden="true">✕</span>
         </button>
+        </span>
+      </span>
+      {/* GAP-11-A breadcrumb path line (mockup): local · {name} · {cwdTail}. Spans cols
+          1–2 below the tab. Mirrors the mockup's "local · test-suite · ~/apps/orchard". */}
+      <span className="identity-breadcrumb" data-testid="identity-breadcrumb">
+        <span className="breadcrumb-seg">local</span>
+        <span className="breadcrumb-sep" aria-hidden="true">·</span>
+        <span className="breadcrumb-seg">{session.name}</span>
+        {cwdTail !== '' && (
+          <>
+            <span className="breadcrumb-sep" aria-hidden="true">·</span>
+            <span className="breadcrumb-seg">{cwdTail}</span>
+          </>
+        )}
       </span>
     </div>
   );
+}
+
+/**
+ * Format a session cwd into the breadcrumb tail — the trailing 1–2 path segments with a
+ * leading "~/" hint when the path lives under HOME-like roots, so a long absolute cwd does
+ * not blow out the breadcrumb (the .identity-breadcrumb ellipsis is the final guard). Pure
+ * string formatting — no fs, no IPC. Exported for the unit test.
+ *
+ *   /Users/jerry/apps/orchard → ~/apps/orchard (tail kept short)
+ *   /apps/orchard             → apps/orchard
+ *   ""                        → "" (omit the segment)
+ */
+export function formatCwdTail(cwd: string | undefined): string {
+  if (!cwd) return '';
+  const trimmed = cwd.replace(/[/\\]+$/, '');
+  if (trimmed === '') return '';
+  const segments = trimmed.split(/[/\\]+/).filter((s) => s.length > 0);
+  if (segments.length === 0) return '';
+  const tail = segments.slice(-2);
+  // A path with more than 2 segments gets a "~/" depth hint (it lives deeper than root).
+  const prefix = segments.length > 2 ? '~/' : '';
+  return prefix + tail.join('/');
 }

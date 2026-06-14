@@ -16,7 +16,11 @@
   /* Surface / ink / line — lifted as-is from terminal.css:6-17, plus --bg from
    * DESIGN.md §"Design tokens" (the warm-white interior, not yet in :root). */
   --surface: #ffffff;
-  --bg: oklch(0.975 0.008 85); /* DESIGN.md — warm-white interior */
+  /* GAP-11-A: warmed toward the mockup's #f3e6d6 cream field (switchboard-ide-view.png)
+   * so the white --surface card visibly floats on a warm ground (was 0.975 0.008 85 —
+   * near-white, which read flat against the card). oklch(0.93 0.024 78) ≈ #f3e6d6: a
+   * higher-chroma, lower-L warm cream. Stays a var() token (no literal leaks). */
+  --bg: oklch(0.915 0.032 74); /* warm cream field (≈ #f3e6d6) — GAP-11-A */
   --bg-sunk: oklch(0.955 0.01 85);
   --ink: oklch(0.32 0.012 70);
   --ink-soft: oklch(0.5 0.012 70);
@@ -85,6 +89,7 @@
   --space-4: 16px;
   --space-5: 20px;
   --space-6: 24px;
+  --space-7: 28px; /* GAP-11-A: the terminal-well inner gutter (white shows around the well) */
   --space-8: 32px;
   --space-12: 48px;
   /* The odd-ball 5px/14px/22px spacing values stay one-offs; Phases 10–13 retune

@@ -20,39 +20,87 @@
  * .term-mount re-fits automatically against the new inner box (RESEARCH O-2). NO manual
  * re-fit call is added in this file (CSS only). */
 
-/* ── The unified session card (D-03 / D-03a) ────────────────────────────────────
- * .terminal-area is BOTH the flex column (identity header cap above the viewport
- * stack — RESEARCH Q2) AND the framed card wrapper. It floats on the cream --bg
- * (set on .ide-layout) with a --space-4 gutter (margin), framed with the Phase-10
- * active-card token composition (--surface/--line/--radius/--shadow-pop) and
- * overflow:hidden to MASK the container corners — never the terminal cells.
+/* ── The unified session card (D-03 / D-03a / GAP-11-A) ──────────────────────────
+ * .terminal-area is the WHITE --surface card that floats on the warm cream --bg with
+ * a generous OUTER margin. GAP-11-A headline fix (operator 2026-06-14, "忠实对齐 mockup"
+ * → .planning/design/rendered/switchboard-ide-view.png): the charcoal terminal is no
+ * longer flush edge-to-edge inside this card — it is an INSET ROUNDED WELL (.terminal-well
+ * below) sitting inside the card with generous WHITE padding around it (the --surface
+ * shows ALL THE WAY AROUND the well). Breathing room now lives INSIDE the card, not just
+ * outside it.
  *
- * GUTTER (D-03 headline geometry): --space-4 (16px) default. The ONLY permitted RUBRIC
- * tuning axis is stepping the margin to --space-5 / --space-6 if 16px reads tight against
- * the cream ground (UI-SPEC card-gutter contract). Do NOT introduce any other axis. */
+ * The card itself: --surface fill, --line hairline, --radius corners, --shadow-pop lift,
+ * a stepped-up OUTER --space-5 margin (was --space-4), and --space-5 INNER padding that
+ * becomes the white gutter the header + well float in. overflow:hidden masks the card's
+ * own corners (NOT the terminal cells — D-03a).
+ *
+ * FLEX (RESEARCH Q2): a column — the breadcrumb identity header cap sits above the
+ * terminal well; the well flexes to fill the rest. The gap between them is --space-4. */
 .terminal-area {
   flex: 1 1 auto;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  /* The gutter — the breathing room between the card and the cream --bg edges. */
-  margin: var(--space-4);
+  gap: var(--space-4);
+  /* Outer gutter — the card floats on the warm cream --bg with a generous --space-6 margin
+   * so the cream field is clearly present all around the card (GAP-11-A breathing). */
+  margin: var(--space-6);
+  /* Inner gutter — the WHITE breathing room the header + well sit in (GAP-11-A). The
+   * --surface shows all around the well, so the terminal is an inset block, not flush. */
+  padding: var(--space-5);
+  box-sizing: border-box;
   /* The card frame (mirrors sidebar.css .sidebar-row.active token composition). */
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: var(--shadow-pop);
-  /* Masks the container corners (NOT terminal cells — D-03a). */
+  /* GAP-11-A: the CARD no longer needs overflow:hidden to mask the terminal — the inset
+   * .terminal-well (which DOES clip) sits inside the --space-5 white padding, well away
+   * from the card's rounded corners, so nothing reaches them. Dropping the card-level clip
+   * keeps the resize reflow path one constraint lighter (the well owns the only clip the
+   * terminal needs), preserving the .term-mount ResizeObserver → fit → ptyResize timing the
+   * pty-resize.smoke SC3 budget depends on. min-width:0 already lets the card shrink. */
+}
+
+/* ── The inset terminal WELL (GAP-11-A — the headline fix) ───────────────────────
+ * The charcoal --term-bg rounded block that the xterm renders inside. This WRAPPER —
+ * NOT the .viewport-stack / .term-mount / .xterm — owns the radius + overflow + fill so
+ * the terminal reads as an inset rounded well with white --surface breathing around it
+ * (mockup). FIDELITY GUARDRAIL (D-03a, BLOCKING): radius/overflow live HERE ONLY; the
+ * .viewport-stack stays flush (its original relative flex box model) inside it and the
+ * .term-mount ResizeObserver re-fits to this smaller inner box automatically — NO manual
+ * fit(). The --radius corner
+ * is large but the xterm content never reaches the exact corner (the well is taller/wider
+ * than any single glyph cell), so no glyph is clipped. */
+.terminal-well {
+  /* A flex COLUMN wrapper (NOT an absolute-positioning context) so the .viewport-stack
+   * inside keeps its ORIGINAL box model (a relative flex child) — this preserves the exact
+   * layout/reflow timing the .term-mount ResizeObserver + fit addon depend on (pty-resize
+   * SC3). The well only ADDS the radius/overflow/charcoal mask around that unchanged stack. */
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  /* min-width AND min-height:0 so the flex item can shrink below the xterm canvas's
+   * intrinsic content size on a window resize — otherwise the default min-width:auto
+   * pins the well to the canvas width and the fit addon never recomputes a narrower col
+   * count (pty-resize.smoke SC3 — the 1s reflow budget). */
+  min-width: 0;
+  min-height: 0;
+  background: var(--term-bg);
+  border-radius: var(--radius);
   overflow: hidden;
 }
 
-/* The viewport stack — fills the remaining card height below the identity header cap;
- * position:relative so the absolute SessionView panes (inset:0) stack inside it.
- * D-03a: NO border-radius / padding / margin here — the inner box must stay flush so
- * the .term-mount ResizeObserver re-fits to it without clipping the last row. */
+/* The viewport stack — a relative flex child of the well (its ORIGINAL box model, restored
+ * from the pre-GAP-11-A flush layout): flex:1 1 auto fills the well height, min-width/height:0
+ * lets it shrink on resize, position:relative anchors the absolute SessionView panes (inset:0).
+ * D-03a: NO border-radius / padding / margin here — the inner box stays flush so the .term-mount
+ * ResizeObserver re-fits to it without clipping the last row. The radius + overflow that round
+ * the terminal live on the .terminal-well WRAPPER above. */
 .viewport-stack {
   position: relative;
   flex: 1 1 auto;
+  min-width: 0;
   min-height: 0;
   background: var(--term-bg);
 }
@@ -97,46 +145,78 @@
   height: 100%;
 }
 
-/* ── Identity header (D-05 / IDENT-03) — the card's top CAP, identity + controls ──
- * Sits above the .viewport-stack inside the flex-column card. The shipped
- * border-bottom hairline is the cap join (UI-SPEC default — re-evaluated vs RUBRIC).
- * Cap padding from the --space scale: --space-2 vertical / --space-3 horizontal
- * (snaps the shipped 8px / 14px). Reuses the .row-icon / .row-name / .status-badge
- * markup so identity reads consistently with the Sidebar row. */
+/* ── Identity header (D-05 / IDENT-03 / GAP-11-A breadcrumb) — the card's top cap ──
+ * GAP-11-A: re-read as a BREADCRUMB (mockup switchboard-ide-view.png) — a session "tab"
+ * (icon + name) on the left + a path line (local · name · cwdTail) + the status on the
+ * right — NOT a flat strip with a hairline join. It now floats on the white --surface
+ * inside the card's --space-5 padding, so the bottom-border hairline is dropped (the
+ * --space-4 flex gap below provides the separation). It is two stacked lines:
+ *   line 1  →  [icon tab] [name]                              [status badge]
+ *   line 2  →  local · {name} · {cwdTail}
+ * Reuses .row-icon / .row-name / .status-badge so identity reads consistently. */
 .identity-header {
   flex: 0 0 auto;
-  display: flex;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
+  column-gap: var(--space-2);
+  row-gap: var(--space-1);
   box-sizing: border-box;
-  background: var(--surface);
-  border-bottom: 1px solid var(--line);
   font-family: var(--font-ui);
   color: var(--ink);
 }
 
-/* The session name — the single identity weight (700, matching the Sidebar .row-name
- * identity contract from 10-UI-SPEC; moved up from the shipped 600). */
+/* The session name — the single identity weight (700, matching the Sidebar .row-name). */
 .identity-header .row-name {
-  flex: 1 1 auto;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-weight: 700;
 }
 
+/* GAP-11-A breadcrumb path line — the mockup's "local · test-suite · ~/apps/orchard"
+ * secondary under the tab. Spans the icon+name columns (col 1–2), JetBrains-Mono so the
+ * cwd path reads as a real path, --ink-faint so it sits quietly below the bold name. */
+.identity-header .identity-breadcrumb {
+  grid-column: 1 / 3;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
+  color: var(--ink-faint);
+}
+
+/* The "·" separators inside the breadcrumb — a touch fainter than the segments. */
+.identity-header .identity-breadcrumb .breadcrumb-sep {
+  color: var(--ink-faint);
+  opacity: 0.6;
+  padding: 0 var(--space-1);
+}
+
+/* ── Header right cluster (GAP-11-A): status badge + Clear/Remove, grid column 3 ──
+ * The breadcrumb grid puts this whole group in the auto-sized right column so the badge
+ * + controls hug the far edge (the .row-name 1fr column consumes the middle). */
+.identity-header .header-right {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  justify-self: end;
+}
+
 /* ── Header control cluster (D-01/D-06 — Clear + Remove ONLY) ────────────────────
- * Right-aligned cluster after the badge. margin-left:auto pins it to the far edge;
- * gap var(--space-1) (4px). Unlike the Sidebar cluster these controls are ALWAYS
- * visible (the header is the always-present active-session control surface, not a
- * hover-reveal row). No Restart, no Stop, no Start (D-06 / 06.1-04 FIX 3). */
+ * Sits after the badge inside .header-right; gap var(--space-1) (4px). Unlike the Sidebar
+ * cluster these controls are ALWAYS visible (the header is the always-present active-session
+ * control surface, not a hover-reveal row). No Restart, no Stop, no Start (D-06 / FIX 3). */
 .identity-header .header-controls {
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  margin-left: auto;
 }
 
 /* Clear is a text-labelled button (discoverable in the header where space allows —
@@ -211,18 +291,20 @@
  * TRANSPARENT (was --term-bg) so the dormant card reads as the live card's sibling on
  * the same unified card surface — not a separate dark void. Tokens only. ──────────── */
 
-/* The stage fills the viewport-stack region and centers the card. */
+/* The stage fills the viewport-stack region and centers the card. GAP-11-A: the stack now
+ * lives inside the charcoal .terminal-well, so the stage paints the white --surface to MASK
+ * the well when a dormant session is active — the IdleCard reads as a white-card sibling
+ * (D-03/D-04), not a card floating on a dark void. (Pre-GAP-11-A it was transparent because
+ * the stack sat directly on the unified card surface.) */
 .idle-card-stage {
   position: absolute;
   inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
+  padding: var(--space-6);
   box-sizing: border-box;
-  /* D-03 sibling: the unified card wrapper owns the ground; the stage is transparent
-   * so the card surface shows through (was var(--term-bg)). */
-  background: transparent;
+  background: var(--surface);
 }
 
 .idle-card {

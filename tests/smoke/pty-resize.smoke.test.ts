@@ -22,13 +22,28 @@ import {
  * read would pick up banner/clock digits. We instead find the last `tput cols`
  * ECHO and take the first standalone integer that appears AFTER it — that is the
  * command's actual output, immune to banner/prompt noise.
+ *
+ * WRAP-TOLERANCE (GAP-11-A): on a NARROW terminal the echoed command `tput cols`
+ * can WRAP mid-word (xterm reflows the prompt+command across a soft line break, so
+ * the whitespace-collapsed buffer reads e.g. `t put cols`). A literal
+ * `lastIndexOf('tput cols')` would then MISS the most-recent (narrow) echo and fall
+ * back to an earlier, WIDER reading — reporting a stale column count for a terminal
+ * that DID correctly resize. We therefore match the command tolerant of any
+ * wrap-inserted whitespace between its characters and take the LAST such match. This
+ * is a parser-robustness fix only; the SC3 reflow assertion itself is unchanged.
  */
+const TPUT_COLS_RE = /t\s*p\s*u\s*t\s+c\s*o\s*l\s*s/g;
+
 function colsFromBuffer(buf: string): number | null {
   // Collapse whitespace so the command echo and its output sit on one line.
   const flat = buf.replace(/\s+/g, ' ');
-  const idx = flat.lastIndexOf('tput cols');
-  if (idx === -1) return null;
-  const after = flat.slice(idx + 'tput cols'.length);
+  // Find the LAST `tput cols` echo, tolerant of wrap-inserted whitespace inside the word.
+  let lastEnd = -1;
+  for (const m of flat.matchAll(TPUT_COLS_RE)) {
+    lastEnd = m.index + m[0].length;
+  }
+  if (lastEnd === -1) return null;
+  const after = flat.slice(lastEnd);
   const m = after.match(/\b(\d{2,3})\b/);
   return m ? parseInt(m[1], 10) : null;
 }

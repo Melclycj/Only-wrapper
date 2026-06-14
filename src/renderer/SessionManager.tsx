@@ -665,38 +665,43 @@ export function SessionManager(): React.JSX.Element {
               onClear={handleClear}
               onRemove={handleCloseRequest}
             />
-            <div className="viewport-stack">
-              {startedSessions.map((s) => (
-                <SessionView
-                  key={s.logicalId}
-                  id={s.logicalId}
-                  active={s.logicalId === activeId && !activeIsCard}
-                  // GAP-10-D fix (10-07): the AUTHORITATIVE running status (seeded from the
-                  // spawn return). Seeds the SessionView agent-state gate so a first-launch
-                  // session whose create()-time 'running' broadcast raced ahead of the
-                  // SessionView onPtyStatus subscription still classifies → amber fires.
-                  running={s.status === 'running'}
-                  onAgentState={handleAgentState}
-                  // The bar shows ONLY for the active, search-open session — a
-                  // backgrounded session never shows it even if its id is searchOpenId
-                  // (07-02 TERM-10 / 07-UI-SPEC §1).
-                  searchOpen={s.logicalId === activeId && searchOpenId === s.logicalId}
-                  onCloseSearch={handleCloseSearch}
-                  // 07-03 (TERM-11 / D-05): the global scrollback cap. SessionView seeds
-                  // new Terminal({ scrollback }) from it and live-applies a change via
-                  // term.options.scrollback on prop change (fan-out to all open terms).
-                  scrollback={scrollback}
-                />
-              ))}
-              {activeIsCard && activeRecord !== null && (
-                <IdleCard
-                  session={activeRecord}
-                  onStart={handleStart}
-                  errorMessage={activeRecord.errorMessage}
-                  onEdit={handleEdit}
-                  onRetry={handleStart}
-                />
-              )}
+            {/* GAP-11-A: the charcoal terminal is an INSET ROUNDED WELL inside the white
+                card (mockup) — the .terminal-well WRAPPER owns radius/overflow/charcoal
+                fill (D-03a: NEVER on .viewport-stack/.term-mount/.xterm). The stack stays
+                flush (inset:0) so the ResizeObserver re-fits — NO manual fit(). The well is
+                ALWAYS mounted with ALL SessionViews so backgrounded sessions keep buffering
+                (SC1/SC2). A dormant active session overlays the IdleCard on a --surface
+                stage (D-03/D-04 sibling — white card, not a dark void). */}
+            <div className="terminal-well" data-testid="terminal-well">
+              <div className="viewport-stack">
+                {startedSessions.map((s) => (
+                  <SessionView
+                    key={s.logicalId}
+                    id={s.logicalId}
+                    active={s.logicalId === activeId && !activeIsCard}
+                    // GAP-10-D (10-07): the AUTHORITATIVE running status (seeded from the
+                    // spawn return) — gates the agent-state classification on a first launch.
+                    running={s.status === 'running'}
+                    onAgentState={handleAgentState}
+                    // The bar shows ONLY for the active, search-open session (07-02 TERM-10).
+                    searchOpen={
+                      s.logicalId === activeId && searchOpenId === s.logicalId
+                    }
+                    onCloseSearch={handleCloseSearch}
+                    // 07-03 (TERM-11 / D-05): the global scrollback cap fanned to every term.
+                    scrollback={scrollback}
+                  />
+                ))}
+                {activeIsCard && activeRecord !== null && (
+                  <IdleCard
+                    session={activeRecord}
+                    onStart={handleStart}
+                    errorMessage={activeRecord.errorMessage}
+                    onEdit={handleEdit}
+                    onRetry={handleStart}
+                  />
+                )}
+              </div>
             </div>
           </>
         )}
