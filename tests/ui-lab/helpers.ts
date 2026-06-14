@@ -94,6 +94,10 @@ export function resolveOverrideCss(): OverrideResolution | null {
     for (const rel of [
       'src/renderer/tokens.css',
       'src/renderer/terminal.css',
+      // GAP-11-A: the terminal-area surface layer (the inset well + breadcrumb header +
+      // card padding) lives here — injected so CSS-only well/header tuning previews
+      // without a repackage (structural TSX changes still require ui:shots:fresh).
+      'src/renderer/terminal-area.css',
       'src/renderer/sidebar.css',
     ]) {
       css += `${fs.readFileSync(path.resolve(process.cwd(), rel), 'utf8')}\n`;
