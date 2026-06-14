@@ -1,5 +1,5 @@
 ---
-status: pending
+status: diagnosed
 phase: 11-terminal-area-polish-live-start-restart
 source: [11-VALIDATION.md, 11-03-PLAN.md]
 started: 2026-06-14
@@ -73,7 +73,12 @@ a visible cream gutter to the `--bg` background — NOT an edge-to-edge rectangl
 evidence: `artifacts/ui-lab/p11-gate/terminal-card.png` + `terminal-running.png` (framed card,
 gutter, shadow, no clipped row) vs the BEFORE `artifacts/ui-lab/phase9-baseline/terminal-running.png`
 (unframed edge-to-edge). `tokens-completeness` GREEN.
-result: [PENDING]
+result: [FAIL] — operator 2026-06-14: "没看出来呼吸感 … 很丑,甚至不如那个 html draft 的效果". The
+framed card lacks perceptible breathing room and reads uglier than the `switchboard-mockup.html`
+north-star: the terminal is flush edge-to-edge inside the card rather than an inset rounded
+*well* sitting inside a white `--surface` with breathing room around it (mockup IDE view, now
+rendered at `.planning/design/rendered/switchboard-ide-view.png`). → **GAP-11-A** (visual
+gap-closure round — see ## Gaps).
 
 ### SC1-CV. CORE-VALUE FIDELITY — terminal still native (UI-03, BLOCKING)
 steps: Type in the terminal; run `claude --rc` (the canonical 🛋️ scenario), `vim`, and a
@@ -84,7 +89,7 @@ card frame is on the WRAPPER only; the xterm grid is untouched (the ResizeObserv
 evidence: `app-restart-restore.smoke`, `alt-screen-reset.smoke`, `pty-resize.smoke` (correct
 `tput cols` after framing) GREEN; the `terminal-card` capture shows no clipped glyph. This is
 the BLOCKING Core-Value check — automated smoke corroborates but the operator signs off.
-result: [PENDING]
+result: [PASS] — operator approved LIVE 2026-06-14: the terminal stays native (typed, ran the agent / vim / scrolling, ANSI/truecolor + alt-screen enter-exit + resize all unaffected; no glyph clipped by a corner).
 
 ### SC2. WORKING AREA vs INACTIVE LIST clarity (D-03 sibling)
 steps: With at least one live session + one dormant (Inactive) session, glance at the layout.
@@ -93,7 +98,7 @@ obvious at a glance; the dormant IdleCard reads as the live card's SIBLING (same
 slate/idle "ready when you are", not an error/empty-void treatment).
 evidence: `artifacts/ui-lab/p11-gate/inactive-recipes.png` (dashed eggshell recipe rows + ghost
 ▶ Start) + `terminal-card.png` (Working Area · n / Inactive · n section labels visible).
-result: [PENDING]
+result: [PASS] — operator approved LIVE 2026-06-14.
 
 ### SC3. LIFECYCLE — Start / Remove / Clear + Remove→Start recycle + NO restart anywhere (SESS-07 / D-01)
 steps: (a) Scan everywhere for a restart control — sidebar rows, the right-click context menu,
@@ -106,7 +111,7 @@ evidence: `grep -rc 'data-testid="restart-session"' src/renderer` → 0; `header
 asserts the menu Restart is absent; `startup-command.smoke` SC3 proves Remove → Inactive → Start ▶
 re-runs the stored command on a fresh process with no "— restarted" separator; the idle-card
 skip reason ("context menu has no Stop item: Edit, Remove") corroborates the menu is Edit+Remove.
-result: [PENDING]
+result: [PASS] — operator approved LIVE 2026-06-14: NO restart control anywhere (no ↻ row, no menu Restart, none on the header); Remove → Inactive List → Start ▶ recycle works, never forced to type `exit`.
 
 ### SC4. IDENTITY PRESERVED across Remove → Start (SESS-07 / SESS-04 / D-02)
 steps: Take a CONFIGURED session (custom name / icon / startup recipe). Remove it → Start it.
@@ -116,7 +121,7 @@ fidelity path is untouched.
 evidence: `app-restart-restore.smoke` (configured persists; dormant Start has no separator) +
 `startup-command.smoke` R1 (the dormant Start ▶ re-spawns + RUNS the saved command);
 `security.guard.test.ts` GREEN at 20 keys; `src/main/*` byte-untouched this phase.
-result: [PENDING]
+result: [PASS] — operator approved LIVE 2026-06-14: identity (name/icon/recipe) preserved across Remove → Start.
 
 ### D-04. AGENT-BUSY ESCALATION COPY (LIVE, requires a real mid-task agent)
 steps: With an agent mid-task (`claude` actively WORKING, or WAITING for your input at a prompt),
@@ -131,23 +136,46 @@ evidence: `confirm-copy.test.ts` unit-proves the escalation string branches by `
 {in-progress, waiting}`; the `agent-busy-confirm.png` capture shows the modal chrome + danger
 ramp in the Free state (baseline copy). The LIVE escalation requires a real agent state (not
 harness-drivable) — this is the operator's check.
-result: [PENDING]
+result: [PASS] — operator approved LIVE 2026-06-14: the agent-busy confirm copy escalates.
 
 ## Summary
 
 total: 6
-passed: 0
-issues: 0
-pending: 6
+passed: 5
+issues: 1
+pending: 0
 partial: 0
 skipped: 0
 blocked: 0
 
-(SC1, SC1-CV, SC2, SC3, SC4, D-04 — all PENDING the operator's LIVE sign-off. On approval, mark
-each PASS and flip `nyquist_compliant: true` in 11-VALIDATION.md, closing UI-03 + SESS-07.)
+(NOT_APPROVED_QUALIFIED 2026-06-14: SC1-CV / SC2 / SC3 / SC4 / D-04 operator-approved LIVE — the
+functional + Core-Value + SESS-07 work is CONFIRMED and stays done. SC1 FAILED on visual quality
+→ GAP-11-A. `nyquist_compliant` stays FALSE in 11-VALIDATION.md; UI-03 + SESS-07 stay OPEN until
+the GAP-11-A redesign lands + re-gates and the operator approves SC1.)
 
 ## Gaps
 
-(none yet — populated if the operator reports a regression. If terminal fidelity regresses or
-any restart control is still reachable, the operator reports it here and does NOT approve →
-gap-closure routing.)
+| # | Gap | Severity | Surface | status | route |
+|---|-----|----------|---------|--------|-------|
+| GAP-11-A | Terminal card lacks breathing room + does not match the `switchboard-mockup.html` north-star — the terminal sits flush edge-to-edge inside the card instead of an inset rounded *well* inside a white surface; reads "很丑,甚至不如那个 html draft" | S1 | terminal area (UI-03) | open | Phase 11 gap-closure round 2 (11-04 redesign + 11-05 re-gate) |
+
+### GAP-11-A scope (operator decision 2026-06-14 — "忠实对齐 mockup")
+
+Faithfully match `.planning/design/rendered/switchboard-ide-view.png` (the mockup IDE view):
+
+1. **Inset rounded terminal well** — the `--term-bg` terminal becomes a rounded block sitting
+   INSIDE a white `--surface` card with generous padding around it (breathing room INSIDE the
+   card, not just outside). **Fidelity guardrail preserved**: the *well wrapper* gets the
+   radius/padding; the xterm stays flush inside the well and the ResizeObserver re-fits to it
+   (no clip, no fit regression). Needs a small `terminal-well` wrapper in `SessionManager.tsx`.
+2. **Generous outer breathing room** — the card floats on cream with real margin (step the
+   gutter up from `--space-4`).
+3. **Warmer cream background** — tune `--bg` warmer toward the mockup's `#f3e6d6`.
+4. **Breadcrumb session header** — the header reads as a session tab + path line
+   (`local · /name · ~/cwd`) + status, like the mockup, not a flat strip.
+5. **Status summary pills (top)** — a top strip aggregating counts by status (e.g.
+   `2 Waiting · 5 Running · 2 Done · 1 Idle`). NOTE: a small NEW feature (count aggregation +
+   a top bar), not pure CSS — operator explicitly opted in.
+
+(The functional gates SC1-CV / SC2 / SC3 / SC4 / D-04 stay PASSED — the redesign must NOT
+regress terminal fidelity, the Remove→Start recycle, or re-introduce any restart control.)
