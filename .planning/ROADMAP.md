@@ -143,7 +143,7 @@
 
 *Wave 2 (blocked on 12-04)*
 
-- [ ] 12-06-PLAN.md — Lifecycle: GAP-12-B (Restart-to-apply prompt reusing the retained ptyRestart — same logicalId, new ptyPid) + GAP-12-C (bad-cwd CR-01 rejection surfaced where the user acted) + IN-02 SessionManager extraction (<800 lines)
+- [x] 12-06-PLAN.md — Lifecycle: GAP-12-B (Restart-to-apply prompt reusing the retained ptyRestart — same logicalId, new ptyPid) + GAP-12-C (bad-cwd CR-01 rejection surfaced where the user acted) + IN-02 SessionManager extraction (<800 lines) — **DONE** (RestartApplyPrompt + pure session-restart-prompt/session-lifecycle-actions reducers; handleRestart re-surfaced with pid>0 guard; SessionManager.tsx 798 lines; EXPECTED_API_KEYS stays 20; 448 unit GREEN, tsc/scoped-lint clean, session-edit smoke 4/4 isolated incl. 2 new GAP-12-B specs proving new ptyPid + marker-in-buffer + Later-no-restart)
 
 *Wave 3 (blocked on 12-04/05/06)*
 

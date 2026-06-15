@@ -56,3 +56,11 @@ The Phase-12 code review found 0 critical, 5 warning, 3 info. Five were fixed in
   `handleDeleteRequest`/`cancelClose` group (~59 lines) into a `session-lifecycle-actions.ts` helper
   at the start of Phase 13 (same pattern as `session-add.ts`/`session-close.ts`). NB: this overlaps
   WR-04's surface, so do the WR-04 lifecycle fix and the IN-02 extraction together in Phase 14/13.
+
+## 12-06 deferred (out of scope)
+
+- `npm run lint` reports 12 pre-existing errors in `.planning/spikes/*.cjs`
+  (require()-style imports + unused vars in 001/002/003 spike scripts). These are
+  NOT introduced by 12-06 and are unrelated to the renderer/main source. Scoped lint
+  of all 12-06-touched files (SessionManager.tsx, RestartApplyPrompt.tsx,
+  session-restart-prompt.ts, session-lifecycle-actions.ts + tests) is GREEN.

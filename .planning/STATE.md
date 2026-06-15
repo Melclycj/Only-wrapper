@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: milestone
 status: executing
-stopped_at: Completed 12-02-PLAN.md
-last_updated: "2026-06-15T01:34:08.221Z"
-last_activity: 2026-06-15 -- Phase 12 execution started
+stopped_at: Completed 12-06-PLAN.md
+last_updated: "2026-06-15T12:15:30.000Z"
+last_activity: 2026-06-15 -- 12-06 gap-closure DONE (GAP-12-B Restart-to-apply prompt + GAP-12-C CR-01 surfacing + IN-02 extraction)
 progress:
   total_phases: 6
   completed_phases: 1
-  total_plans: 23
-  completed_plans: 21
-  percent: 17
+  total_plans: 24
+  completed_plans: 22
+  percent: 18
 ---
 
 # Project State
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-06-10 — v1.1 milestone started)
 
 ## Current Position
 
-Phase: 12 (session-form-polish-edit-ux) — EXECUTING
-Plan: 3 of 3
-Status: Phase 12 automated gate GREEN — awaiting BLOCKING human-verify (Task 3)
-Last activity: 2026-06-15 -- 12-03 Tasks 1-2 done (SESS-05 round-trip smoke + p12-form-gate capture scored PASS, gitSha d57576d); Task 3 BLOCKING human-verify pending (orchestrator-owned); nyquist_compliant still false
+Phase: 12 (session-form-polish-edit-ux) — EXECUTING (gap-closure)
+Plan: 12-06 of the gap-closure set complete; 12-07 re-gate next
+Status: Gap-closure Wave 2 (12-06) DONE — GAP-12-B + GAP-12-C closed; 12-07 BLOCKING operator re-verify pending (nyquist_compliant still false)
+Last activity: 2026-06-15 -- 12-06 gap-closure DONE (gitSha 5b9d9b8): Restart-to-apply prompt reusing the retained ptyRestart (new RestartApplyPrompt + pure session-restart-prompt/session-lifecycle-actions reducers), handleRestart re-surfaced with a pid>0 guard (bad-cwd CR-01 rejection lands on the IdleCard — GAP-12-C), IN-02 extraction keeps SessionManager.tsx at 798 lines, EXPECTED_API_KEYS stays 20; 448 unit GREEN, tsc clean, scoped lint clean, session-edit smoke 4/4 isolated (2 new GAP-12-B specs prove new ptyPid + startup marker in buffer + Later-no-restart). The 12-07 re-gate (full suite + ui:shots:fresh + BLOCKING operator human-verify) owns the live restart + bad-cwd visible-rejection sign-off.
 
 ### v1.1 Milestone Phases (9–15)
 
@@ -117,6 +117,7 @@ Phase 9 (UI-01 design tokens) gates the per-surface polish phases (10–13). Pha
 | Phase 11 P01 | ~18min | 2 tasks | 6 files |
 | Phase 12 P01 | ~5 min | 3 tasks | 6 files |
 | Phase 12 P02 | 10 min | 3 tasks | 8 files |
+| Phase 12 P06 | ~12 min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -205,6 +206,7 @@ Recent decisions affecting current work:
 - [Phase 11-02]: UI-03 / D-03 unified session card landed (renderer-CSS-only). NEW src/renderer/terminal-area.css = the terminal-area surface layer EXTRACTED from terminal.css (mirroring the Phase-10 sidebar.css extraction): .terminal-area card frame + .viewport-stack + .session-view* + .term-mount + .xterm* sizing + the .identity-header cluster + .idle-card family + .welcome-state, imported AFTER terminal.css in index.tsx so cascade order is preserved. terminal.css 873 → 494 lines (under the 800 hard rule). The card frame is on .terminal-area DIRECTLY (NOT a new .terminal-card wrapper div — SessionManager.tsx is out of this plan's files_modified; framing the existing container avoids the ResizeObserver re-bind walk read_first warned against): margin: var(--space-4) gutter + background var(--surface) + border 1px var(--line) + border-radius var(--radius) + box-shadow var(--shadow-pop) + overflow:hidden (masks the WRAPPER corners). The cream ground moved up to .ide-layout { background: var(--bg) }. D-03a BLOCKING fidelity guardrail HELD: NO radius/padding/overflow on .viewport-stack/.term-mount/.xterm* (they keep inset:0 / width:100%;height:100%); NO manual fit call added — the existing .term-mount ResizeObserver re-fits to the new framed inner box (O-2 PROVEN GREEN by pty-resize.smoke reporting correct tput cols + alt-screen-reset scroll/exit + app-restart-restore + header-controls + search-bar; 8 fidelity smoke specs GREEN). .idle-card-stage ground flipped --term-bg → transparent (D-03 sibling); .identity-header .row-control-close danger ramp added (D-15 color-mix wash); header .row-name weight 600 → 700 (single identity weight). IdentityHeader.tsx = doc-comment refresh ONLY to the Phase-11 D-01 lifecycle (Clear + Remove; recycle via dormant ▶ go glyph) — no structural/JSX/testid change; identity-header/clear-terminal/header-remove all preserved. color #ffffff → var(--surface) on idle/welcome buttons (value-preserving tokens-first). EXPECTED_API_KEYS stays 20 (renderer-only, src/main untouched). 401 unit GREEN, tsc + eslint clean, tokens-completeness + status-colors GREEN. VISUAL proof (card looks framed, no clipped row) is STRUCTURAL → owned by Plan 11-03's packaged ui:shots:fresh capture, NOT an injection preview.
 - [Phase 12]: 12-01: Two pure renderer reducers extracted RED→GREEN — mergeAuthoritativeProfiles (SESS-05, copies exactly cwd/shell/startupCommand/configured, never the renderer-owned lifecycle fields) + validateSessionForm (D-04, frozen UI-SPEC literals + isAbsolutePathish format-only check). Not yet wired into SessionManager/SessionEditModal (Plan 02). edit-modal-validation ui-lab surface + DESIGN-RUBRIC two-group/blue-Save update added. 413 unit GREEN, tsc clean, EXPECTED_API_KEYS stays 20.
 - [Phase 12]: 12-02: Save button moved to constructive accent-blue .modal-btn-save (not danger-red); form CSS extracted to form.css; rehydrateProfiles delegates to mergeAuthoritativeProfiles — D-04 Pitfall 1 required; <800-line discipline; SESS-05 flows through the tested reducer
+- [Phase 12]: 12-06 (gap-closure): GAP-12-B closed — after Save, a LIVE session whose launch fields (cwd/shell/startupCommand) changed shows a "Restart to apply?" prompt (Restart now / Later). Restart now REUSES the RETAINED ptyRestart (Phase 11 D-01 kept it un-surfaced) → same logicalId, new ptyPid; Later persists without restarting. handleRestart re-surfaced with a pid>0 guard (DEBT-02 WR-02, mirrors handleStart): a bad-cwd restart makes create() return pid -1 with the CR-01 'Working directory not found' notice already broadcast over onPtyStatus → row.errorMessage → IdleCard, so the failed respawn is NOT optimistically flipped to running (GAP-12-C surfacing). NO new bridge key — EXPECTED_API_KEYS stays 20 (security.guard GREEN); main stays the validator of record (CR-01 isValidCwd unchanged). IN-02 extraction: SessionManager decision logic moved to pure session-lifecycle-actions.ts (resolveRemoveAction reproduces confirmClose's isConfiguredLive branch byte-for-byte + flipToDormant) and session-restart-prompt.ts (launchFieldsChanged WR-05-trim / needsRestartPrompt running-only / restartPromptIdFor); SessionManager.tsx = 798 lines (<800). NEW dedicated RestartApplyPrompt.tsx copies the ConfirmModal a11y skeleton (NOT generalized) with an accent-blue primary; testids restart-apply-now / restart-apply-later (additive). 448 unit GREEN (51 files), tsc clean, scoped eslint clean (12 pre-existing .planning/spikes/*.cjs lint errors deferred — out of scope). session-edit smoke 4/4 GREEN isolated (2 new GAP-12-B specs prove new ptyPid + startup marker in buffer + Later-no-restart; the attempt-1 rename failure was the known first-spawn flake, cleared on isolated re-run). The wdio smoke runs the PACKAGED binary → `npm run package` is REQUIRED after a renderer change before the smoke reflects it (a stale package masked the prompt on the first run). 12-07 re-gate owns the live restart + bad-cwd visible-rejection BLOCKING human-verify; nyquist_compliant stays false until explicit operator approval.
 
 ### Pending Todos
 
@@ -255,8 +257,8 @@ Acknowledged and deferred at v1.0 milestone close on 2026-06-10 (option B — ca
 
 ## Session Continuity
 
-Last session: 2026-06-15T01:34:00.712Z
-Stopped at: Completed 12-02-PLAN.md
+Last session: 2026-06-15T12:15:30.000Z
+Stopped at: Completed 12-06-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
