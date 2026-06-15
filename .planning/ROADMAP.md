@@ -128,7 +128,7 @@
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 12-02-PLAN.md — Renderer composition: SessionEditModal D-02 two-group restructure + IconPicker polish + D-04 inline validation + blue Save + form.css extract + SESS-05 rehydrate rewire
+- [x] 12-02-PLAN.md — Renderer composition: SessionEditModal D-02 two-group restructure + IconPicker polish + D-04 inline validation + blue Save + form.css extract + SESS-05 rehydrate rewire
 
 **Wave 3** *(blocked on Wave 2 completion)*
 

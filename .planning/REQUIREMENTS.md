@@ -22,7 +22,7 @@ Phase numbering continues from v1.0 (which ended at Phase 8). Each requirement m
 ### Session-Edit UX
 
 - [x] **SESS-05**: When the user re-opens the Edit Session modal, the saved working directory and startup command are pre-filled — the form mirrors what is actually persisted in main — rather than shown empty. (pending todo: edit-modal-does-not-prefill-saved-cwd-and-startup-command)
-- [ ] **SESS-06**: The session form provides a native "Browse…" folder picker for the working directory that fills the field with an absolute path; main remains the validator of record (CR-01 path guard still gates the value). (pending todo: add-folder-picker-for-working-directory-selection)
+- [x] **SESS-06**: The session form provides a native "Browse…" folder picker for the working directory that fills the field with an absolute path; main remains the validator of record (CR-01 path guard still gates the value). (pending todo: add-folder-picker-for-working-directory-selection)
 - [x] **SESS-07**: The session lifecycle is simplified to Start / Remove / Clear — the restart verb is removed from the UI (the `ptyRestart` mechanism is kept hidden, so `EXPECTED_API_KEYS` stays 20). Recycling a session is the discoverable Remove → Start (fresh) path, consistent with the dormant-record Start ▶ promotion path, so the user is never forced to type `exit`. *(Amended 2026-06-13 — operator chose to remove restart rather than surface it; see Phase 11 `11-CONTEXT.md` D-01/D-02/D-05.)* (done 2026-06-14 — Phase 11: Start/Remove/Clear lifecycle, restart UI removed, Remove → Start recycle; operator-verified LIVE)
 
 ### Code-Review Debt
@@ -95,7 +95,7 @@ Each v1.1 requirement maps to exactly one phase. Phase numbering continues from 
 | SESS-07 | Phase 11 — Terminal Area Polish + Live Start/Restart | Complete |
 | UI-04 | Phase 12 — Session Form: Polish + Edit UX | Complete |
 | SESS-05 | Phase 12 — Session Form: Polish + Edit UX | Complete |
-| SESS-06 | Phase 12 — Session Form: Polish + Edit UX | Pending |
+| SESS-06 | Phase 12 — Session Form: Polish + Edit UX | Complete |
 | UI-05 | Phase 13 — State & Interaction Design | Pending |
 | UI-06 | Phase 13 — State & Interaction Design | Pending |
 | DEBT-01 | Phase 14 — Code-Review Debt Closure | Pending |
