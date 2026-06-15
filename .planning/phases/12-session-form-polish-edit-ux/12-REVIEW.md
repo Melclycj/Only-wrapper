@@ -23,7 +23,10 @@ findings:
   warning: 5
   info: 3
   total: 8
-status: issues_found
+  fixed: 5
+  deferred: 3
+status: resolved
+resolution: "5 fixed in-phase (WR-01/WR-02/WR-03/IN-01/IN-03); 3 deferred (WR-04→Phase14/DEBT-02 lifecycle, WR-05→harness debt, IN-02→Phase13). See deferred-items.md."
 ---
 
 # Phase 12: Code Review Report
@@ -40,6 +43,21 @@ Phase 12 delivers three artifacts: the `mergeAuthoritativeProfiles` pure reducer
 The two new pure reducers are logically correct and well-immutability-disciplined. The security boundary holds: no `innerHTML`/`dangerouslySetInnerHTML`, no `eval`, no new bridge keys, and the cwd error notice is rendered as a React text node (auto-escaped). The 800-line hard rule is obeyed by all new source files. No hardcoded secrets or debug artifacts were found.
 
 Five warnings and three info items were found. No blockers exist.
+
+## Resolution (orchestrator, 2026-06-15)
+
+| Finding | Disposition | Commit / Route |
+|---------|-------------|----------------|
+| WR-01 (terminal-area.css token scan) | **FIXED** | `ef52d53` — added to tokens-completeness (no latent drift found) |
+| WR-02 (form.css scrim literal) | **FIXED** | `a8df866` — tokenized as `--scrim` |
+| WR-03 (smoke field-setter) | **FIXED** | `9c75193` — native-setter; session-edit smoke 2/2 GREEN |
+| IN-01 (merge undefined contract) | **FIXED** | `07d9fa7` — test locks "main truth wins" |
+| IN-03 (handleSave comment) | **FIXED** | `fd0e8a2` — comment corrected |
+| WR-04 (confirmClose stale snapshot) | **DEFERRED → Phase 14 / DEBT-02** | benign (no data loss); lifecycle code requires Phase-14 human re-verify |
+| WR-05 (idle-card "Stop" surface) | **DEFERRED → harness debt** | pre-existing (Phase 11); unrelated to session form |
+| IN-02 (SessionManager 795 lines) | **DEFERRED → Phase 13** | proactive split before Phase 13 form work |
+
+Post-fix gate: `npm run test:unit` 420/420, `tsc` 0, lint clean, `security.guard` GREEN (EXPECTED_API_KEYS=20), session-edit smoke 2/2. See `deferred-items.md` for the deferred-finding detail + the corrected `pty-resize.smoke` flake classification.
 
 ## Warnings
 
