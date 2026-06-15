@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog, screen } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, screen, Menu } from 'electron';
 import path from 'node:path';
 import os from 'node:os';
 import started from 'electron-squirrel-startup';
@@ -14,6 +14,7 @@ import {
   type KeyInput,
 } from './switch-keys';
 import { handleWindowClosed, handleWindowAllClosed } from './lifecycle';
+import { buildAppMenuTemplate } from './app-menu';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -204,6 +205,13 @@ app.whenReady().then(async () => {
   const data = await store.load();
   ptyManager.hydrate(data.sessions); // restored records → dormant (not_started)
   ptyManager.setStoreSignal(syncStore); // every mutation debounce-writes (D-13)
+  // GAP-12-D: set the application menu with the STANDARD Edit roles so Cmd+A select-all,
+  // Cmd+C/V/X, and Cmd+Z work in the form inputs. No menu was ever set, so Cmd+A had no
+  // Select-All role and bubbled out → it closed the edit modal. The Cmd+1-9 / Cmd+K /
+  // Cmd+F app-wins chords are deliberately NOT menu accelerators — they stay in the
+  // before-input-event interceptor below so they win over a focused xterm (Electron
+  // #19279). Process-global, set once at whenReady (after the ConPTY gate).
+  Menu.setApplicationMenu(Menu.buildFromTemplate(buildAppMenuTemplate(process.platform)));
   createWindow();
 });
 
