@@ -36,6 +36,10 @@ const formCss = readFileSync(
   resolve(__dirname, '../form.css'),
   'utf8',
 );
+const terminalAreaCss = readFileSync(
+  resolve(__dirname, '../terminal-area.css'),
+  'utf8',
+);
 const statusColorsTs = readFileSync(
   resolve(__dirname, '../status-colors.ts'),
   'utf8',
@@ -115,6 +119,16 @@ describe('tokens.css single source of truth (SC2/SC3)', () => {
     // .modal-btn-save accent ramp + the .edit-group-* / .edit-field-notice rules all
     // resolve through tokens.css.
     const referenced = referencedTokens(formCss);
+    const undefinedRefs = [...referenced].filter((t) => !defined.has(t));
+    expect(undefinedRefs).toEqual([]);
+  });
+
+  it('every var(--token) in terminal-area.css is defined in tokens.css', () => {
+    // terminal-area.css was added in Phase 11 (UI-03), imported in index.tsx:25.
+    // 77 var(--token) references — a future token rename or removal in tokens.css
+    // would silently break terminal-area.css at runtime without this guard
+    // (RESEARCH Reliability lens — "fails loudly" contract).
+    const referenced = referencedTokens(terminalAreaCss);
     const undefinedRefs = [...referenced].filter((t) => !defined.has(t));
     expect(undefinedRefs).toEqual([]);
   });
