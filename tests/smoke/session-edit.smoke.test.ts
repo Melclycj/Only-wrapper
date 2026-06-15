@@ -20,6 +20,7 @@ import {
   clickAddSession,
   openContextMenu,
   clickMenuItem,
+  clickByTestId,
   setEditFieldByTestId,
   readEditFieldByTestId,
   hasTestId,
@@ -82,7 +83,7 @@ describe('Session edit smoke (SESS-01/02/04)', () => {
 
     const newName = 'Renamed Session';
     await setEditName(newName);
-    await clickMenuItem('Save changes'); // Save button shares the menu-item click contract (label promoted to 'Save changes' in 12-02)
+    await clickByTestId('edit-save'); // GAP-12-A: Save is driven by data-testid (not a context-menu item)
 
     await browser.waitUntil(async () => (await rowName(id)) === newName, {
       timeout: 3000,
@@ -113,7 +114,7 @@ describe('Session edit smoke (SESS-01/02/04)', () => {
     await openEdit(id);
     await setEditFieldByTestId('edit-cwd', knownCwd);
     await setEditFieldByTestId('edit-startup', knownStartup);
-    await clickMenuItem('Save changes');
+    await clickByTestId('edit-save');
 
     // Save closes the modal (onSaveProfile → cancelEdit). Wait for the close so the
     // reopen below seeds from main's truth, not the stale in-flight form.

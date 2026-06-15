@@ -330,13 +330,14 @@ export function SessionEditModal({
             Cancel
           </button>
           {/* Save is the CONSTRUCTIVE accent-blue primary (D-04 Pitfall 1: the blue
-              save ramp, NOT the destructive red confirm ramp). It still carries the
-              menu-item class so the WDIO driver's text-addressed menu click activates
-              it. The save data-testid is UNCHANGED; only the visible label is promoted
-              for a clearer constructive verb-noun. */}
+              save ramp, NOT the destructive red confirm ramp). GAP-12-A: the button is
+              driven by data-testid="edit-save" (the smoke + ui-lab click it by testid),
+              so it carries NO context-menu-item class — that class set
+              background:transparent and was overriding the accent-blue .modal-btn-save
+              fill, making Save read neutral instead of blue. */}
           <button
             type="button"
-            className="modal-btn modal-btn-save context-menu-item"
+            className="modal-btn modal-btn-save"
             data-testid="edit-save"
             onClick={handleSave}
           >
