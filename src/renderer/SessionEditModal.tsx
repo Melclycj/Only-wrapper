@@ -123,10 +123,11 @@ export function SessionEditModal({
     // the form is robust to both real typing and automated fills (the E2E contract).
     const nameValue = nameRef.current?.value ?? name;
     const cwdValue = cwdRef.current?.value ?? cwd;
-    // Only trust the <select>'s DOM value once discovery has resolved — while the
-    // in-flight "Finding shells…" placeholder is shown the ref reads that label text,
-    // so fall back to the seeded `shell` (keeps the saved shell unchanged if the user
-    // saves before discovery lands).
+    // When discovery has resolved, the <select>'s DOM value is authoritative — it
+    // reflects either the matched saved shell or shells[0] if the saved shell is no
+    // longer present in the discovered list. While discovery is in-flight
+    // (shells === null), keep the saved shell unchanged so saving before discovery
+    // lands does not overwrite the persisted shell with a placeholder label.
     const shellValue =
       shells !== null ? (shellRef.current?.value ?? shell) : shell;
     const startupValue = startupRef.current?.value ?? startupCommand;
