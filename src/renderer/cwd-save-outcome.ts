@@ -44,3 +44,25 @@ export function cwdWasDropped(
   const persisted = (persistedCwd ?? '').trim();
   return submitted !== persisted;
 }
+
+/** The minimal row shape the drop lookup reads from main's authoritative snapshot. */
+interface PersistedCwdRow {
+  logicalId: string;
+  cwd: string;
+}
+
+/**
+ * Decide the save-time cwd-drop OUTCOME for one session from main's authoritative
+ * post-save snapshot (the listSessions re-read rehydrateProfiles already performs).
+ * Returns the frozen CWD_DROPPED_NOTICE when main dropped the submitted cwd, else null
+ * (a valid save / no actionable change). Keeps SessionManager's handler a single call —
+ * the find + compare live here so the renderer stays a thin reporter of main's outcome.
+ */
+export function cwdDropNoticeFor(
+  id: string,
+  submittedCwd: string,
+  persisted: readonly PersistedCwdRow[],
+): string | null {
+  const persistedCwd = persisted.find((s) => s.logicalId === id)?.cwd;
+  return cwdWasDropped(submittedCwd, persistedCwd) ? CWD_DROPPED_NOTICE : null;
+}

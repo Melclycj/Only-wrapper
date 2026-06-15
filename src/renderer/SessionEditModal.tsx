@@ -39,6 +39,16 @@ export interface SessionEditModalProps {
    * danger ramp (D-04). NOT a new IPC — it reuses the existing onPtyStatus path.
    */
   errorMessage?: string;
+  /**
+   * GAP-12-E (12-09): the save-time cwd-drop notice. Non-null when the LAST Save submitted
+   * a cwd main REJECTED (kept the prior directory) — the modal stays OPEN and renders this
+   * inline under the cwd field in the danger ramp (the existing edit-field-notice--error
+   * markup), distinct from the live FORMAT hint and from the CR-01 `errorMessage`. A fixed
+   * literal (CWD_DROPPED_NOTICE) — no path interpolation.
+   */
+  cwdDropNotice?: string | null;
+  /** GAP-12-E: clear the drop notice when the user edits the cwd field again. */
+  onClearCwdDropNotice?: () => void;
   onCancel: () => void;
 }
 
@@ -48,6 +58,8 @@ export function SessionEditModal({
   onSaveLive,
   onSaveProfile,
   errorMessage,
+  cwdDropNotice,
+  onClearCwdDropNotice,
   onCancel,
 }: SessionEditModalProps): React.JSX.Element | null {
   const titleId = useId();
@@ -156,16 +168,23 @@ export function SessionEditModal({
   // computed from the live React state (controlled inputs keep them in sync).
   const notices = validateSessionForm({ name, cwd, startupCommand });
   const nameNotice = notices.name;
-  // The cwd row shows EITHER main's genuine rejection (error ramp) when it matches the
-  // CR-01 'Working directory not found' shape, OR the neutral format hint — never both
-  // (a real rejection outranks the local format guess). The error string is main's
-  // already-sanitized notice; rendered as a React text node (auto-escaped), no HTML.
+  // The cwd row shows AT MOST ONE notice, by precedence (danger ramp wins over the neutral
+  // format guess):
+  //   1. GAP-12-E save-time DROP (cwdDropNotice) — the freshest signal: the LAST Save
+  //      submitted a cwd main rejected, so the modal is held open with this notice and the
+  //      kept (prior) directory in the field. A fixed literal (CWD_DROPPED_NOTICE).
+  //   2. CR-01 main rejection (errorMessage matching 'Working directory not found…') from a
+  //      live failed spawn over onPtyStatus.
+  //   3. The neutral non-absolute FORMAT hint.
   const cwdRejected =
     typeof errorMessage === 'string' &&
     errorMessage.startsWith('Working directory not found');
-  const cwdNotice = cwdRejected
-    ? { tone: 'error' as const, message: 'Working directory not found' }
-    : notices.cwd;
+  const cwdNotice =
+    typeof cwdDropNotice === 'string' && cwdDropNotice.length > 0
+      ? { tone: 'error' as const, message: cwdDropNotice }
+      : cwdRejected
+        ? { tone: 'error' as const, message: 'Working directory not found' }
+        : notices.cwd;
 
   return (
     <div
@@ -252,7 +271,12 @@ export function SessionEditModal({
                 className="edit-input"
                 data-testid="edit-cwd"
                 value={cwd}
-                onChange={(e) => setCwd(e.target.value)}
+                onChange={(e) => {
+                  setCwd(e.target.value);
+                  // GAP-12-E: editing the cwd dismisses a stale save-time drop notice so
+                  // it never lingers over a fresh attempt.
+                  onClearCwdDropNotice?.();
+                }}
               />
               <button
                 type="button"
