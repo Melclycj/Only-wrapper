@@ -38,3 +38,33 @@ Phase 12 does NOT ship. Five gaps + one process meta-finding. Route: gap-closure
 ## Re-gate criterion
 
 After the gap-closure plans land: full suite GREEN + a fresh `ui:shots:fresh` capture that **includes the Save button**, then a re-run of the BLOCKING operator human-verify covering GAP-12-A..E. `nyquist_compliant` flips true only on the operator's explicit unqualified approval.
+
+---
+
+## Re-Gate 1 Result (12-07 Task 2) — 2026-06-16: **QUALIFIED FAIL**
+
+Automated chain GREEN (tsc 0 / scoped lint clean / unit 448 / smoke 15-15 / ui:shots `p12-regate` rubric PASS; one stale smoke fixed test-only at `3bb9f28`). Operator ran the BLOCKING human-verify on the packaged app. Verdict: **QUALIFIED FAIL** — `nyquist_compliant` stays **false**; Phase 12 does NOT ship.
+
+### Operator results (verbatim, per item)
+
+| Item | Result | Operator words |
+|------|--------|----------------|
+| 1 GAP-12-A (blue Save + spacing) | ✅ approve | "approve" |
+| 2 GAP-12-D (Cmd+A / clipboard / overlay) | ✅ approve | "approve" |
+| 3 GAP-12-E (validation hints) | ⚠️ partial | "name can see hint, false path still can not see … when i input a false path, which action will it hint me wrong path? if … click on save, then save directly close window" |
+| 4 SESS-06 (Browse…) | ✅ approve | "approve" |
+| 5 GAP-12-B (restart-to-apply) | ❌ FAIL | "failed, it outputs shell wasnt ready in time. there was a restart function that was working, why not directly use it?" |
+| 6 GAP-12-C (visible bad-cwd rejection) | ❌ FAIL | "cant see, i think when there is a false path, the working directory [isn't] saved at all" |
+| 7 existing chords (Cmd+1/2/K/F) | ❌ FAIL | "no" |
+| 8 SC1 cohesive surface | ✅ yes | "yes" |
+
+### Remaining / reopened gaps (root cause code-confirmed where noted)
+
+| ID | Status | Severity | Root cause / hypothesis | Fix direction |
+|----|--------|----------|--------------------------|---------------|
+| GAP-12-B | REOPENED | high | `handleRestart`→`ptyRestart`→main `restart()`→`create()` runs the TERM-05 readiness probe; it did NOT match within `READINESS_TIMEOUT_MS`=4000ms on the in-place restart respawn → `READINESS_FAIL_NOTICE` ("shell wasn't ready in time") + the command is NOT injected (D-04 safe fallback). Why the probe times out on a restart respawn (vs a working dormant Start, same `create()` path) is UNKNOWN → needs reproduction/trace. | **DEBUG-FIRST.** Reproduce + trace the probe buffer on a restart respawn (race with the dying shell? stale bytes? timeout too tight?). Decide fix (longer/again-on-restart probe, or a restart-specific injection) — do NOT guess. |
+| GAP-12-C | REOPENED | high | On a restart-to-apply FAILURE the session was LIVE (SessionView, no IdleCard). `handleRestart` only flips to running on `pid>0`; on `pid<=0` it does nothing (no else), relying on the `onPtyStatus` 'error'+notice to surface via the IdleCard — but a live→failed-restart session may not transition to the IdleCard, so "Working directory not found" is invisible. Operator also suspects the bad cwd "isn't saved at all". | Make the failed restart-to-apply visibly land the error where the user acted (flip to a not_started/error state that shows the IdleCard + notice). Confirm `updateProfile` persists the cwd (validation is at `create()`, not persist). Ties to GAP-12-B debug. |
+| GAP-12-E | REOPENED | medium | `validateSessionForm` hints on FORMAT only: a non-empty, NON-ABSOLUTE cwd (`foo/bar`) hints live; an absolute-but-NON-EXISTENT path (`/x/nope`) is format-valid → NO hint by design (existence is main's CR-01 at launch). Hints never block Save (convenience-only; main = validator of record), so Save closes regardless. Operator expected a "wrong path" (non-existent) to be flagged → expectation/spec mismatch. | Clarify the model + make launch-time existence rejection visible (ties to GAP-12-C). Decide whether to add a live existence check (needs IPC / a bridge key — weigh vs the 20-key budget) or rely on a clearly-surfaced launch rejection. |
+| GAP-12-F | **NEW** | high | After the 12-05 application `Menu` (`Menu.setApplicationMenu`, appMenu+editMenu+windowMenu), the operator reports the existing chords (Cmd+1/2 switch, Cmd+K clear, Cmd+F find) no longer work. By design these are `before-input-event` intents (index.ts:125-146), NOT menu accelerators (app-menu.ts:14), so the Menu should not shadow them — the regression is UNEXPECTED. | **DEBUG-FIRST.** Reproduce live; determine which chord(s) broke and whether the new Menu changed `before-input-event` delivery / focus. Likely a 12-05 regression. |
+
+**Route:** `/gsd-debug` to root-cause GAP-12-B / GAP-12-C / GAP-12-F (reproducible product/lifecycle defects — the readiness-probe + restart-error-surfacing are DEBT-02-governed; GAP-12-F is a Menu regression) → then `/gsd-plan-phase 12 --gaps` to plan fixes for B/C/E/F with confirmed causes → re-execute → re-gate. `nyquist_compliant` stays false.

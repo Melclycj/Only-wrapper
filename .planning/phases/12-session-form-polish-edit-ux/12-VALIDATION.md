@@ -150,4 +150,6 @@ A subsequent **test-only** fix (`3bb9f28`, below) does not affect the packaged b
 
 > Note: the manifest's `edit-modal-validation` `expects` string ("Danger-ramp helper text") predates GAP-12-E; scored against DESIGN-RUBRIC §edit-modal-validation (authority: calm `--ink-faint`, no danger unless main rejects). Pixels match the rubric.
 
-**Verdict (Task 1):** all rubric lines PASS, no FAIL/PARTIAL → cleared to present to the operator (T-10-10-01: never present a known-failing app). **Task 2 (BLOCKING operator human-verify) pending.** `nyquist_compliant` stays false.
+**Verdict (Task 1):** all rubric lines PASS, no FAIL/PARTIAL → cleared to present to the operator (T-10-10-01: never present a known-failing app).
+
+**Verdict (Task 2/3) — 2026-06-16: QUALIFIED FAIL.** Operator ran the packaged-app human-verify: approved GAP-12-A / GAP-12-D / SESS-06 / SC1 (items 1/2/4/8), but reported failures on GAP-12-B (restart-to-apply → "shell wasn't ready in time", command not applied), GAP-12-C (bad-cwd rejection not visible), GAP-12-E (a non-existent path gets no feedback; Save closes anyway), and a NEW GAP-12-F (Cmd+1/2/K/F chords broke after the 12-05 Menu). Per-item words + reopened-gap table + routing recorded in `12-VERIFICATION.md` §"Re-Gate 1 Result". **`nyquist_compliant` stays `false`** (NOT flipped). Route: `/gsd-debug` (B/C/F) → `/gsd-plan-phase 12 --gaps` → re-execute → re-gate.
