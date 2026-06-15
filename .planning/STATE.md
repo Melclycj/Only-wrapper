@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: milestone
 status: verifying
-stopped_at: Completed 12-08-PLAN.md
-last_updated: "2026-06-16T03:05:00.000Z"
-last_activity: "2026-06-16 -- 12-08 gap-closure round 2 (GAP-12-B) DONE (commits 800de51/f2cfb47/342a3b7): replaced the FIXED 4000ms TERM-05 readiness wall with a DUAL-DEADLINE budget — READINESS_IDLE_TIMEOUT_MS=8000 (extend-on-progress, re-armed on each produced byte) + READINESS_HARD_TIMEOUT_MS=15000 (absolute ceiling, NEVER reset; typescript-reviewer LOAD-BEARING). Both timers route ONE shared D-04 give-up closure (flush bare prompt once, READINESS_FAIL_NOTICE, NEVER inject); stale-timeout guard covers both; match clears both + injects cmd+CR once; bare-shell/skipStartupCommand/restart/updateProfile untouched; EXPECTED_API_KEYS stays 20. NEW test:integration npm script runs a REAL-timing heavy-init regression (ZDOTDIR `sleep 5` zsh) PROVING old-4000=timeout(4000ms) / new=match(5059ms) / never-ready=hard-ceiling(15003ms) — fails the pre-fix code. Relocated the spike-005 bad-cwd .diag stub → committed pty-bad-cwd-restart.test.ts (3 GAP-12-C cases). 455 unit GREEN (53 files), tsc clean, eslint(src,tests) clean. 12-09 (renderer/surface diag relocate) + 12-10 (BLOCKING operator re-gate, runs npm run test:integration) remain."
+stopped_at: Completed 12-09-PLAN.md
+last_updated: "2026-06-16T03:16:00.000Z"
+last_activity: "2026-06-16 -- 12-09 gap-closure round 2 (GAP-12-C + GAP-12-E, renderer) DONE (commits ba1b529/151fea2/4937146): GAP-12-C — handleRestart gained an explicit pid<=0 else that CLEARS the dead ptyPid so the error state create() already broadcast over onPtyStatus wins (→ resolveRowStatus → IdleCard + 'Working directory not found' notice), no more stale-'running' row on a dead PTY; pid>0 branch byte-identical; applyStatusEvent's notice-informational contract UNCHANGED (its test stays GREEN). GAP-12-E — new pure cwd-save-outcome.ts (cwdWasDropped + cwdDropNoticeFor + frozen CWD_DROPPED_NOTICE); rehydrateProfiles now returns main's listSessions snapshot so handleSaveProfile reads the post-save persisted cwd off the SAME re-read and, on a drop (main's CR-01 kept the prior dir), KEEPS the modal open with the inline notice instead of closing silently; handleSaveProfile now OWNS the close decision; SessionEditModal renders the drop notice under the cwd field (outranks the format hint + CR-01 errorMessage), cleared on typing. Renderer adds NO existence check + NO new IPC — main stays validator of record, EXPECTED_API_KEYS stays 20 (security.guard GREEN). Relocated the spike-005 gap-12-c-surface .diag stub → committed session-restart-error-surface.test.ts (3 cases, CONTROST typo fixed). SessionManager.tsx held < 800 lines (799) by extracting cwdDropNoticeFor + condensing comments. 469 unit GREEN (55 files), tsc + eslint(src,tests) clean. 12-10 (BLOCKING operator re-gate, runs npm run test:integration) is the last remaining plan."
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 24
-  completed_plans: 22
+  completed_plans: 23
   percent: 18
 ---
 
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-06-10 — v1.1 milestone started)
 ## Current Position
 
 Phase: 12 (session-form-polish-edit-ux) — EXECUTING (gap-closure round 2)
-Plan: 12-08 of the round-2 gap-closure set complete; 12-09 + 12-10 remain
-Status: Gap-closure round 2 plan 12-08 DONE — GAP-12-B (readiness latency-budget defect) FIXED via the dual-deadline budget; the real-timing regression proves it fails-old / passes-new. 12-10 BLOCKING operator re-gate (runs npm run test:integration on the operator's machine) still pending (nyquist_compliant still false).
-Last activity: 2026-06-16 -- 12-08 gap-closure round 2 (GAP-12-B) DONE (commits 800de51/f2cfb47/342a3b7): dual-deadline readiness budget (idle 8000 extend-on-progress + hard 15000 ceiling) in create(), one shared D-04 give-up, EXPECTED_API_KEYS stays 20; NEW test:integration heavy-init regression (old-4000=timeout / new=match@5059ms / never-ready=hard@15003ms); relocated bad-cwd .diag stub → pty-bad-cwd-restart.test.ts (3 cases). 455 unit GREEN, tsc + eslint(src,tests) clean.
+Plan: 12-08 + 12-09 of the round-2 gap-closure set complete; ONLY 12-10 remains
+Status: Gap-closure round 2 plans 12-08 (GAP-12-B, main) + 12-09 (GAP-12-C + GAP-12-E, renderer) DONE. The three confirmed gaps are now CODE-CLOSED with regressions; 12-10 BLOCKING operator re-gate (runs npm run test:integration on the operator's machine, covers GAP-12-B/C/E) is the LAST remaining plan (nyquist_compliant still false until explicit unqualified approval).
+Last activity: 2026-06-16 -- 12-09 gap-closure round 2 (GAP-12-C + GAP-12-E, renderer) DONE (commits ba1b529/151fea2/4937146): handleRestart pid<=0 clears the dead ptyPid so the broadcast error wins → IdleCard + notice (GAP-12-C, applyStatusEvent contract unchanged); new pure cwd-save-outcome reducer + handleSaveProfile compares submitted-vs-persisted cwd off the existing listSessions re-read and keeps the modal open with an inline drop notice (GAP-12-E, no new IPC, EXPECTED_API_KEYS stays 20); relocated the spike-005 surface diag stub → committed session-restart-error-surface.test.ts. SessionManager.tsx held < 800 (799). 469 unit GREEN (55 files), tsc + eslint(src,tests) clean.
 
 ### v1.1 Milestone Phases (9–15)
 
@@ -119,6 +119,7 @@ Phase 9 (UI-01 design tokens) gates the per-surface polish phases (10–13). Pha
 | Phase 12 P02 | 10 min | 3 tasks | 8 files |
 | Phase 12 P06 | ~12 min | 3 tasks | 7 files |
 | Phase 12 P08 | ~10 min | 3 tasks | 9 files |
+| Phase 12 P09 | ~25 min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
