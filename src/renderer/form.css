@@ -1,0 +1,444 @@
+/* form.css — the modal/form/picker surface layer (Phase 12, UI-04 / D-02 / D-04).
+ *
+ * Extracted from terminal.css (Phase 12 — that file neared the 800-line discipline
+ * and Phase 13 adds more). This is the chrome for the session create/EDIT form modal:
+ * the ConfirmModal-skeleton overlay/card/buttons, the right-click context menu, the
+ * IconPicker grid + swatches, the Preferences body, and the edit-form fields/groups.
+ *
+ * Design tokens (--surface, --ink, --line, --color-accent, --space-*, --radius-*,
+ * --shadow-*, --font-*, etc.) live in tokens.css — the single source of truth, imported
+ * BEFORE this stylesheet in index.tsx. This file references them via var() ONLY
+ * (tokens-first, guarded by tokens-completeness.test.ts). The only permitted literals
+ * are element dimensions (dialog width, tile sizes) and the single #ffffff button text
+ * where contrast over a colored fill requires it. */
+
+/* ── Confirm modal (D-03a destructive Close) — DESIGN.md tokens ──────────────── */
+
+/* Scrim: dims the whole app; click = cancel (ConfirmModal wires the handler). */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Warm-dark scrim — not pure black, in keeping with the cozy aesthetic. */
+  background: oklch(0.255 0.018 264 / 0.45);
+}
+
+/* The card: warm --surface, generous --radius (18px), --line border, Nunito. */
+.modal-dialog {
+  width: min(420px, calc(100vw - 48px));
+  box-sizing: border-box;
+  padding: var(--space-6) var(--space-6) var(--space-5);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-dialog);
+  font-family: var(--font-ui);
+  color: var(--ink);
+}
+
+.modal-title {
+  margin: 0 0 var(--space-2);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.modal-body {
+  margin: 0 0 var(--space-5);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.modal-btn {
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-lg);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid var(--line);
+  transition:
+    background var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard);
+}
+
+/* Cancel — neutral. */
+.modal-btn-cancel {
+  background: transparent;
+  color: var(--ink-soft);
+}
+
+.modal-btn-cancel:hover {
+  background: var(--bg-sunk);
+  color: var(--ink);
+}
+
+/* Confirm — the destructive derived red ramp (var(--color-danger), error language). */
+.modal-btn-confirm {
+  background: var(--color-danger);
+  border-color: var(--color-danger);
+  color: #ffffff;
+}
+
+.modal-btn-confirm:hover {
+  background: var(--color-danger-strong);
+  border-color: var(--color-danger-strong);
+}
+
+.modal-btn-confirm:focus-visible {
+  outline: 2px solid var(--color-danger);
+  outline-offset: 2px;
+}
+
+/* Save (D-04 — Pitfall 1, REQUIRED) — the CONSTRUCTIVE accent-blue primary, distinct
+   from the destructive red .modal-btn-confirm. The session form's Save is a creating
+   action, not a destructive confirm, so it must read blue (12-UI-SPEC §Color: accent
+   reserved item 1). Same pill geometry as .modal-btn-confirm; only the ramp differs. */
+.modal-btn-save {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: #ffffff;
+}
+
+.modal-btn-save:hover {
+  background: var(--color-accent-strong);
+  border-color: var(--color-accent-strong);
+}
+
+.modal-btn-save:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* ── Right-click context menu (D-03) — DESIGN.md tokens ───────────────────────── */
+
+/* Positioned absolutely at the cursor (left/top set inline from clientX/clientY).
+ * Warm --surface card, --line border, soft shadow, Nunito — matches the modal card. */
+.context-menu {
+  position: fixed;
+  z-index: 200;
+  min-width: 140px;
+  padding: var(--space-1);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-0_5);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-menu);
+  font-family: var(--font-ui);
+}
+
+.context-menu-item {
+  display: block;
+  width: 100%;
+  padding: 7px var(--space-3);
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.context-menu-item:hover,
+.context-menu-item:focus-visible {
+  background: var(--bg-sunk);
+  outline: none;
+}
+
+/* D-15: the destructive Remove/Delete item reads in the danger ramp, consistent
+   with the destructive ConfirmModal. Hover/focus uses the same color-mix tint
+   idiom as .row-control-close:hover (re-stated here — that rule moved to
+   sidebar.css). Tokens-first: var(--color-danger) + color-mix, no literal. */
+.context-menu-item-danger {
+  color: var(--color-danger);
+}
+
+.context-menu-item-danger:hover,
+.context-menu-item-danger:focus-visible {
+  background: color-mix(in oklch, var(--color-danger) 8%, transparent);
+  color: var(--color-danger);
+}
+
+/* ── Icon picker (D-07/D-08/D-09) — curated grid + free-text + color swatches ────
+ * Phase 12 polish (D-03): the picker reads as a designed grid + swatch row. Hover
+ * uses a --bg-sunk wash, selected shows a token ring, and every focusable cell/swatch
+ * carries the blue :focus-visible ring (the same affordance the inputs use). The
+ * emoji | color model is UNCHANGED — this is presentation only. */
+
+.icon-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.icon-picker-preview {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.icon-picker-preview .row-icon {
+  width: 28px;
+  height: 28px;
+  font-size: 18px;
+}
+
+.emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: var(--space-1);
+}
+
+.emoji-cell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-standard);
+}
+
+.emoji-cell:hover {
+  background: var(--bg-sunk);
+}
+
+.emoji-cell.selected {
+  border-color: var(--color-accent);
+  background: var(--bg-sunk);
+}
+
+.emoji-cell:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+.emoji-input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: var(--space-3) var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.emoji-input:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+.color-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.color-swatch {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: border-color var(--duration-fast) var(--ease-standard);
+}
+
+.color-swatch:hover {
+  border-color: var(--line);
+}
+
+.color-swatch.selected {
+  border-color: var(--color-accent);
+}
+
+.color-swatch:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+/* ── Preferences modal (07-03, TERM-11 / D-08) — extensible settings stack ─────── */
+
+/* The Preferences body: a vertical list of .edit-field setting groups (one now —
+ * scrollback). Reuses the shipped .edit-field gap/margins verbatim; adding a future
+ * setting = appending another .edit-field group, no layout rewrite (D-08). No new
+ * modal-shell CSS — the dialog reuses the shipped .modal-* classes. */
+.prefs-body {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: var(--space-2);
+}
+
+/* ── Session edit form (D-02 / D-04) — two semantic groups, single column ───────── */
+
+.modal-dialog-edit {
+  width: min(460px, calc(100vw - 48px));
+  max-height: calc(100vh - 64px);
+  overflow-y: auto;
+}
+
+.edit-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-bottom: var(--space-3);
+}
+
+.edit-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+.edit-input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: var(--space-3) var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.edit-input:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+/* cwd field + Browse… button on one row (UI-SPEC §Interaction 4). The input flexes;
+ * the button sits inline-end at the same height. */
+.edit-cwd-row {
+  display: flex;
+  gap: var(--space-2);
+  align-items: stretch;
+}
+
+.edit-cwd-row .edit-input {
+  flex: 1 1 auto;
+  width: auto;
+}
+
+/* Browse… — neutral secondary button matching the .edit-input height/treatment. */
+.edit-browse-button {
+  flex: 0 0 auto;
+  padding: var(--space-3) var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--ink-soft);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
+}
+
+.edit-browse-button:hover {
+  background: var(--bg-sunk);
+  color: var(--ink);
+}
+
+.edit-browse-button:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+/* The shell dropdown (D-05/SC4) — a native <select> styled to match .edit-input
+ * exactly (the field replaced the old free-text shell input; no arbitrary path can
+ * be typed). Same box-sizing/padding/border/radius/surface/ink/Nunito + the SAME
+ * blue :focus-visible outline. */
+.edit-select {
+  box-sizing: border-box;
+  width: 100%;
+  padding: var(--space-3) var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.edit-select:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+/* Group A (Identity) and Group B (Launch) section subhead — small-caps glyph row.
+ * Differentiated from the same-size .edit-label by uppercase + tracking + faint ink
+ * (12-UI-SPEC §Typography: hierarchy by case/weight/tone, not a unique size). Shared
+ * by the NEW .edit-group-subhead and the existing .applies-on-restart-hint. */
+.edit-group-subhead,
+.applies-on-restart-hint {
+  margin: 0 0 var(--space-3);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* Hairline divider between the Identity and Launch groups (D-02 — rule treatment;
+ * the recessed-surface alternative is the .edit-restart-group below). */
+.edit-group-divider {
+  border: none;
+  border-top: 1px solid var(--line-soft);
+  margin: var(--space-5) 0;
+}
+
+/* Inline validation notice (D-04) under a field. CALM by default: a hint is faint
+ * ink (an empty name / non-absolute cwd is a valid-but-noteworthy choice), and the
+ * danger red is spent ONLY on a genuine error (main's CR-01 rejection). Text only —
+ * no wash (the Phase-10 D-15 wash idiom is reserved for the destructive menu item). */
+.edit-field-notice {
+  margin-top: var(--space-1);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.3;
+}
+
+.edit-field-notice--hint {
+  color: var(--ink-faint);
+}
+
+.edit-field-notice--error {
+  color: var(--color-danger);
+}
+
+/* The restart-applied fields are visually grouped under their subhead so the user
+ * knows cwd/shell/startup take effect on the next restart (D-02). The recessed
+ * --bg-sunk surface + dashed border reads as the "Launch" group container. */
+.edit-restart-group {
+  margin-top: var(--space-1);
+  padding: var(--space-3) var(--space-3) var(--space-1);
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-xl);
+  background: var(--bg-sunk);
+}

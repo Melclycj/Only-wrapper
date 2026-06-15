@@ -13,6 +13,11 @@ import '@fontsource/jetbrains-mono/700.css';
 // are defined when terminal.css parses.
 import './tokens.css';
 import './terminal.css';
+// The modal/form/picker surface stylesheet AFTER terminal.css (Phase 12 extraction):
+// .modal-* (incl. the constructive .modal-btn-save), .context-menu*, .icon-picker,
+// .prefs-body, the .edit-* two-group form. Cascade order preserved (these rules
+// previously lived in terminal.css's mid-section).
+import './form.css';
 // terminal-area.css AFTER terminal.css (Phase 11 extraction): the .terminal-area card
 // frame + .viewport-stack / .session-view / .term-mount / .xterm sizing + the
 // .identity-header cluster + .idle-card family + .welcome-state. Cascade order preserved

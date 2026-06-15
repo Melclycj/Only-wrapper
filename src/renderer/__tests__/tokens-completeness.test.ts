@@ -32,6 +32,10 @@ const sidebarCss = readFileSync(
   resolve(__dirname, '../sidebar.css'),
   'utf8',
 );
+const formCss = readFileSync(
+  resolve(__dirname, '../form.css'),
+  'utf8',
+);
 const statusColorsTs = readFileSync(
   resolve(__dirname, '../status-colors.ts'),
   'utf8',
@@ -104,6 +108,17 @@ describe('tokens.css single source of truth (SC2/SC3)', () => {
     expect(undefinedRefs).toEqual([]);
   });
 
+  it('every var(--token) in form.css is defined in tokens.css', () => {
+    // The modal/form/picker block moved into form.css (Plan 12-02); the completeness
+    // guard must follow it so a moved/added var(--token) that resolves to nothing
+    // still fails loudly (RESEARCH Pitfall 4 — keep the touch-points honest). The new
+    // .modal-btn-save accent ramp + the .edit-group-* / .edit-field-notice rules all
+    // resolve through tokens.css.
+    const referenced = referencedTokens(formCss);
+    const undefinedRefs = [...referenced].filter((t) => !defined.has(t));
+    expect(undefinedRefs).toEqual([]);
+  });
+
   it('every var(--token) in status-colors.ts is defined in tokens.css', () => {
     const referenced = referencedTokens(statusColorsTs);
     const undefinedRefs = [...referenced].filter((t) => !defined.has(t));
@@ -154,6 +169,31 @@ describe('sidebar.css literal absence (SC2 migration proof — extracted rules s
 
   it('the raw JetBrains Mono font stack is absent from sidebar.css', () => {
     expect(count(sidebarCss, "'JetBrains Mono'")).toBe(0);
+  });
+});
+
+describe('form.css literal absence (SC2 migration proof — extracted form block stays guarded)', () => {
+  // The modal/form/picker block moved into form.css (Plan 12-02); the migrated primitives
+  // must stay absent there too, so the value-preserving move + the new accent Save ramp
+  // cannot silently reintroduce a raw literal that bypasses tokens.css (RESEARCH Pitfall 4).
+  // The new .modal-btn-save uses var(--color-accent) — NOT the raw oklch literal.
+  const count = (haystack: string, needle: string): number =>
+    haystack.split(needle).length - 1;
+
+  it('the accent-blue literal is absent from form.css (uses var(--color-accent))', () => {
+    expect(count(formCss, 'oklch(0.62 0.14 248')).toBe(0);
+  });
+
+  it('the danger-red literal is absent from form.css', () => {
+    expect(count(formCss, 'oklch(0.58 0.16 25')).toBe(0);
+  });
+
+  it('the raw Nunito font stack is absent from form.css', () => {
+    expect(count(formCss, "'Nunito'")).toBe(0);
+  });
+
+  it('the raw JetBrains Mono font stack is absent from form.css', () => {
+    expect(count(formCss, "'JetBrains Mono'")).toBe(0);
   });
 });
 
