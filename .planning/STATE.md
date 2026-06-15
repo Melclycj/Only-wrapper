@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: milestone
-status: planning
-stopped_at: Phase 12 UI-SPEC approved
-last_updated: "2026-06-14T15:29:14.755Z"
-last_activity: 2026-06-14 -- Phase 11 CLOSED (GAP-11-A SC1 approved; nyquist TRUE; UI-03 + SESS-07 complete; v2 composer deferred)
+status: executing
+stopped_at: "Phase 12 planned — 3 plans (12-01 tdd foundation / 12-02 execute / 12-03 gate); plan-checker VERIFICATION PASSED (12/12 dims); ready to execute. SESS-05/06 already-built (Phase 6) → verify-and-finish; headline is UI-04 form polish on the locked chassis. EXPECTED_API_KEYS stays 20."
+last_updated: "2026-06-15T00:48:48.740Z"
+last_activity: 2026-06-15 -- Phase 12 planned (3 plans; plan-checker PASSED; ready to execute)
 progress:
   total_phases: 6
   completed_phases: 3
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-06-10 — v1.1 milestone started)
 
 Phase: 11 (Terminal Area Polish + Live Start/Restart) — COMPLETE (operator approved SC1 LIVE 2026-06-14; UI-03 + SESS-07 closed). NEXT = Phase 12 (Session Form: Polish + Edit UX).
 Plan: all Phase-11 plans complete (the 11-03 gate + the GAP-11-A re-gate both passed)
-Status: Phase 11 COMPLETE. GAP-11-A (the framed-card visual) was closed over rounds 2-3 and the operator approved SC1 LIVE on the packaged app 2026-06-14. Final state: the charcoal terminal is an inset rounded WELL floating inside the white card with breathing room on all sides (xterm content no longer jams the corner; D-03a fidelity guardrail held — xterm/term-mount/viewport-stack flush, ResizeObserver re-fits). Round 3 (operator mockup compare): tightened the outer cream margin (--space-6 -> --space-4), lightened --bg to oklch(0.95 0.022 74), REMOVED the top status-summary pill strip (wrong placement/counting — component+reducer+test+ui-lab surface deleted, deferred for redesign), and marked the breadcrumb cwd as the CONFIGURED working dir (dotted-underline + title hint), not the live pwd. Verify: 401 unit + tsc clean + fidelity smoke GREEN (the session-edit smoke is a confirmed parallel-load timing flake — 3/3 isolated pass, passed 15/15 in-suite pre-bg-change). nyquist_compliant TRUE; UI-03 + SESS-07 CLOSED; 11-VERIFICATION.md PASSED. Committed 2f32abf (code) + phase-close docs. A fixed-bottom-input-line / Warp-style command composer raised during the mockup compare was deferred to v2 (REQUIREMENTS COMP-01; .planning/v2-ideas/command-composer-agent-shell.md). NEXT = Phase 12 (Session Form: Polish + Edit UX — UI-04 / SESS-05 / SESS-06).
+Status: Ready to execute
 Last activity: 2026-06-14 -- Phase 11 CLOSED (GAP-11-A SC1 approved; nyquist TRUE; UI-03 + SESS-07 complete; v2 composer deferred)
 
 ### v1.1 Milestone Phases (9–15)
