@@ -13,6 +13,7 @@
     "format": "prettier --write .",
     "test:unit": "vitest run",
     "test:smoke": "wdio run wdio.conf.ts",
+    "test:integration": "node tests/integration/readiness-probe-heavy-init.integration.test.cjs",
     "test": "npm run test:unit && npm run test:smoke",
     "verify:fonts": "node scripts/assert-fonts-bundled.cjs",
     "ui:shots": "wdio run wdio.uilab.conf.ts",

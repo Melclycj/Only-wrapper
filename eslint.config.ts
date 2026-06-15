@@ -70,11 +70,14 @@ export default tseslint.config(
     },
   },
 
-  // 4. Node CJS build scripts (postinstall helpers) — must use require() and
-  // run under plain Node with no TS/ESM tooling. Exempt them from the
-  // ESM-only require ban; they are not application source.
+  // 4. Node CJS build scripts (postinstall helpers) AND CJS integration drivers —
+  // must use require() and run under plain Node with no TS/ESM tooling/build step.
+  // Exempt them from the ESM-only require ban; they are not application source.
+  // tests/**/*.cjs: the GAP-12-B heavy-init readiness regression is intentionally a
+  // src-free, electron-free, build-step-free Node driver (it spawns real shells via
+  // node-pty and ports the probe matcher verbatim) — opt-in via `npm run test:integration`.
   {
-    files: ['scripts/**/*.cjs'],
+    files: ['scripts/**/*.cjs', 'tests/**/*.cjs'],
     rules: {
       '@typescript-eslint/no-require-imports': 'off',
     },
