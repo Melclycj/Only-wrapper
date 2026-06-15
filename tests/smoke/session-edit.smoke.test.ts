@@ -24,6 +24,8 @@ import {
   setEditFieldByTestId,
   readEditFieldByTestId,
   hasTestId,
+  ptyPidOf,
+  waitForTextIn,
 } from './helpers/xterm-driver';
 
 /** data-session-id of the Nth sidebar row (0-indexed). */
@@ -140,6 +142,93 @@ describe('Session edit smoke (SESS-01/02/04)', () => {
     expect(await readEditFieldByTestId('edit-cwd')).toBe(knownCwd);
     expect(await readEditFieldByTestId('edit-startup')).toBe(knownStartup);
     // The round-trip preserved identity — same logical id, no respawn (SESS-02).
+    expect(await sessionIdAt(0)).toBe(id);
+  });
+
+  // GAP-12-B (12-06): editing a LIVE session's launch field → Save → "Restart to apply?"
+  // → Restart now MUST re-spawn the session (same logicalId, NEW ptyPid) and run the new
+  // startup command. Proves the retained ptyRestart applies the edit (the feature the
+  // operator expected — Phase 11 had removed every restart path).
+  it('applies a changed startup command via Restart to apply (GAP-12-B)', async () => {
+    await clickAddSession();
+    const id = await sessionIdAt(0);
+    // Record the initial ptyPid (main's source of truth) so we can prove a real respawn.
+    const initialPid = await ptyPidOf(id);
+
+    // A KNOWN startup command that prints a unique marker on the next launch, and a known
+    // existing absolute cwd (process.cwd(), accepted by CR-01) so the restart succeeds.
+    const marker = 'restart-apply-marker-12-06';
+    await openEdit(id);
+    await setEditFieldByTestId('edit-cwd', process.cwd());
+    await setEditFieldByTestId('edit-startup', `echo '${marker}'`);
+    await clickByTestId('edit-save');
+
+    // Save closes the edit modal; the restart-to-apply prompt then appears (the session is
+    // LIVE and a launch field changed).
+    await browser.waitUntil(async () => !(await editModalOpen()), {
+      timeout: 3000,
+      timeoutMsg: 'edit modal did not close after Save changes',
+    });
+    await browser.waitUntil(async () => hasTestId('restart-apply-now'), {
+      timeout: 3000,
+      interval: 50,
+      timeoutMsg:
+        '"Restart to apply?" prompt did not appear after editing a LIVE launch field (GAP-12-B)',
+    });
+
+    // Restart now → ptyRestart re-spawns under the SAME logicalId with a NEW ptyPid.
+    await clickByTestId('restart-apply-now');
+
+    // (a) a real respawn — main reports a DIFFERENT ptyPid for the same logicalId.
+    await browser.waitUntil(
+      async () => {
+        const pid = await ptyPidOf(id);
+        return pid > 0 && pid !== initialPid;
+      },
+      {
+        timeout: 8000,
+        interval: 100,
+        timeoutMsg:
+          'ptyPid did not change after Restart now (expected a real respawn under the same logicalId)',
+      },
+    );
+    expect(await ptyPidOf(id)).not.toBe(initialPid);
+
+    // (b) the new startup command auto-ran on the restart — its marker is in the buffer.
+    expect(await waitForTextIn(id, marker, 8000)).toBe(true);
+
+    // Identity is stable across the restart — same logical id (IDENT-02).
+    expect(await sessionIdAt(0)).toBe(id);
+  });
+
+  // GAP-12-B: "Later" dismisses the prompt WITHOUT restarting — the saved values still
+  // persist (for the next Start), and the live PTY is untouched (same ptyPid, no respawn).
+  it('Later dismisses the Restart-to-apply prompt without restarting (GAP-12-B)', async () => {
+    await clickAddSession();
+    const id = await sessionIdAt(0);
+    const initialPid = await ptyPidOf(id);
+
+    await openEdit(id);
+    await setEditFieldByTestId('edit-cwd', process.cwd());
+    await setEditFieldByTestId('edit-startup', "echo 'later-no-restart'");
+    await clickByTestId('edit-save');
+
+    await browser.waitUntil(async () => hasTestId('restart-apply-now'), {
+      timeout: 3000,
+      interval: 50,
+      timeoutMsg: '"Restart to apply?" prompt did not appear (GAP-12-B Later case)',
+    });
+
+    // Click Later → the prompt closes and NO respawn happens.
+    await clickByTestId('restart-apply-later');
+    await browser.waitUntil(async () => !(await hasTestId('restart-apply-now')), {
+      timeout: 3000,
+      interval: 50,
+      timeoutMsg: 'Restart-to-apply prompt did not close after clicking Later',
+    });
+
+    // The live PTY is untouched — same ptyPid, no respawn (IDENT-02 + no double-spawn).
+    expect(await ptyPidOf(id)).toBe(initialPid);
     expect(await sessionIdAt(0)).toBe(id);
   });
 });
