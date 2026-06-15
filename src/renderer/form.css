@@ -23,7 +23,7 @@
   align-items: center;
   justify-content: center;
   /* Warm-dark scrim — not pure black, in keeping with the cozy aesthetic. */
-  background: oklch(0.255 0.018 264 / 0.45);
+  background: var(--scrim);
 }
 
 /* The card: warm --surface, generous --radius (18px), --line border, Nunito. */
