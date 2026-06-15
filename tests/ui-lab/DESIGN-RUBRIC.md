@@ -115,6 +115,9 @@ From DESIGN.md §Aesthetic direction + §Design tokens:
       soft borders; focus shows the accent ring.
 - [ ] Save = **accent-blue fill** (constructive, NOT danger-red); label "Save changes";
       Cancel = quiet neutral. Pill shapes (`--radius-lg`).
+- [ ] The `.modal-actions` row (incl. the blue Save) is VISIBLE IN THE CAPTURED FRAME —
+      not scrolled below the fold (GAP-12-A/META: the surface scrolls Save into view and
+      `assertEditSaveCaptured` fails the run if Save is absent or has a zero box).
 - [ ] Icon/emoji picker: tidy grid with hover (`--bg-sunk`) + selected ring; swatch
       row aligned; feels playful-but-tidy (parlour, not toolbox).
 - [ ] Vertical rhythm between fields is even; inter-group spacing reads as a clear break.

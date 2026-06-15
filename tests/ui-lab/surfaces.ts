@@ -156,6 +156,49 @@ async function pressEscape(): Promise<void> {
   await browser.keys(['Escape']);
 }
 
+/**
+ * META (GAP-12-A): scroll the edit form's Save button into view and assert it is present
+ * + has a non-zero rendered box. The edit dialog has `max-height + overflow-y:auto`, so
+ * the Save button can sit BELOW THE FOLD — that is exactly how the visual gate
+ * false-passed a non-blue Save. Throw a descriptive Error (NOT SkipSurface) so a
+ * below-the-fold or missing Save FAILS the run loudly.
+ */
+async function assertEditSaveCaptured(): Promise<void> {
+  const box = await browser.execute(() => {
+    const btn = document.querySelector<HTMLElement>('[data-testid="edit-save"]');
+    if (!btn) return null;
+    btn.scrollIntoView({ block: 'end' });
+    const r = btn.getBoundingClientRect();
+    return { w: r.width, h: r.height };
+  });
+  if (!box) {
+    throw new Error(
+      'edit-modal: Save button [data-testid="edit-save"] not found — cannot capture the primary action',
+    );
+  }
+  if (box.w === 0 || box.h === 0) {
+    throw new Error(
+      `edit-modal: Save button has a zero rendered box (${box.w}x${box.h}) — not visible in the capture`,
+    );
+  }
+}
+
+/**
+ * GAP-12-E: after an invalid cwd + empty name are driven, assert the calm inline-hint
+ * nodes ACTUALLY rendered (a tracker-suppressed fill would leave React state seeded and
+ * the hints absent — a false-negative PNG). Throw a descriptive Error if zero rendered.
+ */
+async function assertValidationHintsRendered(): Promise<void> {
+  const count = await browser.execute(
+    () => document.querySelectorAll('.edit-field-notice--hint').length,
+  );
+  if (count < 1) {
+    throw new Error(
+      'edit-modal-validation: expected >=1 .edit-field-notice--hint after invalid cwd + empty name, found 0 — validation hints did not render',
+    );
+  }
+}
+
 /** Read the `.row-name` geometry + computed text-overflow for a row. */
 async function rowNameMetrics(
   id: string,
@@ -426,9 +469,14 @@ export const SURFACES: Surface[] = [
       'DESIGN.md §Design tokens (radius: cards 18px, inputs ≈8px)',
     ],
     expects:
-      '18px dialog card + dialog shadow; labeled fields; ~8px inputs; pill buttons; Nunito.',
+      '18px dialog card + dialog shadow; labeled fields; ~8px inputs; pill buttons; Nunito; the accent-BLUE "Save changes" button visible in the actions row (GAP-12-A/META).',
     prepare: async (ctx) => {
       await openEditModal(ctx.ids[0]);
+      // META (GAP-12-A): the dialog scrolls (max-height + overflow-y:auto), so the Save
+      // button can fall below the fold — that is how the rubric false-passed a non-blue
+      // Save. Scroll the actions row into view + fail loudly if the Save button is absent
+      // or has no rendered box, so the gate cannot pass without seeing the primary action.
+      await assertEditSaveCaptured();
       await browser.pause(300);
     },
     cleanup: async () => {
@@ -448,10 +496,13 @@ export const SURFACES: Surface[] = [
     prepare: async (ctx) => {
       await openEditModal(ctx.ids[0]);
       // Drive a non-absolute cwd to trigger the renderer format hint, and clear the
-      // name to trigger the neutral empty-name hint (the validation-display testids
-      // land in Plan 02 — this Wave-0 scaffold still captures the modal state).
+      // name to trigger the neutral empty-name hint (validateSessionForm returns
+      // tone:'hint' for both; Plan 12-02 wired the inline display).
       await setInputByTestId('edit-cwd', 'not-absolute');
       await setInputByTestId('edit-name', '');
+      // GAP-12-E: assert the calm hint nodes ACTUALLY rendered (machine check, not just
+      // a PNG) — fails loudly if a tracker-suppressed fill left them absent.
+      await assertValidationHintsRendered();
       await browser.pause(300);
     },
     cleanup: async () => {

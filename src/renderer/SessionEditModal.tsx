@@ -55,6 +55,11 @@ export function SessionEditModal({
   const cwdRef = useRef<HTMLInputElement>(null);
   const shellRef = useRef<HTMLSelectElement>(null);
   const startupRef = useRef<HTMLInputElement>(null);
+  // GAP-12-D: tracks whether the most recent mousedown landed on the overlay ITSELF
+  // (vs a text-selection drag that starts in an input and ends on the overlay). Only a
+  // genuine backdrop click — mousedown AND click both on the overlay — cancels, so a
+  // Cmd+A / drag-select overshoot no longer closes the modal.
+  const overlayMouseDownRef = useRef(false);
 
   // Local form state seeded from the session each time the modal opens for a target.
   const [name, setName] = useState('');
@@ -163,7 +168,19 @@ export function SessionEditModal({
     : notices.cwd;
 
   return (
-    <div className="modal-overlay" data-testid="session-edit-modal" onClick={onCancel}>
+    <div
+      className="modal-overlay"
+      data-testid="session-edit-modal"
+      onMouseDown={(e) => {
+        overlayMouseDownRef.current = e.target === e.currentTarget;
+      }}
+      onClick={(e) => {
+        // GAP-12-D: close only when the gesture BOTH started and ended on the overlay
+        // (a real backdrop click), never on a selection-drag overshoot ending here.
+        if (overlayMouseDownRef.current && e.target === e.currentTarget) onCancel();
+        overlayMouseDownRef.current = false;
+      }}
+    >
       <div
         className="modal-dialog modal-dialog-edit"
         role="dialog"
