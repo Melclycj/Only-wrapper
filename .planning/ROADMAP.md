@@ -121,7 +121,7 @@
   3. A native "Browse…" folder picker fills the working-directory field with an absolute path, and main still validates the value (the CR-01 path guard still gates it).
   4. Any new IPC bridge surface added for the folder picker is accounted for against the security key budget, and the EXPECTED_API_KEYS guard stays green.
 
-**Plans**: 3 plans
+**Plans**: 7 plans (3 original + 4 gap-closure)
 **Wave 1**
 
 - [x] 12-01-PLAN.md — Wave-0 foundation: extract mergeAuthoritativeProfiles + validateSessionForm pure reducers (RED→GREEN) + add the edit-modal-validation ui-lab surface + DESIGN-RUBRIC update
@@ -132,7 +132,22 @@
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 12-03-PLAN.md — Gate: SESS-05 round-trip smoke + Save-label lockstep + packaged ui:shots:fresh capture + BLOCKING end-of-phase human-verify (SC1 / O-1 / O-2)
+- [x] 12-03-PLAN.md — Gate: SESS-05 round-trip smoke + Save-label lockstep + packaged ui:shots:fresh capture + BLOCKING end-of-phase human-verify (SC1 / O-1 / O-2) — QUALIFIED FAIL (5 gaps, see 12-VERIFICATION.md)
+
+**Gap-closure (from 12-VERIFICATION.md human-gate — `gap_closure: true`)**
+
+*Wave 1 (parallel — no file overlap)*
+
+- [ ] 12-04-PLAN.md — Renderer/CSS: GAP-12-A (Save → accent-blue, drop context-menu-item, drive Save by data-testid) + GAP-12-E (calm validation tone verify) + GAP-12-D overlay-close guard + META (ui-lab edit-modal capture now includes the Save button)
+- [ ] 12-05-PLAN.md — Main process: GAP-12-D (application Menu with standard Edit roles — Cmd+A/C/V/X work; chords untouched)
+
+*Wave 2 (blocked on 12-04)*
+
+- [ ] 12-06-PLAN.md — Lifecycle: GAP-12-B (Restart-to-apply prompt reusing the retained ptyRestart — same logicalId, new ptyPid) + GAP-12-C (bad-cwd CR-01 rejection surfaced where the user acted) + IN-02 SessionManager extraction (<800 lines)
+
+*Wave 3 (blocked on 12-04/05/06)*
+
+- [ ] 12-07-PLAN.md — Re-gate: full suite + packaged ui:shots:fresh (Save button in-frame) + BLOCKING operator human-verify covering GAP-12-A..E; nyquist flips true only on explicit approval
 
 **UI hint**: yes
 
