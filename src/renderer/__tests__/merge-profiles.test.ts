@@ -82,4 +82,15 @@ describe('mergeAuthoritativeProfiles (SESS-05 edit-prefill merge)', () => {
     const result = mergeAuthoritativeProfiles(rows, authoritative);
     expect(result[0].configured).toBe(true);
   });
+
+  it('truth.startupCommand=undefined overwrites row.startupCommand (main truth wins)', () => {
+    // SESS-05 contract: main's persisted truth is always authoritative, even when
+    // truth.startupCommand is undefined. The merge does NOT fall back to the row's
+    // existing value (no ?? guard here, unlike configured). This locks the intended
+    // behavior so a future ?? row.startupCommand guard cannot be added silently.
+    const rows = [makeRow('a', { startupCommand: 'existing-cmd' })];
+    const authoritative = [makeRow('a', { startupCommand: undefined })];
+    const result = mergeAuthoritativeProfiles(rows, authoritative);
+    expect(result[0].startupCommand).toBeUndefined();
+  });
 });
