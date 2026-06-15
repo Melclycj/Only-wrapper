@@ -64,7 +64,7 @@ describe('Session edit smoke (SESS-01/02/04)', () => {
 
     const newName = 'Renamed Session';
     await setEditName(newName);
-    await clickMenuItem('Save'); // Save button shares the menu-item click contract
+    await clickMenuItem('Save changes'); // Save button shares the menu-item click contract (label promoted to 'Save changes' in 12-02)
 
     await browser.waitUntil(async () => (await rowName(id)) === newName, {
       timeout: 3000,

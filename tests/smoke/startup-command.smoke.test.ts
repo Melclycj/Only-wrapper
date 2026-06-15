@@ -91,7 +91,7 @@ describe('Startup-command auto-run smoke (TERM-05: SC1/SC2/SC3/D-02/D-04)', () =
 
     await menuAction(id, 'Edit');
     await setStartupCommand('echo JW_STARTUP_OK');
-    await clickMenuItem('Save');
+    await clickMenuItem('Save changes'); // label promoted to 'Save changes' in 12-02
 
     // Recycle: Remove (keeps the recipe → Inactive List) → select → dormant Start ▶.
     await menuAction(id, 'Remove');
@@ -227,7 +227,7 @@ describe('Startup-command auto-run smoke (TERM-05: SC1/SC2/SC3/D-02/D-04)', () =
       }
     }, id);
     await setStartupCommand('echo JW_DORMANT_OK');
-    await clickMenuItem('Save');
+    await clickMenuItem('Save changes'); // label promoted to 'Save changes' in 12-02
 
     // Remove the live session → a configured live row flips to a DORMANT recipe (it
     // moves to the Inactive List; the record is kept, not deleted).

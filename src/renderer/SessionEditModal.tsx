@@ -18,6 +18,7 @@ import type { SessionIconSpec, SessionRecord } from '../shared/types';
 import type { DiscoveredShell } from '../main/shell-discovery';
 import { IconPicker } from './IconPicker';
 import { splitEdit } from './session-edit';
+import { validateSessionForm } from './validate-session-form';
 
 export interface SessionEditModalProps {
   open: boolean;
@@ -31,6 +32,13 @@ export interface SessionEditModalProps {
     shell: string;
     startupCommand: string;
   }) => void;
+  /**
+   * The active row's main-side rejection notice (from onPtyStatus → applyStatusEvent,
+   * carried on row.errorMessage). When it matches the CR-01 cwd-rejection shape
+   * ('Working directory not found…'), it renders INLINE under the cwd field in the
+   * danger ramp (D-04). NOT a new IPC — it reuses the existing onPtyStatus path.
+   */
+  errorMessage?: string;
   onCancel: () => void;
 }
 
@@ -39,6 +47,7 @@ export function SessionEditModal({
   session,
   onSaveLive,
   onSaveProfile,
+  errorMessage,
   onCancel,
 }: SessionEditModalProps): React.JSX.Element | null {
   const titleId = useId();
@@ -135,6 +144,23 @@ export function SessionEditModal({
     onSaveProfile(restart);
   };
 
+  // D-04 inline validation — renderer-cheap NEUTRAL hints from the pure reducer
+  // (empty name → "keeps current name"; non-absolute cwd → format hint). Main's CR-01
+  // stays the validator of record; these are convenience-only. The notices are
+  // computed from the live React state (controlled inputs keep them in sync).
+  const notices = validateSessionForm({ name, cwd, startupCommand });
+  const nameNotice = notices.name;
+  // The cwd row shows EITHER main's genuine rejection (error ramp) when it matches the
+  // CR-01 'Working directory not found' shape, OR the neutral format hint — never both
+  // (a real rejection outranks the local format guess). The error string is main's
+  // already-sanitized notice; rendered as a React text node (auto-escaped), no HTML.
+  const cwdRejected =
+    typeof errorMessage === 'string' &&
+    errorMessage.startsWith('Working directory not found');
+  const cwdNotice = cwdRejected
+    ? { tone: 'error' as const, message: 'Working directory not found' }
+    : notices.cwd;
+
   return (
     <div className="modal-overlay" data-testid="session-edit-modal" onClick={onCancel}>
       <div
@@ -148,29 +174,48 @@ export function SessionEditModal({
           Edit session
         </h2>
 
-        <div className="edit-field">
-          <label className="edit-label" htmlFor={`${titleId}-name`}>
-            Name
-          </label>
-          <input
-            id={`${titleId}-name`}
-            ref={nameRef}
-            type="text"
-            className="edit-input"
-            data-testid="edit-name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
+        {/* Group A — IDENTITY (applies LIVE: name/icon, no respawn — D-02). */}
+        <div className="edit-group edit-group-identity">
+          <p className="edit-group-subhead">Identity</p>
+
+          <div className="edit-field">
+            <label className="edit-label" htmlFor={`${titleId}-name`}>
+              Name
+            </label>
+            <input
+              id={`${titleId}-name`}
+              ref={nameRef}
+              type="text"
+              className="edit-input"
+              data-testid="edit-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+            {/* Empty name → neutral "keeps current name" hint (D-04 — a valid choice,
+                never the danger ramp). */}
+            {nameNotice && (
+              <span
+                className={`edit-field-notice edit-field-notice--${nameNotice.tone}`}
+              >
+                {nameNotice.message}
+              </span>
+            )}
+          </div>
+
+          <div className="edit-field">
+            <span className="edit-label">Icon</span>
+            <IconPicker value={icon} name={name} onChange={setIcon} />
+          </div>
         </div>
 
-        <div className="edit-field">
-          <span className="edit-label">Icon</span>
-          <IconPicker value={icon} name={name} onChange={setIcon} />
-        </div>
+        {/* Hairline divider between the Identity and Launch groups (D-02). */}
+        <hr className="edit-group-divider" />
 
+        {/* Group B — LAUNCH (persists to main, applies on the NEXT restart — D-02).
+            The existing restart-hint testid/copy is REUSED as this group's subhead. */}
         <div className="edit-restart-group">
           <p className="applies-on-restart-hint" data-testid="applies-on-restart">
-            Applies on restart
+            Launch · Applies on restart
           </p>
 
           <div className="edit-field">
@@ -204,6 +249,16 @@ export function SessionEditModal({
                 Browse…
               </button>
             </div>
+            {/* Inline validation under cwd (D-04): main's CR-01 'Working directory not
+                found' rejection in the danger ramp, OR the neutral non-absolute format
+                hint. Calm by default; red only on a genuine rejection. */}
+            {cwdNotice && (
+              <span
+                className={`edit-field-notice edit-field-notice--${cwdNotice.tone}`}
+              >
+                {cwdNotice.message}
+              </span>
+            )}
           </div>
 
           <div className="edit-field">
@@ -273,16 +328,18 @@ export function SessionEditModal({
           >
             Cancel
           </button>
-          {/* The Save button also carries `.context-menu-item` so the WDIO driver's
-              clickMenuItem('Save') (which addresses `.context-menu-item` by text)
-              activates it — the smoke test reuses that single click contract. */}
+          {/* Save is the CONSTRUCTIVE accent-blue primary (D-04 Pitfall 1: the blue
+              save ramp, NOT the destructive red confirm ramp). It still carries the
+              menu-item class so the WDIO driver's text-addressed menu click activates
+              it. The save data-testid is UNCHANGED; only the visible label is promoted
+              for a clearer constructive verb-noun. */}
           <button
             type="button"
-            className="modal-btn modal-btn-confirm context-menu-item"
+            className="modal-btn modal-btn-save context-menu-item"
             data-testid="edit-save"
             onClick={handleSave}
           >
-            Save
+            Save changes
           </button>
         </div>
       </div>
