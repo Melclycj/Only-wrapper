@@ -78,6 +78,37 @@ async function menuAction(id: string, label: string): Promise<void> {
   await clickMenuItem(label);
 }
 
+/**
+ * GAP-12-B (12-06): saving an edit to a LIVE session whose launch fields (cwd/shell/
+ * startupCommand) changed now opens a "Restart to apply?" prompt. These specs drive the
+ * DORMANT cold-spawn path (Remove → Inactive List → Start ▶), so dismiss the prompt with
+ * "Later" — which persists the saved recipe WITHOUT respawning live — before Remove, so the
+ * modal overlay does not block the recycle. (session-edit.smoke covers the Restart-now half.)
+ */
+async function dismissRestartApplyLater(): Promise<void> {
+  await browser.waitUntil(
+    async () =>
+      browser.execute(
+        () => document.querySelector('[data-testid="restart-apply-now"]') !== null,
+      ),
+    {
+      timeout: 6000,
+      timeoutMsg: 'Restart-to-apply prompt did not appear after Save (GAP-12-B)',
+    },
+  );
+  await clickByTestId('restart-apply-later');
+  await browser.waitUntil(
+    async () =>
+      browser.execute(
+        () => document.querySelector('[data-testid="restart-apply-now"]') === null,
+      ),
+    {
+      timeout: 6000,
+      timeoutMsg: 'Restart-to-apply prompt did not close after clicking Later',
+    },
+  );
+}
+
 describe('Startup-command auto-run smoke (TERM-05: SC1/SC2/SC3/D-02/D-04)', () => {
   it('auto-runs a non-empty startupCommand — output visible, command typed (SC1) + nonce invisible (D-02)', async () => {
     // Add a live session, set a benign visible startup command via the edit modal, then
@@ -91,7 +122,12 @@ describe('Startup-command auto-run smoke (TERM-05: SC1/SC2/SC3/D-02/D-04)', () =
 
     await menuAction(id, 'Edit');
     await setStartupCommand('echo JW_STARTUP_OK');
-    await clickMenuItem('Save changes'); // label promoted to 'Save changes' in 12-02
+    // Save is driven by data-testid: GAP-12-A (12-04) dropped the button's context-menu-item
+    // hook (it was overriding the accent-blue), so clickMenuItem can no longer find it.
+    await clickByTestId('edit-save');
+    // GAP-12-B: a LIVE startupCommand edit now prompts "Restart to apply?" — dismiss with
+    // "Later" (keep the recipe, no live respawn) so it does not block the Remove below.
+    await dismissRestartApplyLater();
 
     // Recycle: Remove (keeps the recipe → Inactive List) → select → dormant Start ▶.
     await menuAction(id, 'Remove');
@@ -227,7 +263,12 @@ describe('Startup-command auto-run smoke (TERM-05: SC1/SC2/SC3/D-02/D-04)', () =
       }
     }, id);
     await setStartupCommand('echo JW_DORMANT_OK');
-    await clickMenuItem('Save changes'); // label promoted to 'Save changes' in 12-02
+    // Save is driven by data-testid: GAP-12-A (12-04) dropped the button's context-menu-item
+    // hook (it was overriding the accent-blue), so clickMenuItem can no longer find it.
+    await clickByTestId('edit-save');
+    // GAP-12-B: a LIVE startupCommand edit now prompts "Restart to apply?" — dismiss with
+    // "Later" (keep the recipe, no live respawn) so it does not block the Remove below.
+    await dismissRestartApplyLater();
 
     // Remove the live session → a configured live row flips to a DORMANT recipe (it
     // moves to the Inactive List; the record is kept, not deleted).
