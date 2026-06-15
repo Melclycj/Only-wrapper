@@ -108,11 +108,25 @@ From DESIGN.md §Aesthetic direction + §Design tokens:
 ## edit-modal
 
 - [ ] Dialog: 18px card, `--shadow-dialog` elevation, on a dimmed/screened backdrop.
+- [ ] Two-group structure: an "Identity" group (Name + Icon/color) and a "Launch ·
+      Applies on restart" group (cwd + Shell + Startup), each with a section subhead
+      + a hairline divider. Single column — no two-column layout.
 - [ ] Fields: labeled clearly in soft ink; inputs ~8px radius with visible but
       soft borders; focus shows the accent ring.
-- [ ] Primary (Save) = accent fill; secondary (Cancel) = quiet; pill shapes.
-- [ ] Icon/emoji picker affordance feels playful-but-tidy (parlour, not toolbox).
-- [ ] Vertical rhythm between fields is even; the form reads in one calm column.
+- [ ] Save = **accent-blue fill** (constructive, NOT danger-red); label "Save changes";
+      Cancel = quiet neutral. Pill shapes (`--radius-lg`).
+- [ ] Icon/emoji picker: tidy grid with hover (`--bg-sunk`) + selected ring; swatch
+      row aligned; feels playful-but-tidy (parlour, not toolbox).
+- [ ] Vertical rhythm between fields is even; inter-group spacing reads as a clear break.
+
+## edit-modal-validation
+
+- [ ] cwd format hint (non-absolute path) renders in `--ink-faint` below the cwd field.
+- [ ] Empty-name hint "Keeps the current name" renders in `--ink-faint` below the name
+      field.
+- [ ] Hint text is CALM — does not read as an alarm; the danger red (`--color-danger`)
+      is NOT present unless main actively rejects (an explicit error state).
+- [ ] The rest of the form is undisturbed; validation is per-field, not a modal-wide state.
 
 ## preferences-modal
 

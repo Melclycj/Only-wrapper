@@ -416,6 +416,29 @@ export const SURFACES: Surface[] = [
     },
   },
   {
+    id: 'edit-modal-validation',
+    title: 'Session edit form — inline validation (cwd + name hints)',
+    designRefs: [
+      '12-UI-SPEC.md §Color (danger reserved for a genuine validation error)',
+      '12-CONTEXT.md D-04 inline validation',
+    ],
+    expects:
+      'Danger-ramp helper text under the cwd field; name hint in ink-faint; calm overall.',
+    prepare: async (ctx) => {
+      await openEditModal(ctx.ids[0]);
+      // Drive a non-absolute cwd to trigger the renderer format hint, and clear the
+      // name to trigger the neutral empty-name hint (the validation-display testids
+      // land in Plan 02 — this Wave-0 scaffold still captures the modal state).
+      await setInputByTestId('edit-cwd', 'not-absolute');
+      await setInputByTestId('edit-name', '');
+      await browser.pause(300);
+    },
+    cleanup: async () => {
+      await clickByTestId('edit-cancel');
+      await waitForTestIdGone('session-edit-modal');
+    },
+  },
+  {
     id: 'preferences-modal',
     title: 'Preferences dialog',
     designRefs: ['DESIGN.md §Design tokens'],
