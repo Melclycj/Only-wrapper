@@ -1,0 +1,110 @@
+{"ev":"driver-start","shell":"/bin/zsh","args":["-l"],"cwd":"/Users/jerry/Project/Just-wrapper","timeoutMs":4000}
+{"scenario":"A_dormant_start","ev":"spawn","pid":46405}
+{"scenario":"A_dormant_start","ev":"marker-write","atMs":0}
+{"scenario":"A_dormant_start","ev":"data","atMs":2,"chunk":"\": __JW_READY_4a7eea413af9fb45__\\r\\n\""}
+{"scenario":"A_dormant_start","ev":"data","atMs":35,"chunk":"\"Restored session: Tue Jun 16 00:41:58 AEST 2026\\r\\n\""}
+{"scenario":"A_dormant_start","ev":"data","atMs":1468,"chunk":"\"\\u001b[1m\\u001b[7m%\\u001b[27m\\u001b[1m\\u001b[0m                                                                               \\r \\r\""}
+{"scenario":"A_dormant_start","ev":"data","atMs":1469,"chunk":"\"\\u001b]7;file://chenruijiedeAir/Users/jerry/Project/Just-wrapper\\u0007\""}
+{"scenario":"A_dormant_start","ev":"data","atMs":1469,"chunk":"\"\\r\\u001b[0m\\u001b[27m\\u001b[24m\\u001b[J(base) jerry@chenruijiedeAir Just-wrapper % \\u001b[K\\u001b[?2004h:\\b: __JW_READY_4a7eea413af9fb4\""}
+{"scenario":"A_dormant_start","ev":"data","atMs":1469,"chunk":"\"5__\\u001b[?2004l\\r\\r\\n\""}
+{"scenario":"A_dormant_start","ev":"MATCH","atMs":1469,"markerWrittenAt":0}
+{"scenario":"B_restart_respawn","ev":"old-spawn","pid":46645}
+{"scenario":"B_restart_respawn","ev":"stop-begin","atMs":0}
+{"scenario":"B_restart_respawn","ev":"old-exit","stopMs":801}
+{"scenario":"B_restart_respawn","ev":"respawn","pid":46892}
+{"scenario":"B_restart_respawn","ev":"marker-write","atMs":0}
+{"scenario":"B_restart_respawn","ev":"data","atMs":0,"chunk":"\": __JW_READY_8cd09d82e0f67b79__\\r\\n\""}
+{"scenario":"B_restart_respawn","ev":"data","atMs":1041,"chunk":"\"\\u001b[1m\\u001b[7m%\\u001b[27m\\u001b[1m\\u001b[0m                                                                               \\r \\r\""}
+{"scenario":"B_restart_respawn","ev":"data","atMs":1041,"chunk":"\"\\u001b]7;file://chenruijiedeAir/Users/jerry/Project/Just-wrapper\\u0007\""}
+{"scenario":"B_restart_respawn","ev":"data","atMs":1041,"chunk":"\"\\r\\u001b[0m\\u001b[27m\\u001b[24m\\u001b[J(base) jerry@chenruijiedeAir Just-wrapper % \\u001b[K\\u001b[?2004h:\\b: __JW_READY_8cd09d82e0f67b79__\""}
+{"scenario":"B_restart_respawn","ev":"MATCH","atMs":1041,"markerWrittenAt":0}
+{"scenario":"C_restart_delayed_marker","ev":"old-spawn","pid":47123}
+{"scenario":"C_restart_delayed_marker","ev":"stop-begin","atMs":0}
+{"scenario":"C_restart_delayed_marker","ev":"old-exit","stopMs":803}
+{"scenario":"C_restart_delayed_marker","ev":"respawn","pid":47370}
+{"scenario":"C_restart_delayed_marker","ev":"data","atMs":1048,"chunk":"\"\\u001b[1m\\u001b[7m%\\u001b[27m\\u001b[1m\\u001b[0m                                                                               \\r \\r\""}
+{"scenario":"C_restart_delayed_marker","ev":"marker-write","atMs":1048}
+{"scenario":"C_restart_delayed_marker","ev":"data","atMs":1048,"chunk":"\": __JW_READY_a5c243aab70bd2a3__\\r\\n\""}
+{"scenario":"C_restart_delayed_marker","ev":"data","atMs":1048,"chunk":"\"\\u001b]7;file://chenruijiedeAir/Users/jerry/Project/Just-wrapper\\u0007\""}
+{"scenario":"C_restart_delayed_marker","ev":"data","atMs":1048,"chunk":"\"\\r\\u001b[0m\\u001b[27m\\u001b[24m\\u001b[J(base) jerry@chenruijiedeAir Just-wrapper % \\u001b[K\""}
+{"scenario":"C_restart_delayed_marker","ev":"data","atMs":1048,"chunk":"\"\\u001b[?2004h:\""}
+{"scenario":"C_restart_delayed_marker","ev":"data","atMs":1048,"chunk":"\"\\b: __JW\""}
+{"scenario":"C_restart_delayed_marker","ev":"data","atMs":1048,"chunk":"\"_REA\""}
+{"scenario":"C_restart_delayed_marker","ev":"data","atMs":1048,"chunk":"\"DY_a5c243\""}
+{"scenario":"C_restart_delayed_marker","ev":"data","atMs":1048,"chunk":"\"aab\""}
+{"scenario":"C_restart_delayed_marker","ev":"data","atMs":1048,"chunk":"\"70\""}
+{"scenario":"C_restart_delayed_marker","ev":"data","atMs":1048,"chunk":"\"bd2\""}
+{"scenario":"C_restart_delayed_marker","ev":"data","atMs":1048,"chunk":"\"a3\""}
+{"scenario":"C_restart_delayed_marker","ev":"data","atMs":1048,"chunk":"\"__\\u001b[?2004l\\r\\r\\n\""}
+{"scenario":"C_restart_delayed_marker","ev":"MATCH","atMs":1048,"markerWrittenAt":1048}
+{"scenario":"B_restart_respawn","ev":"old-spawn","pid":47609}
+{"scenario":"B_restart_respawn","ev":"stop-begin","atMs":0}
+{"scenario":"B_restart_respawn","ev":"old-exit","stopMs":802}
+{"scenario":"B_restart_respawn","ev":"respawn","pid":47855}
+{"scenario":"B_restart_respawn","ev":"marker-write","atMs":0}
+{"scenario":"B_restart_respawn","ev":"data","atMs":0,"chunk":"\": __JW_READY_31aa3dd5cdc25004__\\r\\n\""}
+{"scenario":"B_restart_respawn","ev":"data","atMs":1040,"chunk":"\"\\u001b[1m\\u001b[7m%\\u001b[27m\\u001b[1m\\u001b[0m                                                                               \\r \\r\""}
+{"scenario":"B_restart_respawn","ev":"data","atMs":1040,"chunk":"\"\\u001b]7;file://chenruijiedeAir/Users/jerry/Project/Just-wrapper\\u0007\""}
+{"scenario":"B_restart_respawn","ev":"data","atMs":1040,"chunk":"\"\\r\\u001b[0m\\u001b[27m\\u001b[24m\\u001b[J(base) jerry@chenruijiedeAir Just-wrapper % \\u001b[K\\u001b[?2004h\""}
+{"scenario":"B_restart_respawn","ev":"data","atMs":1040,"chunk":"\":\\b: __JW\""}
+{"scenario":"B_restart_respawn","ev":"data","atMs":1040,"chunk":"\"_REA\""}
+{"scenario":"B_restart_respawn","ev":"data","atMs":1040,"chunk":"\"DY_31aa3dd\""}
+{"scenario":"B_restart_respawn","ev":"data","atMs":1040,"chunk":"\"5cdc\""}
+{"scenario":"B_restart_respawn","ev":"data","atMs":1040,"chunk":"\"250\""}
+{"scenario":"B_restart_respawn","ev":"data","atMs":1040,"chunk":"\"04\""}
+{"scenario":"B_restart_respawn","ev":"data","atMs":1040,"chunk":"\"__\\u001b[?2004l\\r\\r\\n\""}
+{"scenario":"B_restart_respawn","ev":"MATCH","atMs":1040,"markerWrittenAt":0}
+{"scenario":"B_repeat","i":0,"matched":true,"ms":1040}
+{"scenario":"B_restart_respawn","ev":"old-spawn","pid":48086}
+{"scenario":"B_restart_respawn","ev":"stop-begin","atMs":0}
+{"scenario":"B_restart_respawn","ev":"old-exit","stopMs":805}
+{"scenario":"B_restart_respawn","ev":"respawn","pid":48333}
+{"scenario":"B_restart_respawn","ev":"marker-write","atMs":0}
+{"scenario":"B_restart_respawn","ev":"data","atMs":0,"chunk":"\": __JW_READY_692d2d1355ef217b__\\r\\n\""}
+{"scenario":"B_restart_respawn","ev":"data","atMs":1046,"chunk":"\"\\u001b[1m\\u001b[7m%\\u001b[27m\\u001b[1m\\u001b[0m                                                                               \\r \\r\""}
+{"scenario":"B_restart_respawn","ev":"data","atMs":1046,"chunk":"\"\\u001b]7;file://chenruijiedeAir/Users/jerry/Project/Just-wrapper\\u0007\""}
+{"scenario":"B_restart_respawn","ev":"data","atMs":1046,"chunk":"\"\\r\\u001b[0m\\u001b[27m\\u001b[24m\\u001b[J(base) jerry@chenruijiedeAir Just-wrapper % \\u001b[K\\u001b[?2004h\""}
+{"scenario":"B_restart_respawn","ev":"data","atMs":1046,"chunk":"\":\\b: __JW_RE\""}
+{"scenario":"B_restart_respawn","ev":"data","atMs":1046,"chunk":"\"ADY_\""}
+{"scenario":"B_restart_respawn","ev":"data","atMs":1046,"chunk":"\"692d\""}
+{"scenario":"B_restart_respawn","ev":"data","atMs":1046,"chunk":"\"2d1\""}
+{"scenario":"B_restart_respawn","ev":"data","atMs":1046,"chunk":"\"355ef2\""}
+{"scenario":"B_restart_respawn","ev":"data","atMs":1046,"chunk":"\"17b\""}
+{"scenario":"B_restart_respawn","ev":"data","atMs":1046,"chunk":"\"__\""}
+{"scenario":"B_restart_respawn","ev":"MATCH","atMs":1046,"markerWrittenAt":0}
+{"scenario":"B_repeat","i":1,"matched":true,"ms":1046}
+{"scenario":"B_restart_respawn","ev":"old-spawn","pid":48571}
+{"scenario":"B_restart_respawn","ev":"stop-begin","atMs":0}
+{"scenario":"B_restart_respawn","ev":"old-exit","stopMs":804}
+{"scenario":"B_restart_respawn","ev":"respawn","pid":48820}
+{"scenario":"B_restart_respawn","ev":"marker-write","atMs":0}
+{"scenario":"B_restart_respawn","ev":"data","atMs":0,"chunk":"\": __JW_READY_102c8b8bb8aca369__\\r\\n\""}
+{"scenario":"B_restart_respawn","ev":"data","atMs":1055,"chunk":"\"\\u001b[1m\\u001b[7m%\\u001b[27m\\u001b[1m\\u001b[0m                                                                               \\r \\r\""}
+{"scenario":"B_restart_respawn","ev":"data","atMs":1055,"chunk":"\"\\u001b]7;file://chenruijiedeAir/Users/jerry/Project/Just-wrapper\\u0007\""}
+{"scenario":"B_restart_respawn","ev":"data","atMs":1055,"chunk":"\"\\r\\u001b[0m\\u001b[27m\\u001b[24m\\u001b[J(base) jerry@chenruijiedeAir Just-wrapper % \\u001b[K\\u001b[?2004h\""}
+{"scenario":"B_restart_respawn","ev":"data","atMs":1055,"chunk":"\":\\b: \""}
+{"scenario":"B_restart_respawn","ev":"data","atMs":1055,"chunk":"\"__JW\""}
+{"scenario":"B_restart_respawn","ev":"data","atMs":1055,"chunk":"\"_READY_10\""}
+{"scenario":"B_restart_respawn","ev":"data","atMs":1055,"chunk":"\"2c8b\""}
+{"scenario":"B_restart_respawn","ev":"data","atMs":1055,"chunk":"\"8b\""}
+{"scenario":"B_restart_respawn","ev":"data","atMs":1055,"chunk":"\"b8a\""}
+{"scenario":"B_restart_respawn","ev":"data","atMs":1055,"chunk":"\"ca\""}
+{"scenario":"B_restart_respawn","ev":"data","atMs":1055,"chunk":"\"369__\""}
+{"scenario":"B_restart_respawn","ev":"MATCH","atMs":1055,"markerWrittenAt":0}
+{"scenario":"B_repeat","i":2,"matched":true,"ms":1055}
+{"scenario":"B_restart_respawn","ev":"old-spawn","pid":49050}
+{"scenario":"B_restart_respawn","ev":"stop-begin","atMs":0}
+{"scenario":"B_restart_respawn","ev":"old-exit","stopMs":804}
+{"scenario":"B_restart_respawn","ev":"respawn","pid":49297}
+{"scenario":"B_restart_respawn","ev":"marker-write","atMs":0}
+{"scenario":"B_restart_respawn","ev":"data","atMs":1,"chunk":"\": __JW_READY_3438450d4357c2d4__\\r\\n\""}
+{"scenario":"B_restart_respawn","ev":"data","atMs":1072,"chunk":"\"\\u001b[1m\\u001b[7m%\\u001b[27m\\u001b[1m\\u001b[0m                                                                               \\r \\r\""}
+{"scenario":"B_restart_respawn","ev":"data","atMs":1073,"chunk":"\"\\u001b]7;file://chenruijiedeAir/Users/jerry/Project/Just-wrapper\\u0007\""}
+{"scenario":"B_restart_respawn","ev":"data","atMs":1073,"chunk":"\"\\r\\u001b[0m\\u001b[27m\\u001b[24m\\u001b[J(base) jerry@chenruijiedeAir Just-wrapper % \\u001b[K\\u001b[?2004h\""}
+{"scenario":"B_restart_respawn","ev":"data","atMs":1073,"chunk":"\":\""}
+{"scenario":"B_restart_respawn","ev":"data","atMs":1073,"chunk":"\"\\b: __JW_RE\""}
+{"scenario":"B_restart_respawn","ev":"data","atMs":1073,"chunk":"\"ADY_\""}
+{"scenario":"B_restart_respawn","ev":"data","atMs":1073,"chunk":"\"343845\""}
+{"scenario":"B_restart_respawn","ev":"data","atMs":1073,"chunk":"\"0d43\""}
+{"scenario":"B_restart_respawn","ev":"data","atMs":1073,"chunk":"\"57c\""}
+{"scenario":"B_restart_respawn","ev":"data","atMs":1073,"chunk":"\"2d\""}
