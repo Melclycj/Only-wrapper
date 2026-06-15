@@ -42,7 +42,7 @@
 
 *Wave 1 (parallel — no file overlap: main vs renderer)*
 
-- [ ] 12-08-PLAN.md — Main process: GAP-12-B (the headline) — replace the fixed 4000ms READINESS_TIMEOUT_MS with a dual-deadline budget (8000ms idle-extend-on-progress + a mandatory 15000ms hard absolute ceiling, both routing through the D-04 give-up path) + the DEBT-02 real-timing regression built from the spike-005 heavy-init driver (npm run test:integration) + relocate the gap-12-c-bad-cwd-restart diag stub into a committed test
+- [x] 12-08-PLAN.md — Main process: GAP-12-B (the headline) — replaced the fixed 4000ms READINESS_TIMEOUT_MS with a dual-deadline budget (READINESS_IDLE_TIMEOUT_MS=8000 idle-extend-on-progress + a mandatory READINESS_HARD_TIMEOUT_MS=15000 hard absolute ceiling, both routing ONE shared D-04 give-up closure) + the DEBT-02 real-timing regression built from the spike-005 heavy-init ZDOTDIR-sleep driver (npm run test:integration) + relocated the gap-12-c-bad-cwd-restart diag stub into a committed test — **DONE** (commits 800de51/f2cfb47/342a3b7; integration regression PROVES old-4000=timeout / new=match@5059ms / never-ready=hard@15003ms — fails the pre-fix code; EXPECTED_API_KEYS stays 20; 455 unit GREEN, tsc + eslint(src,tests) clean)
 - [ ] 12-09-PLAN.md — Renderer: GAP-12-C (handleRestart pid<=0 else surfaces a failed restart visibly — IdleCard + notice, applyStatusEvent contract unchanged) + GAP-12-E (no silent cwd drop — compare submitted vs persisted cwd via the existing listSessions re-read, surface an inline drop notice, keep the modal open; no new bridge key) + relocate the gap-12-c-surface diag stub into a committed test
 
 *Wave 2 (blocked on 12-08/09)*
