@@ -9,14 +9,32 @@ import { describe, it, expect } from 'vitest';
 import {
   launchFieldsChanged,
   needsRestartPrompt,
+  restartPromptIdFor,
   type LaunchFields,
 } from '../session-restart-prompt';
+import type { LogicalId, SessionRecord } from '../../shared/types';
 
 const base: LaunchFields = {
   cwd: '/home/me/proj',
   shell: '/bin/zsh',
   startupCommand: 'npm run dev',
 };
+
+function makeRow(overrides: Partial<SessionRecord> = {}): SessionRecord {
+  return {
+    logicalId: 'r1' as LogicalId,
+    ptyPid: 1000,
+    name: 'r1',
+    icon: { type: 'emoji', value: '🖥️' },
+    cwd: base.cwd,
+    shell: base.shell,
+    startupCommand: base.startupCommand,
+    status: 'running',
+    order: 0,
+    lastActive: 0,
+    ...overrides,
+  };
+}
 
 describe('launchFieldsChanged', () => {
   it('returns false when nothing changed', () => {
@@ -98,5 +116,41 @@ describe('needsRestartPrompt', () => {
         }),
       ).toBe(false);
     }
+  });
+});
+
+describe('restartPromptIdFor (save call-site convenience)', () => {
+  it('returns the row id when a running row had a launch change', () => {
+    const row = makeRow();
+    expect(restartPromptIdFor(row, { ...base, cwd: '/new' })).toBe('r1');
+  });
+
+  it('returns null when nothing changed', () => {
+    expect(restartPromptIdFor(makeRow(), { ...base })).toBeNull();
+  });
+
+  it('returns null for a dormant row even with a launch change', () => {
+    const row = makeRow({ status: 'not_started' });
+    expect(restartPromptIdFor(row, { ...base, cwd: '/new' })).toBeNull();
+  });
+
+  it('returns null for a null row (defensive)', () => {
+    expect(restartPromptIdFor(null, base)).toBeNull();
+  });
+
+  it('treats an undefined row.startupCommand as empty (whitespace after → no change → null)', () => {
+    const row = makeRow({ startupCommand: undefined });
+    // before '' vs after '   '.trim()='' → no launch change → null.
+    expect(
+      restartPromptIdFor(row, { ...base, startupCommand: '   ' }),
+    ).toBeNull();
+  });
+
+  it('treats an undefined row.startupCommand as empty (real after value → change → id)', () => {
+    const row = makeRow({ startupCommand: undefined });
+    // before '' vs after 'npm start' → change → prompt.
+    expect(
+      restartPromptIdFor(row, { ...base, startupCommand: 'npm start' }),
+    ).toBe('r1');
   });
 });

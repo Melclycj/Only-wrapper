@@ -13,7 +13,7 @@
 // A dormant / not_started / exited / error session does NOT prompt — its next Start
 // already picks up the saved launch values, so no respawn-now is needed.
 
-import type { SessionStatus } from '../shared/types';
+import type { LogicalId, SessionRecord, SessionStatus } from '../shared/types';
 
 /** The three "Applies on restart" launch fields (D-02 restart half). */
 export interface LaunchFields {
@@ -63,4 +63,27 @@ export function needsRestartPrompt(input: RestartPromptInput): boolean {
     input.status === 'running' &&
     launchFieldsChanged(input.before, input.after)
   );
+}
+
+/**
+ * Convenience for the save call site: given the PRE-save `row` (or null) and the just-
+ * submitted launch `after` fields, return the row's logicalId iff it should prompt, else
+ * null. Captures the before-fields off the row so SessionManager.handleSaveProfile stays a
+ * one-liner (the row must be read BEFORE ptyUpdateProfile/rehydrate overwrite it).
+ */
+export function restartPromptIdFor(
+  row: SessionRecord | null,
+  after: LaunchFields,
+): LogicalId | null {
+  if (row === null) return null;
+  const should = needsRestartPrompt({
+    status: row.status,
+    before: {
+      cwd: row.cwd,
+      shell: row.shell,
+      startupCommand: row.startupCommand ?? '',
+    },
+    after,
+  });
+  return should ? row.logicalId : null;
 }

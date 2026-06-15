@@ -7,15 +7,10 @@
 // receive their resolved id as a prop and bind to the already-spawned PTY; they
 // never spawn. This guarantees exactly one PTY per session (no orphan, no double-spawn).
 //
-// Layout (DESIGN.md §"IdeLayout", basic tier): a <Sidebar> (icon + name + live
-// status badge, click-to-switch, add-session button) + a .viewport-stack that
-// keeps ALL <SessionView>s mounted (so hidden sessions keep buffering — SC1/SC2)
-// and toggles which one is active.
-//
-// Status (TERM-08, SC4): per-session window.api.onPtyStatus subscriptions push every
-// transition into state so the badge stays live — never a stale one-time poll.
-//
-// HARD RULE (CLAUDE.md / D-06): renderer NEVER imports electron/node-pty; the only
+// Layout (DESIGN.md §"IdeLayout"): a <Sidebar> + a .viewport-stack that keeps ALL
+// <SessionView>s mounted (hidden sessions keep buffering — SC1/SC2) and toggles the
+// active one. Status (TERM-08, SC4): per-session onPtyStatus subscriptions keep badges
+// live. HARD RULE (CLAUDE.md / D-06): renderer NEVER imports electron/node-pty; the only
 // bridge to main is window.api.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -24,6 +19,7 @@ import type { AgentState } from '../shared/agent-state';
 import { SessionView } from './SessionView';
 import { Sidebar } from './Sidebar';
 import { ConfirmModal } from './ConfirmModal';
+import { RestartApplyPrompt } from './RestartApplyPrompt';
 import { buildConfirmBody } from './confirm-copy';
 import { ContextMenu } from './ContextMenu';
 import { SessionEditModal } from './SessionEditModal';
@@ -55,20 +51,22 @@ import { reorder } from './session-reorder';
 // unit-testable in the Node env (apply-status-event.test.ts). It internally applies
 // resolveRowStatus (session-status.ts) for the self-exit → Inactive List flip.
 import { applyStatusEvent } from './apply-status-event';
+// resolveRemoveAction is the PURE Remove/Delete decision reducer (12-06 IN-02) — extracted
+// from confirmClose's inline isConfiguredLive predicate so the file stays < 800 lines once
+// 12-06 adds the restart-to-apply prompt state/handlers. confirmClose keeps the IPC + setState.
+import { resolveRemoveAction, flipToDormant } from './session-lifecycle-actions';
+// restartPromptIdFor is the PURE restart-to-apply decision reducer (12-06 GAP-12-B) —
+// running session + a changed launch field → the id to prompt for (else null).
+import { restartPromptIdFor } from './session-restart-prompt';
 
 /**
- * Renderer-only row shape: the authoritative SessionRecord (main's source of truth)
- * plus a transient `errorMessage` captured from the onPtyStatus `notice` when a spawn
- * fails (SC2/D-03). It is NEVER persisted and NEVER crosses the bridge — it exists only
- * to drive the error card + the sidebar tooltip, so no shared-type / bridge change is
- * needed (Research Open Q2).
+ * Renderer-only row shape: the authoritative SessionRecord plus two TRANSIENT overlays
+ * that are NEVER persisted and NEVER cross the bridge (no shared-type/bridge change —
+ * Research Open Q2): `errorMessage` (from the onPtyStatus `notice` on a failed spawn —
+ * SC2/D-03, drives the error card + tooltip) and `agentState` (TERM-09/SC4/D-06 —
+ * computed in SessionView off onPtyData, lifted via onAgentState, cleared when the
+ * session leaves 'running').
  */
-// The renderer-only row also carries the agent-state presentation OVERLAY (TERM-09 /
-// SC4 — D-06): a transient `agentState` computed in SessionView off the onPtyData
-// stream and lifted via onAgentState. Like `errorMessage` it is NEVER persisted and
-// NEVER crosses the bridge (D-06 — not a 6th SessionStatus, not an IPC field); it
-// drives presentation() on the badges/dots and is cleared when the session leaves
-// 'running' (D-07/D-10).
 type SessionRow = SessionRecord & {
   errorMessage?: string;
   agentState?: AgentState;
@@ -84,6 +82,10 @@ export function SessionManager(): React.JSX.Element {
   // The session whose EDIT form modal is open (D-04). Non-null → SessionEditModal is
   // open for that id; null → closed. Hosted exactly like `closingId`.
   const [editingId, setEditingId] = useState<LogicalId | null>(null);
+  // GAP-12-B (12-06): the session pending a "Restart to apply?" prompt (its launch fields
+  // changed on Save while LIVE), or null. Hosted like editingId. Set by handleSaveProfile
+  // (via needsRestartPrompt) after the save persists; cleared on Restart-now / Later.
+  const [restartPromptId, setRestartPromptId] = useState<LogicalId | null>(null);
   // The session whose in-terminal search bar is open (07-02 TERM-10). Non-null → that
   // session's SearchBar is open; null → none. The find chord TOGGLES this for the
   // active session (it never switches the active session). Hosted like `editingId`.
@@ -146,26 +148,13 @@ export function SessionManager(): React.JSX.Element {
   const sessionsRef = useRef<SessionRow[]>(sessions);
   sessionsRef.current = sessions;
 
-  // ── Remove vs Delete (D-03/D-06, two-bucket lifecycle — supersedes the single
-  //    destructive Close). BOTH go behind the SAME confirm modal (T-06.1-14); the verb
-  //    differs by where the row lives:
-  //
-  //      • REMOVE (a live, Working-Area session) → kill the PTY but KEEP the recipe.
-  //        - CONFIGURED (the user gave it metadata — D-02): window.api.ptyStop kills the
-  //          process; main keeps the configured record (persisted via
-  //          listConfiguredSessions) so it restores dormant on the next boot, and we
-  //          OPTIMISTICALLY flip the renderer row to `not_started` so it moves to the
-  //          Inactive List in THIS session too (the renderer is the presentation
-  //          authority between boots; the old reconcile poll is gone). No new bridge key.
-  //        - EPHEMERAL (a throwaway +New, never edited): window.api.ptyClose kills + drops
-  //          the record entirely — it is gone (never persisted, no Inactive entry).
-  //      • DELETE (an Inactive-List, dormant session) → permanent: window.api.ptyClose
-  //        removes the record for good (no live PTY to kill — close() drops the dormant
-  //        entry and persists the shrink).
-  //
-  //    `removeMode` distinguishes the two so confirm-time copy + the side effect match.
-  //    handleRemoveRequest / handleDeleteRequest open the modal; confirmRemove performs
-  //    it; cancelClose dismisses. ──
+  // ── Remove vs Delete (D-03/D-06, two-bucket lifecycle). BOTH go behind the SAME confirm
+  //    modal (T-06.1-14); `removeMode` selects copy + side effect. The branch decision +
+  //    state transforms are the PURE resolveRemoveAction/flipToDormant reducers
+  //    (session-lifecycle-actions.ts, 12-06 IN-02): a CONFIGURED-LIVE Remove → ptyStop +
+  //    flip dormant (recipe kept → Inactive List); everything else (ephemeral Remove, or
+  //    any Delete) → ptyClose + drop the record. handleCloseRequest/handleDeleteRequest
+  //    open the modal; confirmClose performs it; cancelClose dismisses. ──
   const [removeMode, setRemoveMode] = useState<'remove' | 'delete'>('remove');
 
   const handleCloseRequest = useCallback((id: LogicalId) => {
@@ -186,39 +175,16 @@ export function SessionManager(): React.JSX.Element {
     if (closingId === null) return;
     const id = closingId;
     const row = sessions.find((s) => s.logicalId === id) ?? null;
-    // DELETE (Inactive-List) OR REMOVE of an ephemeral live session → permanent: main
-    // kills any PTY AND drops the record (close+remove). The row vanishes.
-    const isConfiguredLive =
-      removeMode === 'remove' &&
-      row !== null &&
-      row.configured === true &&
-      row.status !== 'not_started';
-    if (isConfiguredLive) {
-      // REMOVE a configured live session → kill the PTY (recipe kept). Flip the row to
-      // dormant so it lands in the Inactive List immediately (main persists it as a
-      // configured record; on the next boot coerceOnLoad restores it not_started).
+    // Branch via the pure resolveRemoveAction reducer (12-06 IN-02); confirmClose owns the
+    // IPC + setState side effects. configured-remove → ptyStop + flipToDormant (recipe kept
+    // → Inactive List, activeId unchanged). Otherwise permanent: ptyClose drops the record.
+    const action = resolveRemoveAction(row, removeMode);
+    if (action.kind === 'configured-remove') {
       window.api.ptyStop(id);
-      setSessions((prev) =>
-        prev.map((r) =>
-          r.logicalId === id
-            ? {
-                ...r,
-                status: 'not_started',
-                ptyPid: undefined,
-                agentState: undefined,
-                errorMessage: undefined,
-              }
-            : r,
-        ),
-      );
-      // The active session just left the Working Area → its SessionView unmounts and the
-      // IdleCard takes over; keep it active so the user sees where it went.
+      setSessions((prev) => flipToDormant(prev, id));
       setClosingId(null);
       return;
     }
-    // Permanent removal (Delete, or Remove of an ephemeral/ueditable session): main kills
-    // the PTY AND deletes the record. Because the record is gone from main, no reconcile
-    // re-adds this row.
     window.api.ptyClose(id);
     setSessions((prev) => {
       const result = closeSession(prev, activeId, id);
@@ -228,28 +194,30 @@ export function SessionManager(): React.JSX.Element {
     setClosingId(null);
   }, [closingId, activeId, sessions, removeMode]);
 
-  // ── Restart control (TERM-07 / SC3, IDENT-02): request-response. Main orchestrates
-  //    stop → await-exit → respawn under the SAME logicalId, returning the NEW
-  //    {id, pid} (same logicalId, new ptyPid). The kept SessionView for that id keeps
-  //    its xterm instance (scrollback preserved) and writes the '— restarted HH:MM —'
-  //    separator on the resulting fresh 'running' status (hasRunBefore seam). We thread
-  //    the new ptyPid into the row so the record mirrors main's source of truth. ──
-  // D-01: retained machinery, no UI entry point. SESS-07 / Phase 11 removed every restart
-  // affordance (sidebar ↻ + context-menu Restart), but the `ptyRestart` IPC bridge key +
-  // main's restart machinery stay (EXPECTED_API_KEYS unchanged at 20). This helper is now
-  // un-surfaced dead code — kept (not deleted) so the mechanism can be re-surfaced without
-  // re-plumbing IPC. No UI surface calls it; the grep gates confirm zero callers.
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- D-01: retained machinery, intentionally un-surfaced
+  // ── Restart control (TERM-07 / SC3, IDENT-02): main orchestrates stop → await-exit →
+  //    respawn under the SAME logicalId, returning the new {id, pid}. The kept SessionView
+  //    keeps its xterm (scrollback preserved) and writes the '— restarted HH:MM —' separator
+  //    on the fresh 'running' status (hasRunBefore seam). ──
+  // GAP-12-B (12-06): RE-SURFACED per the operator decision (2026-06-15) — Phase 11 (D-01)
+  // left this as un-surfaced retained machinery (ptyRestart + main's restart() stay,
+  // EXPECTED_API_KEYS unchanged at 20). The "Restart to apply?" prompt below now calls it to
+  // apply a LIVE session's saved launch fields (same logicalId, new ptyPid — IDENT-02). No new
+  // bridge key. DEBT-02 WR-02 pid>0 guard (mirrors handleStart): a now-missing cwd makes
+  // restart()→create() return pid -1 AND broadcast 'error' + the 'Working directory not found'
+  // notice (→ row.errorMessage → IdleCard, GAP-12-C), so only a real respawn (pid > 0) gets the
+  // optimistic running flip; a failed one must NOT flip to running (it would clobber the error).
   const handleRestart = useCallback((id: LogicalId) => {
     void (async () => {
       const { pid } = await window.api.ptyRestart(id);
-      setSessions((prev) =>
-        prev.map((row) =>
-          row.logicalId === id
-            ? { ...row, ptyPid: pid, status: 'running' }
-            : row,
-        ),
-      );
+      if (pid > 0) {
+        setSessions((prev) =>
+          prev.map((row) =>
+            row.logicalId === id
+              ? { ...row, ptyPid: pid, status: 'running', errorMessage: undefined }
+              : row,
+          ),
+        );
+      }
     })();
   }, []);
 
@@ -358,6 +326,17 @@ export function SessionManager(): React.JSX.Element {
 
   const cancelEdit = useCallback(() => setEditingId(null), []);
 
+  // GAP-12-B (12-06): the "Restart to apply?" prompt actions. Restart now → handleRestart
+  // (retained ptyRestart; a bad cwd surfaces the error on the IdleCard via the pid>0 guard,
+  // GAP-12-C). Later → just dismiss; the saved values still take effect on the next Start.
+  const confirmRestartApply = useCallback(() => {
+    if (restartPromptId === null) return;
+    handleRestart(restartPromptId);
+    setRestartPromptId(null);
+  }, [restartPromptId, handleRestart]);
+
+  const dismissRestartApply = useCallback(() => setRestartPromptId(null), []);
+
   // ── Live edit half (D-02): name/icon apply IMMEDIATELY without a respawn. We map
   //    the row in place (NEVER mint a new logicalId — SESS-04/IDENT-02) AND mirror the
   //    name/icon to main via ptyUpdateProfile so a later restart/reconcile that
@@ -400,6 +379,12 @@ export function SessionManager(): React.JSX.Element {
       id: LogicalId,
       fields: { cwd: string; shell: string; startupCommand: string },
     ) => {
+      // GAP-12-B (12-06): decide the restart-to-apply prompt from the PRE-save row,
+      // SYNCHRONOUSLY, BEFORE ptyUpdateProfile/rehydrate overwrite the launch fields.
+      const promptId = restartPromptIdFor(
+        sessions.find((s) => s.logicalId === id) ?? null,
+        fields,
+      );
       window.api.ptyUpdateProfile(id, fields);
       // D-02: mirror the configured auto-promotion on the renderer row (any edit keeps
       // the session). The cwd/shell/startupCommand values are re-read from main's truth
@@ -412,8 +397,11 @@ export function SessionManager(): React.JSX.Element {
       // Re-read main's truth so the next edit prefills the persisted (validated/trimmed)
       // values rather than the just-submitted optimistic ones (edit-prefill, Open Q3).
       void rehydrateProfiles();
+      // GAP-12-B: open the prompt AFTER the save persists (so main already holds the new
+      // values when the user clicks Restart now). null promptId → nothing prompts.
+      if (promptId !== null) setRestartPromptId(promptId);
     },
-    [rehydrateProfiles],
+    [rehydrateProfiles, sessions],
   );
 
   // ── Add: the SOLE ptyCreate spawn path (T-03-09). One spawn per add. ──
@@ -586,6 +574,12 @@ export function SessionManager(): React.JSX.Element {
   const editingSession =
     editingId !== null
       ? (sessions.find((s) => s.logicalId === editingId) ?? null)
+      : null;
+
+  // GAP-12-B: the session targeted by the open "Restart to apply?" prompt (drives the copy).
+  const restartPromptSession =
+    restartPromptId !== null
+      ? (sessions.find((s) => s.logicalId === restartPromptId) ?? null)
       : null;
 
   // The session targeted by the open context menu — drives the Start/Restart label flip.
@@ -780,6 +774,15 @@ export function SessionManager(): React.JSX.Element {
           cancelEdit();
         }}
         onCancel={cancelEdit}
+      />
+      {/* GAP-12-B (12-06): the "Restart to apply?" prompt — see confirmRestartApply. */}
+      <RestartApplyPrompt
+        open={restartPromptSession !== null}
+        sessionName={restartPromptSession?.name ?? ''}
+        confirmTestId="restart-apply-now"
+        cancelTestId="restart-apply-later"
+        onConfirm={confirmRestartApply}
+        onCancel={dismissRestartApply}
       />
       {/* Gear-launched Preferences modal (07-03, TERM-11 / D-08). Hosts the scrollback
           field; live-applies on commit via handleSetScrollback (fan-out to open terms +
