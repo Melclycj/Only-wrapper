@@ -275,6 +275,49 @@ export async function clickMenuItem(label: string): Promise<void> {
   }, label);
 }
 
+/**
+ * Set a text input addressed by `data-testid` to `value` through React's onChange
+ * path (`input.value = …; dispatchEvent('input')`). Mirrors `setEditName` in the
+ * session-edit smoke and `setInputByTestId` in the ui-lab surfaces — the SAME
+ * programmatic-fill contract the edit form's ref-read handleSave is robust to
+ * (a direct value-set bypasses React 19's controlled-input value tracker, so the
+ * form reads the live DOM at save). Used to drive `edit-cwd` / `edit-startup` in
+ * the SESS-05 round-trip (no native dialog automation — Browse… is the human gate).
+ */
+export async function setEditFieldByTestId(
+  testid: string,
+  value: string,
+): Promise<void> {
+  await browser.execute(
+    (tid: string, v: string) => {
+      const input = document.querySelector<HTMLInputElement>(
+        `[data-testid="${tid}"]`,
+      );
+      if (input) {
+        input.value = v;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    },
+    testid,
+    value,
+  );
+}
+
+/**
+ * Read the live DOM `.value` of a text input addressed by `data-testid` (e.g.
+ * `edit-cwd` / `edit-startup`). Returns '' when the element is absent. The
+ * SESS-05 round-trip reads these back after a Save → reopen to prove main's
+ * persisted truth re-seeded the form (rehydrateProfiles + the seed effect).
+ */
+export async function readEditFieldByTestId(testid: string): Promise<string> {
+  return browser.execute((tid: string) => {
+    const input = document.querySelector<HTMLInputElement>(
+      `[data-testid="${tid}"]`,
+    );
+    return input?.value ?? '';
+  }, testid);
+}
+
 /** Toggle the sidebar collapse state via its `data-testid="sidebar-collapse"` control. */
 export async function toggleCollapse(): Promise<void> {
   await browser.execute(() => {

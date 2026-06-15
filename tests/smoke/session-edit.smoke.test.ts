@@ -20,6 +20,9 @@ import {
   clickAddSession,
   openContextMenu,
   clickMenuItem,
+  setEditFieldByTestId,
+  readEditFieldByTestId,
+  hasTestId,
 } from './helpers/xterm-driver';
 
 /** data-session-id of the Nth sidebar row (0-indexed). */
@@ -54,13 +57,28 @@ async function setEditName(value: string): Promise<void> {
   }, value);
 }
 
+/** Whether the edit modal is currently mounted (`data-testid="session-edit-modal"`). */
+async function editModalOpen(): Promise<boolean> {
+  return hasTestId('session-edit-modal');
+}
+
+/** Open the edit modal for `id` via its context-menu → Edit, waiting until it mounts. */
+async function openEdit(id: string): Promise<void> {
+  await openContextMenu(id);
+  await clickMenuItem('Edit');
+  await browser.waitUntil(async () => editModalOpen(), {
+    timeout: 3000,
+    interval: 50,
+    timeoutMsg: 'edit modal did not open after context-menu → Edit',
+  });
+}
+
 describe('Session edit smoke (SESS-01/02/04)', () => {
   it('renames a session LIVE via the context menu, keeping the same logical id', async () => {
     await clickAddSession();
     const id = await sessionIdAt(0);
 
-    await openContextMenu(id);
-    await clickMenuItem('Edit');
+    await openEdit(id);
 
     const newName = 'Renamed Session';
     await setEditName(newName);
@@ -73,6 +91,54 @@ describe('Session edit smoke (SESS-01/02/04)', () => {
 
     expect(await rowName(id)).toBe(newName);
     // Identity is stable across an edit (no respawn, no new id) — SESS-02.
+    expect(await sessionIdAt(0)).toBe(id);
+  });
+
+  // SESS-05 (the automated half of SC2): the edit→Save→reopen cwd+startup ROUND-TRIP
+  // on the running app. Proves main's persisted truth re-seeds the form on reopen —
+  // ptyUpdateProfile persists the restart-applied fields, rehydrateProfiles re-reads
+  // listSessions() through the tested mergeAuthoritativeProfiles reducer, and the modal's
+  // seed effect rehydrates the inputs from session.cwd / session.startupCommand. The
+  // native Browse… dialog is NOT automated here (that is the BLOCKING O-2 human gate).
+  it('round-trips cwd + startup across edit → Save changes → reopen (SESS-05)', async () => {
+    await clickAddSession();
+    const id = await sessionIdAt(0);
+
+    // A KNOWN absolute dir that exists on every host running the smoke (the harness's
+    // own cwd) + a known startup string. CR-01 (main's cwd guard) accepts an existing
+    // absolute path, so this round-trips through main's validation untouched.
+    const knownCwd = process.cwd();
+    const knownStartup = "echo 'sess05 round-trip'";
+
+    await openEdit(id);
+    await setEditFieldByTestId('edit-cwd', knownCwd);
+    await setEditFieldByTestId('edit-startup', knownStartup);
+    await clickMenuItem('Save changes');
+
+    // Save closes the modal (onSaveProfile → cancelEdit). Wait for the close so the
+    // reopen below seeds from main's truth, not the stale in-flight form.
+    await browser.waitUntil(async () => !(await editModalOpen()), {
+      timeout: 3000,
+      timeoutMsg: 'edit modal did not close after Save changes',
+    });
+
+    // Reopen the SAME row and assert the persisted values re-seeded the form. Poll the
+    // reopen-and-read (no fixed timeout): rehydrateProfiles is async (listSessions IPC),
+    // so the seeded value may land a tick after the modal mounts.
+    await openEdit(id);
+    await browser.waitUntil(
+      async () => (await readEditFieldByTestId('edit-cwd')) === knownCwd,
+      {
+        timeout: 5000,
+        interval: 100,
+        timeoutMsg:
+          'edit-cwd did not re-seed to the saved value after reopen (SESS-05 round-trip broken)',
+      },
+    );
+
+    expect(await readEditFieldByTestId('edit-cwd')).toBe(knownCwd);
+    expect(await readEditFieldByTestId('edit-startup')).toBe(knownStartup);
+    // The round-trip preserved identity — same logical id, no respawn (SESS-02).
     expect(await sessionIdAt(0)).toBe(id);
   });
 });
