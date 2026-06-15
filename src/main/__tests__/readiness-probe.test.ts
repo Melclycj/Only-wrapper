@@ -253,7 +253,7 @@ vi.mock('../shell-resolver', () => ({
 import {
   PtyManager,
   PTY_CHANNELS,
-  READINESS_TIMEOUT_MS,
+  READINESS_HARD_TIMEOUT_MS,
   type PtyCreateOptions,
 } from '../pty-manager';
 
@@ -366,9 +366,12 @@ describe('create() readiness-probe hook (SC1/SC2/SC4/D-02 — GREEN as of Plan 0
     mgr.create({ ...baseOpts, id: 'auto-run-1' as LogicalId });
     const child = spawnedChildren[0];
 
-    // Buffer real output but NEVER fire a nonce-matching line.
+    // Buffer real output but NEVER fire a nonce-matching line. That single chunk
+    // re-arms the idle timer (GAP-12-B extend-on-progress), so the idle fallback now
+    // fires READINESS_IDLE_TIMEOUT_MS AFTER this last byte. Advancing past the HARD
+    // ceiling guarantees the give-up fires regardless of which deadline wins.
     child._fireData('PROMPT_NEVER_SETTLES% ');
-    vi.advanceTimersByTime(READINESS_TIMEOUT_MS);
+    vi.advanceTimersByTime(READINESS_HARD_TIMEOUT_MS + 50);
 
     // Timeout path: the buffered bytes are flushed (bare prompt usable — SC4) ...
     expect(sentDataContains(win, 'PROMPT_NEVER_SETTLES')).toBe(true);

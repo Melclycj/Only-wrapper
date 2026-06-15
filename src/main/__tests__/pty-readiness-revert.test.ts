@@ -124,7 +124,7 @@ vi.mock('../shell-resolver', () => ({
 import {
   PtyManager,
   PTY_CHANNELS,
-  READINESS_TIMEOUT_MS,
+  READINESS_HARD_TIMEOUT_MS,
   type PtyCreateOptions,
 } from '../pty-manager';
 import type { LogicalId } from '../../shared/types';
@@ -198,9 +198,11 @@ describe('readiness-timeout revert (ITEM 4): a self-exited recipe must NOT be re
     const afterExit = mgr.listSessions().find((s) => s.logicalId === id);
     expect(afterExit?.status).toBe('not_started');
 
-    // Now the still-armed readiness timer fires (the bug: it broadcasts a stale
-    // 'running' status for an already-exited session).
-    vi.advanceTimersByTime(READINESS_TIMEOUT_MS + 50);
+    // Now the still-armed readiness timers fire (the bug: a stale 'running' status
+    // for an already-exited session). Advance past the HARD ceiling so BOTH the idle
+    // and the hard timer (the dual-deadline budget) have fired — each must be a no-op
+    // for the already-exited session (the stale-timeout guard covers both).
+    vi.advanceTimersByTime(READINESS_HARD_TIMEOUT_MS + 50);
 
     // CONTRACT: NO 'running' status may be broadcast for this id after it self-exited.
     const runningAfterExit = sent.filter(

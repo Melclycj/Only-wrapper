@@ -77,16 +77,51 @@ export const PTY_CHANNELS = {
 export const STOP_GRACE_MS = 800;
 
 /**
+ * GAP-12-B dual-deadline readiness budget — the IDLE window (base / extend-on-progress).
+ *
  * Bounded readiness wait for the TERM-05 startup-command auto-run probe
  * (D-04 / RESEARCH Open Q2). After writing the no-side-effect nonce marker, the
- * create() probe hook waits at most this long for the shell to genuinely process
- * the marker (probe.matches). On expiry with the probe unsettled, the buffered
- * shell output is FLUSHED to the renderer (a bare usable prompt — SC4), normal
- * forwarding is restored, and a ready-fail notice is emitted — the command is
- * NEVER best-effort injected (D-04: a bare shell beats garbled keystrokes).
- * Named constant mirroring STOP_GRACE_MS; tunable from measured cold-spawn latency.
+ * create() probe hook waits for the shell to genuinely process the marker
+ * (probe.matches). This is the IDLE half of a DUAL-DEADLINE budget:
+ *
+ *   - It is RESET (re-armed) on every new byte the probe interceptor sees while
+ *     the probe is unsettled. A heavy-but-PROGRESSING login-shell rc init (conda /
+ *     nvm / direnv / a slow `.zshrc`) keeps producing bytes, so the idle window
+ *     extends and a slow-but-alive rc is NOT guillotined at a fixed wall. This is
+ *     the GAP-12-B fix: the old FIXED 4000ms wall false-timed-out a rc whose match
+ *     time ≈ its rc-init time (the `\n…<nonce>` line can only fire AFTER the login
+ *     shell finishes rc and re-prompts).
+ *   - RAISED from the old 4000ms to 8000ms: the smoke already tolerates an 8000ms
+ *     command-output wait, so 8000ms is contract-safe headroom; the dev-box rc
+ *     matches in ~1–1.5s, so 8000ms idle is generous for a heavy operator rc while
+ *     still bounding a TRULY-IDLE (silent, no-bytes) shell.
+ *
+ * On idle expiry with the probe unsettled, the buffered shell output is FLUSHED to
+ * the renderer (a bare usable prompt — SC4), normal forwarding is restored, and a
+ * ready-fail notice is emitted — the command is NEVER best-effort injected
+ * (D-04: a bare shell beats garbled keystrokes).
+ *
+ * (Renamed from the retired READINESS_TIMEOUT_MS, which was a single fixed wall.)
  */
-export const READINESS_TIMEOUT_MS = 4000;
+export const READINESS_IDLE_TIMEOUT_MS = 8000;
+
+/**
+ * GAP-12-B dual-deadline readiness budget — the HARD absolute ceiling (LOAD-BEARING).
+ *
+ * The MANDATORY absolute wall-clock cap measured from probe-arm time. It is NEVER
+ * reset by the idle-extend logic. Without it, a CHATTY-BUT-NEVER-READY shell — one
+ * that streams ≥1 byte per idle window forever but never re-prompts the nonce on a
+ * produced line — would extend the idle deadline indefinitely and NEVER inject nor
+ * give up (a denial-of-service / latency runaway, T-12-08-01; flagged LOAD-BEARING
+ * by typescript-reviewer). The hard timer fires the SAME flush-and-notice give-up
+ * path as the idle timer (D-04: never inject on timeout).
+ *
+ * 15000ms caps the worst-case never-ready shell well under any human-patience
+ * threshold while leaving room for an extremely heavy rc (multiple conda/nvm/direnv
+ * inits) that is still progressing. A shell that has not produced the
+ * `\n…<nonce>` line in 15s is treated as not-ready (D-04 fallback).
+ */
+export const READINESS_HARD_TIMEOUT_MS = 15000;
 
 /**
  * Fixed (V7) ready-fail notice surfaced on timeout. It is a LITERAL string — it
@@ -430,64 +465,37 @@ export class PtyManager {
       const probe = selectReadinessProbe(process.platform).forShell(record.shell);
       let buffer = '';
       let settled = false;
-      // A single-slot holder for the readiness timer so the match-branch closure
-      // (defined before the timer is created) can clear it. On a successful match
-      // the timer is cleared so the timeout-flush-and-notice branch never fires
-      // (D-04). A const object sidesteps the use-before-assign / prefer-const bind.
-      const timerRef: { current?: NodeJS.Timeout } = {};
-      const offProbe = child.onData((data) => {
-        // WR-01/IN-01: there is NO post-settle scrub branch. On a successful match the
-        // listener is disposed (offProbe.dispose()) AND the buffered probe bytes are
-        // discarded, BEFORE wireNormalOnData re-wires forwarding — so this transient
-        // listener never sees a byte after `settled` flips. Invisibility is guaranteed
-        // by discard-on-match, not by scrubbing a racing echo (the former post-settle
-        // scrub branch + its probe-echo strip helper were unreachable dead code, removed).
-        // Pre-match bytes are BUFFERED and NEVER sent — invisibility (D-02).
-        buffer += data;
-        if (probe.matches(buffer)) {
-          settled = true;
-          // Clear the READINESS_TIMEOUT_MS timer so the timeout-flush-and-notice
-          // branch never fires after a successful match (D-04).
-          if (timerRef.current) clearTimeout(timerRef.current);
-          offProbe.dispose();
-          // The buffered probe bytes (marker echo + nonce-bearing prompt) are
-          // DISCARDED — they never reach the renderer (D-02 invisibility).
-          this.wireNormalOnData(id, child);
-          // Inject the user's saved command as a real Enter (CR 0x0D, NOT LF) so it
-          // echoes visibly and lands in shell history (SC1). This is the main-side
-          // write — NOT the renderer term.paste() bracketed-paste path (which exists
-          // specifically to PREVENT auto-execute). T-05.1-01: same trust boundary as
-          // the user typing their own saved command in their own shell.
-          child.write(cmd + '\r');
-        }
-      });
-      // Send the no-side-effect nonce probe to elicit a readiness round-trip. The
-      // marker is `buildPosixProbe`'s ': <nonce>\r' — no user data is interpolated
-      // (T-05.1-02), changes no shell state (D-01).
-      child.write(probe.marker);
-      // D-04 timeout-flush-and-notice branch (SC4): if the shell does not genuinely
-      // process the marker within READINESS_TIMEOUT_MS, give up on auto-run. FLUSH
-      // the buffered real shell output so a bare usable prompt appears (a bare shell
-      // beats garbled keystrokes — SC4), restore normal forwarding, and emit a
-      // non-intrusive ready-fail notice over the EXISTING pty:status channel. The
-      // command is NEVER best-effort injected (D-04). The notice carries the CURRENT
-      // lifecycle status ('running') so it is additive — it must not regress the badge.
-      timerRef.current = setTimeout(() => {
+      // GAP-12-B dual-deadline holder. The single-slot timerRef is WIDENED to two
+      // slots per the typescript-reviewer TS note: `idle` (re-armed on each new byte
+      // while !settled — extend-on-progress) and `hard` (the absolute ceiling from
+      // probe-arm, NEVER reset). Both are cleared on a successful match. A const
+      // object sidesteps the use-before-assign / prefer-const bind (the closures below
+      // reference it before the timers are assigned).
+      const timers: { idle?: NodeJS.Timeout; hard?: NodeJS.Timeout } = {};
+      const clearTimers = (): void => {
+        if (timers.idle) clearTimeout(timers.idle);
+        if (timers.hard) clearTimeout(timers.hard);
+      };
+      // The SHARED timeout-flush-and-notice give-up path (D-04). BOTH the idle timer
+      // and the hard ceiling call this ONE closure, so the fallback is byte-identical
+      // on idle-expiry and hard-ceiling: never inject, flush the buffered output once,
+      // emit READINESS_FAIL_NOTICE, restore normal forwarding.
+      const giveUpReadiness = (reason: 'idle' | 'hard'): void => {
         if (settled) return;
         settled = true;
+        clearTimers();
         offProbe.dispose();
         // STALE-TIMEOUT GUARD (06.1-04 round 2, ITEM 4 — the "revert to Working Area
         // after ~1s" defect). The child can self-EXIT before the probe ever settles (a
         // recipe/agent that finished, a `claude --rc` that returned). onExit then routes
         // the record to dormantRecords (not_started) and DELETES it from this.sessions —
-        // BUT this timer is still armed (the old code only cleared it on a successful
-        // match). If it now fired the ready-fail notice it would broadcast a stale
-        // pty:status whose `liveStatus` fell back to 'running' (the session is gone from
-        // this.sessions), RESURRECTING the dormant row back into the Working Area. So:
-        // if the exiting child is no longer the session's current live pty (it exited,
-        // was Removed, or was replaced by a re-Start under the same id), this timeout is
-        // a NO-OP — no stale flush, no stale status. A dead child needs no ready-fail
-        // notice (it is already routed by onExit). Mirrors the onExit stale-exit guard.
+        // BUT a timer may still be armed. If it now fired the ready-fail notice it would
+        // broadcast a stale pty:status whose `liveStatus` fell back to 'running' (the
+        // session is gone from this.sessions), RESURRECTING the dormant row back into the
+        // Working Area. So: if the exiting child is no longer the session's current live
+        // pty (it exited, was Removed, or was replaced by a re-Start under the same id),
+        // this give-up is a NO-OP — no stale flush, no stale status. A dead child needs
+        // no ready-fail notice (it is already routed by onExit). Applies to BOTH timers.
         const live = this.sessions.get(id);
         if (!live || live.pty !== child || !live.alive) return;
         // Flush the buffered (real) shell output — the bare prompt becomes usable.
@@ -506,9 +514,62 @@ export class PtyManager {
           status: live.status,
           notice: READINESS_FAIL_NOTICE,
         });
-        // Lifecycle logging only — never log the command/nonce/buffer (V7).
-        console.log(`[pty] readiness probe timed out (session ${id}) — auto-run skipped`);
-      }, READINESS_TIMEOUT_MS);
+        // Lifecycle logging only — never log the command/nonce/buffer (V7). The reason
+        // (idle vs hard ceiling) is logged for diagnosis; it carries no PTY bytes.
+        console.log(
+          `[pty] readiness probe timed out (session ${id}, ${reason}) — auto-run skipped`,
+        );
+      };
+      const offProbe = child.onData((data) => {
+        // WR-01/IN-01: there is NO post-settle scrub branch. On a successful match the
+        // listener is disposed (offProbe.dispose()) AND the buffered probe bytes are
+        // discarded, BEFORE wireNormalOnData re-wires forwarding — so this transient
+        // listener never sees a byte after `settled` flips. Invisibility is guaranteed
+        // by discard-on-match, not by scrubbing a racing echo (the former post-settle
+        // scrub branch + its probe-echo strip helper were unreachable dead code, removed).
+        // Pre-match bytes are BUFFERED and NEVER sent — invisibility (D-02).
+        buffer += data;
+        // GAP-12-B idle-extend: while the probe is unsettled and the shell keeps
+        // PRODUCING bytes (a heavy-but-alive rc init), RESET the idle timer so a
+        // slow-but-progressing rc is not guillotined at a fixed wall. The HARD ceiling
+        // is intentionally NEVER reset here — a stream-forever shell must still hit it.
+        if (!settled) {
+          if (timers.idle) clearTimeout(timers.idle);
+          timers.idle = setTimeout(() => giveUpReadiness('idle'), READINESS_IDLE_TIMEOUT_MS);
+        }
+        if (probe.matches(buffer)) {
+          settled = true;
+          // Clear BOTH timers (idle + hard) so neither timeout-flush-and-notice path
+          // fires after a successful match (D-04).
+          clearTimers();
+          offProbe.dispose();
+          // The buffered probe bytes (marker echo + nonce-bearing prompt) are
+          // DISCARDED — they never reach the renderer (D-02 invisibility).
+          this.wireNormalOnData(id, child);
+          // Inject the user's saved command as a real Enter (CR 0x0D, NOT LF) so it
+          // echoes visibly and lands in shell history (SC1). This is the main-side
+          // write — NOT the renderer term.paste() bracketed-paste path (which exists
+          // specifically to PREVENT auto-execute). T-05.1-01: same trust boundary as
+          // the user typing their own saved command in their own shell.
+          child.write(cmd + '\r');
+        }
+      });
+      // Send the no-side-effect nonce probe to elicit a readiness round-trip. The
+      // marker is `buildPosixProbe`'s ': <nonce>\r' — no user data is interpolated
+      // (T-05.1-02), changes no shell state (D-01).
+      child.write(probe.marker);
+      // GAP-12-B dual-deadline arm (SC4). If the shell does not genuinely process the
+      // marker, give up on auto-run via the SHARED giveUpReadiness path (D-04, never
+      // inject). TWO timers are armed from this probe-arm point:
+      //   - IDLE: the base window. It is re-armed on every produced byte (above), so a
+      //     SILENT (no-bytes) shell fires it at READINESS_IDLE_TIMEOUT_MS, while a
+      //     PROGRESSING heavy rc keeps pushing it out (GAP-12-B).
+      //   - HARD: the absolute ceiling, NEVER reset. A chatty-but-never-ready shell
+      //     that streams a byte per idle window forever would extend the idle timer
+      //     indefinitely; the hard ceiling guarantees a bounded give-up (T-12-08-01,
+      //     LOAD-BEARING). It fires the SAME flush-and-notice path.
+      timers.idle = setTimeout(() => giveUpReadiness('idle'), READINESS_IDLE_TIMEOUT_MS);
+      timers.hard = setTimeout(() => giveUpReadiness('hard'), READINESS_HARD_TIMEOUT_MS);
     }
 
     child.onExit(({ exitCode }) => {
