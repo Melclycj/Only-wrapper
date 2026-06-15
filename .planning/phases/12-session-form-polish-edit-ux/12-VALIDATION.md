@@ -96,3 +96,58 @@ Pure electron/react-free reducer modules + their RED tests (the established repo
 - [ ] `nyquist_compliant: true` set in frontmatter (only after the BLOCKING human-verify passes)
 
 **Approval:** pending
+
+---
+
+## Re-Gate Evidence (12-07, Task 1) — 2026-06-16
+
+Re-gate after gap-closure plans 12-04/05/06. Automated evidence chain against the
+PACKAGED app + a fresh `ui:shots:fresh`. `nyquist_compliant` is NOT flipped here —
+that is Task 3, only on the operator's explicit unqualified "approved" (Task 2).
+
+**Capture:** tag `p12-regate` · gitSha `3aebb04` · binary `out/Just-Wrapper-darwin-arm64/Just-Wrapper.app` · window 1280×800.
+A subsequent **test-only** fix (`3bb9f28`, below) does not affect the packaged binary or any captured surface, so the capture remains valid.
+
+### Automated chain (no claim without stdout — testing-policy)
+
+| # | Command | Result | Evidence |
+|---|---------|--------|----------|
+| 1 | `npx tsc --noEmit` | ✅ 0 errors | exit 0 (`TSC_EXIT=0`) |
+| 2 | `npm run lint` (`eslint .`) | ✅ scoped clean | `npx eslint src tests` → exit 0. `eslint .` reports 12 errors, ALL in `.planning/spikes/{001,002,003}/*.cjs` (require()-style + unused-vars) — pre-existing, deferred (deferred-items.md §"12-06 deferred"); ZERO in `src/`/`tests/`. |
+| 3 | `npm run test:unit` (`vitest run`) | ✅ GREEN | `Test Files 51 passed (51)` · `Tests 448 passed (448)` |
+| 4 | `npm run test:smoke` (`wdio`) | ✅ GREEN | `Spec Files: 15 passed, 15 total (100% completed) in 00:01:05`, exit 0. Incl. the GAP-12-B specs: `applies a changed startup command via Restart to apply` ✓, `Later dismisses … without restarting` ✓, `round-trips cwd + startup … (SESS-05)` ✓ |
+| 5 | `npm run ui:shots:fresh` | ✅ 14/14 captured | `14 passing`; `edit-modal` + `edit-modal-validation` captured (manifest p12-regate). `idle-card` SKIPPED — known WR-05 harness debt (menu has no "Stop"), deferred-items.md. |
+
+### Smoke-fix finding (the re-gate caught a real defect — fixed test-only)
+
+`startup-command.smoke` failed **3/3 ISOLATED** (not a parallel-load flake). Diagnosed to a **stale test**, NOT a product regression:
+- **Root cause:** GAP-12-A (12-04) dropped the Save button's `context-menu-item` class (it was overriding the accent-blue). `clickMenuItem('Save changes')` queries only `.context-menu-item`, so Save never fired → modal stayed open → Remove could not run → "did not move into the Inactive List". 12-04 migrated `session-edit.smoke` to `clickByTestId('edit-save')` but missed this sibling.
+- **Product proven correct independently:** `app-restart-restore.smoke` (Remove→dormant) + `session-edit.smoke`'s two GAP-12-B specs (live edit → prompt → Restart-now/Later) both pass; the ui-lab capture shows the blue Save in-frame. DEBT-02 lifecycle code was investigated, not hand-waved.
+- **Fix (`3bb9f28`, test-only):** Save via `clickByTestId('edit-save')`; dismiss the now-appearing GAP-12-B "Restart to apply?" prompt with "Later". Result: **5/5 passing, 3/3 isolated GREEN (12.4s, no timeouts)** + full suite **15/15**.
+
+### Visual rubric score (pixel evidence vs DESIGN-RUBRIC)
+
+**§edit-modal** (`artifacts/ui-lab/p12-regate/edit-modal.png`)
+
+| Rubric line | Verdict | Pixel evidence |
+|-------------|---------|----------------|
+| Save = accent-blue fill, "Save changes"; Cancel quiet neutral | ✅ PASS | Bottom-right "Save changes" renders as a solid BLUE pill; "Cancel" is neutral text (GAP-12-A) |
+| `.modal-actions` (incl. Save) VISIBLE IN FRAME (not below fold) | ✅ PASS | The actions row + blue Save are in-frame at the dialog bottom (GAP-12-A/META `assertEditSaveCaptured`) |
+| 18px dialog card + dialog shadow on dimmed backdrop | ✅ PASS | Rounded white card, soft elevation, screened backdrop |
+| Two-group structure (Identity / "Launch · Applies on restart") + subhead + divider, single column | ✅ PASS | "LAUNCH · APPLIES ON RESTART" subhead + hairline above the cwd/Shell/Startup group; single column |
+| Fields labeled soft-ink; ~8px inputs; accent focus ring | ✅ PASS | Working directory/Shell/Startup labels; rounded inputs; Name field shows blue focus ring |
+| Icon/emoji picker tidy grid + selected ring; swatch row aligned | ✅ PASS | Emoji grid with the selected tile ringed; aligned color-swatch row |
+| Even vertical rhythm; clear inter-group break | ✅ PASS | Even field spacing; the divider reads as a clear group break |
+
+**§edit-modal-validation** (`artifacts/ui-lab/p12-regate/edit-modal-validation.png`)
+
+| Rubric line | Verdict | Pixel evidence |
+|-------------|---------|----------------|
+| Empty-name hint "Keeps the current name" in `--ink-faint` | ✅ PASS | Grey calm hint under the empty Name field |
+| cwd non-absolute hint in `--ink-faint` | ✅ PASS | "Enter an absolute path, or use Browse…" grey under the `not-absolute` cwd |
+| Hints CALM — danger red NOT present (red only on real main rejection) | ✅ PASS | Both hints are faint grey; NO red anywhere in the frame (GAP-12-E) |
+| Rest of form undisturbed; per-field validation | ✅ PASS | Other fields unaffected; hints are field-local |
+
+> Note: the manifest's `edit-modal-validation` `expects` string ("Danger-ramp helper text") predates GAP-12-E; scored against DESIGN-RUBRIC §edit-modal-validation (authority: calm `--ink-faint`, no danger unless main rejects). Pixels match the rubric.
+
+**Verdict (Task 1):** all rubric lines PASS, no FAIL/PARTIAL → cleared to present to the operator (T-10-10-01: never present a known-failing app). **Task 2 (BLOCKING operator human-verify) pending.** `nyquist_compliant` stays false.
