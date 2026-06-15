@@ -1,17 +1,21 @@
-// GAP-12-C DIAGNOSIS-ONLY probe (spike-style, NOT a shipped regression test).
+// GAP-12-C bad-cwd restart-to-apply REGRESSION (relocated from spike-005's
+// gap-12-c-bad-cwd-restart.diag.test.ts.txt — now a committed, shipped test).
 //
-// Confirms/denies the GAP-12-C premise: does a Restart-to-apply with a NON-EXISTENT
-// cwd produce create() pid -1 + a 'Working directory not found' notice on a LIVE
-// session, and does updateProfile persist the bad cwd?
+// Pins the GAP-12-C main-side contract for the operator's restart-to-apply flow:
+//   1. updateProfile REJECTS a non-existent cwd (CR-01) and keeps the prior valid
+//      cwd — a bad cwd typed into the edit form never persists onto the record.
+//   2. A restart-after-a-bad-cwd-edit SUCCEEDS (pid>0) because the respawn uses the
+//      PRIOR valid cwd — there is NO pid -1 and NO 'Working directory not found'
+//      error notice on that path (the GAP-12-C premise of a failed restart does NOT
+//      occur for an EDIT, because the edit was rejected at persist time).
+//   3. The ONLY path to a create() pid -1 + the notice is a record whose cwd is
+//      ALREADY bad reaching create() — e.g. a stored cwd whose directory was DELETED
+//      after it was persisted (or a corrupt store). That deleted-dir record returns
+//      pid -1 and broadcasts the 'Working directory not found' notice.
 //
 // Mirrors pty-update-profile.test.ts's mock harness verbatim so the result reflects
 // the REAL updateProfile + restart + create() code paths (only node-pty / electron /
 // fs / os are mocked at the boundary).
-//
-// NOTE: this file is named *.diag.test.ts (NOT *.guard.test.ts / not under __tests__'s
-// guard glob? it IS under __tests__) — it is included by the vitest glob
-// src/**/__tests__/**/*.test.ts. It is a throwaway diagnosis artifact for the debug
-// session; it will be removed/relocated by the fix plan.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -126,7 +130,7 @@ function captureWindow(events: StatusEvt[]): never {
 const baseOpts: PtyCreateOptions = { cols: 80, rows: 24 };
 const BAD_CWD = '/no/such/dir/operator-typo-xyz';
 
-describe('GAP-12-C — bad-cwd restart-to-apply (confirm/deny)', () => {
+describe('GAP-12-C — bad-cwd restart-to-apply (regression)', () => {
   beforeEach(() => {
     spawnCalls.length = 0;
     spawnedChildren.length = 0;
@@ -142,7 +146,7 @@ describe('GAP-12-C — bad-cwd restart-to-apply (confirm/deny)', () => {
     const priorCwd = mgr.listSessions().find((s) => s.logicalId === id)?.cwd;
 
     // The renderer's edit-form submits the bad cwd via ptyUpdateProfile.
-    mgr.updateProfile(id, { cwd: BAD_CWD, startupCommand: "echo CHANGED" });
+    mgr.updateProfile(id, { cwd: BAD_CWD, startupCommand: 'echo CHANGED' });
 
     const after = mgr.listSessions().find((s) => s.logicalId === id);
     expect(after?.cwd).toBe(priorCwd); // bad cwd REJECTED — prior value kept
@@ -158,7 +162,7 @@ describe('GAP-12-C — bad-cwd restart-to-apply (confirm/deny)', () => {
     const { id } = mgr.create({ ...baseOpts, cwd: process.cwd() });
 
     // Live edit: bad cwd + a new startup command (the operator's flow).
-    mgr.updateProfile(id, { cwd: BAD_CWD, startupCommand: "echo CHANGED" });
+    mgr.updateProfile(id, { cwd: BAD_CWD, startupCommand: 'echo CHANGED' });
     events.length = 0; // clear pre-restart events
 
     // Restart-to-apply → main.restart() → stop → onExit → create({cwd: record.cwd}).
@@ -177,7 +181,7 @@ describe('GAP-12-C — bad-cwd restart-to-apply (confirm/deny)', () => {
     expect(errNotice).toBeUndefined();
   });
 
-  it('CONTROL: a dormant-record bad cwd that bypasses updateProfile WOULD make create() return pid -1 + the notice', () => {
+  it('a dormant-record bad cwd that bypasses updateProfile makes create() return pid -1 + the notice', () => {
     // This is the ONLY path to the GAP-12-C premise: a record whose cwd is already
     // bad (e.g. a stored cwd whose directory was DELETED after it was persisted, or a
     // corrupt store) reaching create(). updateProfile's CR-01 guard prevents an EDIT
