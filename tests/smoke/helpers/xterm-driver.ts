@@ -294,7 +294,12 @@ export async function setEditFieldByTestId(
         `[data-testid="${tid}"]`,
       );
       if (input) {
-        input.value = v;
+        const setter = Object.getOwnPropertyDescriptor(
+          Object.getPrototypeOf(input) as object,
+          'value',
+        )?.set;
+        if (setter) setter.call(input, v);
+        else input.value = v;
         input.dispatchEvent(new Event('input', { bubbles: true }));
       }
     },
