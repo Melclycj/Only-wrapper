@@ -139,7 +139,7 @@
 *Wave 1 (parallel — no file overlap)*
 
 - [x] 12-04-PLAN.md — Renderer/CSS: GAP-12-A (Save → accent-blue, drop context-menu-item, drive Save by data-testid) + GAP-12-E (calm validation tone verify) + GAP-12-D overlay-close guard + META (ui-lab edit-modal capture now includes the Save button)
-- [ ] 12-05-PLAN.md — Main process: GAP-12-D (application Menu with standard Edit roles — Cmd+A/C/V/X work; chords untouched)
+- [x] 12-05-PLAN.md — Main process: GAP-12-D (application Menu with standard Edit roles — Cmd+A/C/V/X work; chords untouched)
 
 *Wave 2 (blocked on 12-04)*
 
