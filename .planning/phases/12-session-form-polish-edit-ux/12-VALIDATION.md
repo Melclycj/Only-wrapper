@@ -45,9 +45,21 @@ created: 2026-06-15
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| (planner populates) | — | — | UI-04 / SESS-05 / SESS-06 | T-12-01 (cwd path → CR-01, unchanged) | main stays validator of record; no new bridge key | unit / smoke / manual | `npm run test:unit` | — | ⬜ pending |
+| 12-01-T* | 01 | 0 | SESS-05 / UI-04 (D-04) | T-12-01 (cwd → CR-01) | pure reducers: mergeAuthoritativeProfiles 4-field merge never touches status/errorMessage; validateSessionForm hints are convenience-only | unit | `npm run test:unit` | ✅ `src/renderer/merge-profiles.ts`, `validate-session-form.ts` | ✅ green (418/418) |
+| 12-02-T* | 02 | 1-2 | UI-04 / SESS-05 / SESS-06 | T-12-01 | renderer-only D-02 restructure + blue 'Save changes'; rehydrateProfiles delegates to the tested reducer; **no new bridge key (EXPECTED_API_KEYS===20)** | unit + smoke | `npm run test:unit && npm run test:smoke` | ✅ `SessionEditModal.tsx`, `form.css` | ✅ green (unit 418; security.guard + tokens-completeness GREEN) |
+| 12-03-T1 | 03 | 3 | SESS-05 (SC2 automated half) | T-12-01 (round-trip exercises CR-01-accepted path) | edit→Save changes→reopen cwd+startup round-trip proves main's persisted truth re-seeds the form (rehydrateProfiles + seed effect); identity stable | smoke | `npx wdio run wdio.conf.ts --spec tests/smoke/session-edit.smoke.test.ts` | ✅ `tests/smoke/session-edit.smoke.test.ts` | ✅ green (2/2 isolated; 3/3 isolated re-runs — parallel-load flake documented) |
+| 12-03-T2 | 03 | 3 | UI-04 (SC1 visual) | — | packaged no-injection `ui:shots:fresh` (tag `p12-form-gate`, gitSha `d57576d`) of edit-modal + edit-modal-validation, scored PASS on every rubric line | visual (capture) | `UI_LAB_TAG=p12-form-gate npm run ui:shots:fresh` | ✅ `artifacts/ui-lab/p12-form-gate/{edit-modal,edit-modal-validation}.png` | ✅ green (both surfaces PASS rubric) |
+| 12-03-T3 | 03 | 3 | UI-04 (SC1 LIVE) / SESS-05 (O-1) / SESS-06 (O-2) | T-12-01 (operator hand-types a bad cwd → main rejects inline) | one cohesive designed surface; first-open default cwd; Browse… fills absolute path + CR-01 still gates | manual (BLOCKING human-verify) | — (operator on packaged `npm run make`) | — | ⬜ pending (BLOCKING — orchestrator owns) |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
+
+> **Pre-existing out-of-scope note:** `tests/smoke/pty-resize.smoke.test.ts` (PTY resize / `tput cols`
+> round-trip — SC3 terminal fidelity) fails on this macOS dev box, but it fails **identically at the
+> pre-plan 12-02 HEAD** and 12-03 changed **zero `src/` / PTY / resize code** (test files + ui-lab
+> surfaces only). It is therefore pre-existing and out of scope for this verify-and-polish plan —
+> logged in `deferred-items.md`, routed to a terminal-fidelity / Phase-15 follow-up. All
+> **plan-relevant** smokes (session-edit incl. SESS-05 round-trip, startup-command, boot, security,
+> + 9 others) are GREEN.
 
 ---
 

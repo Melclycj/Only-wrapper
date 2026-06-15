@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-06-10 — v1.1 milestone started)
 
 Phase: 12 (session-form-polish-edit-ux) — EXECUTING
 Plan: 3 of 3
-Status: Ready to execute
-Last activity: 2026-06-15 -- Phase 12 execution started
+Status: Phase 12 automated gate GREEN — awaiting BLOCKING human-verify (Task 3)
+Last activity: 2026-06-15 -- 12-03 Tasks 1-2 done (SESS-05 round-trip smoke + p12-form-gate capture scored PASS, gitSha d57576d); Task 3 BLOCKING human-verify pending (orchestrator-owned); nyquist_compliant still false
 
 ### v1.1 Milestone Phases (9–15)
 
