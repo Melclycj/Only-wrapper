@@ -121,7 +121,10 @@
   3. A native "Browse…" folder picker fills the working-directory field with an absolute path, and main still validates the value (the CR-01 path guard still gates it).
   4. Any new IPC bridge surface added for the folder picker is accounted for against the security key budget, and the EXPECTED_API_KEYS guard stays green.
 
-**Plans**: TBD
+**Plans**: 3 plans
+- [ ] 12-01-PLAN.md — Wave-0 foundation: extract mergeAuthoritativeProfiles + validateSessionForm pure reducers (RED→GREEN) + add the edit-modal-validation ui-lab surface + DESIGN-RUBRIC update
+- [ ] 12-02-PLAN.md — Renderer composition: SessionEditModal D-02 two-group restructure + IconPicker polish + D-04 inline validation + blue Save + form.css extract + SESS-05 rehydrate rewire
+- [ ] 12-03-PLAN.md — Gate: SESS-05 round-trip smoke + Save-label lockstep + packaged ui:shots:fresh capture + BLOCKING end-of-phase human-verify (SC1 / O-1 / O-2)
 **UI hint**: yes
 
 ### Phase 13: State & Interaction Design
