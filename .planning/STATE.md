@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: milestone
-status: executing
+status: verifying
 stopped_at: Completed 12-06-PLAN.md
-last_updated: "2026-06-15T12:15:30.000Z"
-last_activity: 2026-06-15 -- 12-06 gap-closure DONE (GAP-12-B Restart-to-apply prompt + GAP-12-C CR-01 surfacing + IN-02 extraction)
+last_updated: "2026-06-15T15:56:52.560Z"
+last_activity: "2026-06-15 -- 12-06 gap-closure DONE (gitSha 5b9d9b8): Restart-to-apply prompt reusing the retained ptyRestart (new RestartApplyPrompt + pure session-restart-prompt/session-lifecycle-actions reducers), handleRestart re-surfaced with a pid>0 guard (bad-cwd CR-01 rejection lands on the IdleCard — GAP-12-C), IN-02 extraction keeps SessionManager.tsx at 798 lines, EXPECTED_API_KEYS stays 20; 448 unit GREEN, tsc clean, scoped lint clean, session-edit smoke 4/4 isolated (2 new GAP-12-B specs prove new ptyPid + startup marker in buffer + Later-no-restart). The 12-07 re-gate (full suite + ui:shots:fresh + BLOCKING operator human-verify) owns the live restart + bad-cwd visible-rejection sign-off."
 progress:
   total_phases: 6
   completed_phases: 1
