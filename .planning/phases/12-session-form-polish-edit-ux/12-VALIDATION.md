@@ -153,3 +153,84 @@ A subsequent **test-only** fix (`3bb9f28`, below) does not affect the packaged b
 **Verdict (Task 1):** all rubric lines PASS, no FAIL/PARTIAL → cleared to present to the operator (T-10-10-01: never present a known-failing app).
 
 **Verdict (Task 2/3) — 2026-06-16: QUALIFIED FAIL.** Operator ran the packaged-app human-verify: approved GAP-12-A / GAP-12-D / SESS-06 / SC1 (items 1/2/4/8), but reported failures on GAP-12-B (restart-to-apply → "shell wasn't ready in time", command not applied), GAP-12-C (bad-cwd rejection not visible), GAP-12-E (a non-existent path gets no feedback; Save closes anyway), and a NEW GAP-12-F (Cmd+1/2/K/F chords broke after the 12-05 Menu). Per-item words + reopened-gap table + routing recorded in `12-VERIFICATION.md` §"Re-Gate 1 Result". **`nyquist_compliant` stays `false`** (NOT flipped). Route: `/gsd-debug` (B/C/F) → `/gsd-plan-phase 12 --gaps` → re-execute → re-gate.
+
+---
+
+## Re-Gate 2 (round 2) — Automated chain — 2026-06-15
+
+Re-gate after gap-closure **round 2** plans landed: **12-08** (the GAP-12-B dual-deadline
+readiness budget + the DEBT-02 spike-005 real-timing integration regression) and **12-09**
+(GAP-12-C visible failed-restart surface + GAP-12-E no-silent-cwd-drop). `nyquist_compliant`
+is **NOT** flipped here — that is the BLOCKING operator human-verify (Task 2) on the
+operator's OWN machine, recorded only on their explicit unqualified "approved".
+
+**Build under test:** gitSha `aab921f` · packaged binary `out/Just-Wrapper-darwin-arm64/Just-Wrapper.app`
+(freshly `npm run package`d before the smoke run).
+
+> The round-1 visual gate (GAP-12-A blue Save in-frame + GAP-12-D + the `edit-modal` /
+> `edit-modal-validation` rubric, captured at `p12-regate`) already PASSED and is **NOT
+> touched by 12-08/12-09** (main probe-budget + renderer notice surfaces only; zero visual
+> structure / token / picker change). It is therefore not re-scored this round — see the
+> round-1 §"Re-Gate Evidence (12-07, Task 1)" visual rubric above.
+
+### Automated chain (no claim without stdout — testing-policy)
+
+| # | Command | Result | Evidence |
+|---|---------|--------|----------|
+| 1 | `npx tsc --noEmit` | ✅ 0 errors | no output, exit 0 (`TSC_EXIT=0`) |
+| 2 | `npx eslint src tests` (scoped) | ✅ clean | no output, exit 0. Whole-repo `eslint .` reports **22 errors, ALL in `.planning/spikes/{001,002,003,005}/*.cjs`** (require()-style imports + unused-vars) — pre-existing, deferred (deferred-items.md); **ZERO in `src/`/`tests/`** — out of scope. |
+| 3 | `npm run test:unit` (`vitest run`) | ✅ GREEN | `Test Files 55 passed (55)` · `Tests 469 passed (469)` · 1.26s |
+| 4 | `npm run test:integration` (DEBT-02 real-timing) | ✅ GREEN | exit 0 — `(a) CONTROL old-4000ms : matched=false at=4000ms` · `(b) NEW dual-deadline : matched=true at=5056ms reason=match` · `(c) never-ready stream : matched=false at=15003ms reason=hard` → `✓ PASS — control(old)=timeout, new=match, never-ready=hard-ceiling` |
+| 5 | `npm run package` → `npm run test:smoke` (wdio vs packaged binary) | ✅ GREEN | `Spec Files: 15 passed, 15 total (100% completed)`, exit 0 — **first run, NO flakes needed isolation**. Confirmed clean on a 2nd back-to-back run (`15 passed, 15 total`). |
+
+### DEBT-02 integration regression — proves the dual-deadline budget (12-08)
+
+```
+━━━ GAP-12-B heavy-init readiness regression ━━━
+heavy init: ZDOTDIR .zshrc `sleep 5`  |  old=4000ms  idle=8000ms  hard=15000ms
+(a) CONTROL old-4000ms : matched=false at=4000ms
+(b) NEW dual-deadline   : matched=true at=5056ms reason=match
+(c) never-ready stream  : matched=false at=15003ms reason=hard
+
+✓ PASS — control(old)=timeout, new=match, never-ready=hard-ceiling
+```
+
+- **(a)** the OLD fixed-4000ms budget TIMES OUT under a `sleep 5` heavy rc init — the exact
+  GAP-12-B trigger; the pre-fix code would FAIL to auto-run the command.
+- **(b)** the NEW dual-deadline budget MATCHES at **5056ms** (idle window extended on the rc's
+  progress bytes) — the fix injects the stored command after the heavy rc finishes.
+- **(c)** a never-producing stream still hits the **15003ms** hard ceiling — the LOAD-BEARING
+  DoS guard holds (no unbounded extend).
+
+### Smoke — the GAP-12-B-relevant specs (vs the freshly packaged binary)
+
+```
+» tests/smoke/session-edit.smoke.test.ts
+   ✓ renames a session LIVE via the context menu, keeping the same logical id
+   ✓ round-trips cwd + startup across edit → Save changes → reopen (SESS-05)
+   ✓ applies a changed startup command via Restart to apply (GAP-12-B)
+   ✓ Later dismisses the Restart-to-apply prompt without restarting (GAP-12-B)
+ 4 passing (2.6s)
+
+» tests/smoke/startup-command.smoke.test.ts
+   ✓ auto-runs a non-empty startupCommand — output visible, command typed (SC1) + nonce invisible (D-02)
+   ✓ the auto-run command lands in history (ArrowUp recalls it) — SC1
+   ✓ SC3 (recycle model): Remove → Inactive List → Start ▶ re-runs the stored startupCommand …
+   ✓ R1: the DORMANT Start ▶ (IdleCard) re-spawns and RUNS the saved startupCommand
+   ✓ a session with NO startupCommand starts as a bare shell — no injection (SC2/TERM-03)
+ 5 passing (12.4s)
+```
+
+> Note: the pre-existing `pty-resize.smoke` macOS failure flagged in round-1 did **NOT**
+> reproduce this round — it PASSED on both consecutive runs (`✓ reports a new column count
+> via tput cols within 1s`). All 15 spec files are GREEN with no isolate-retry required.
+
+**Verdict (Re-Gate 2 automated, Task 1): GREEN** — tsc + scoped-eslint + unit (469) +
+integration (the DEBT-02 dual-deadline proof) + smoke (15/15, no flakes) all pass against the
+round-2 fixes. Cleared to present to the operator (T-10-10-01: never present a known-failing
+app). **`nyquist_compliant` NOT flipped — awaiting the BLOCKING operator human-verify (Task 2)
+on the operator's own machine.**
+
+**Verdict (Task 2/3): PENDING** — the BLOCKING operator human-verify of GAP-12-B / GAP-12-C /
+GAP-12-E on the operator's OWN machine has not yet been run. `nyquist_compliant` stays `false`
+until the operator's explicit, unqualified "approved".
