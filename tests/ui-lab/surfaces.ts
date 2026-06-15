@@ -114,17 +114,38 @@ async function openEditModal(id: string): Promise<void> {
   await waitForTestId('session-edit-modal');
 }
 
-/** Set a text input's value (by data-testid) through React's onChange path. */
+/**
+ * Set a text input's value (by data-testid) so React's `onChange` ACTUALLY fires.
+ *
+ * A bare `input.value = v; dispatchEvent('input')` sets the DOM value but React 19's
+ * controlled-input value tracker suppresses the synthetic onChange (the same
+ * tracker-bypass the edit modal's ref-read handleSave is built to tolerate). For
+ * SAVE that is fine — handleSave reads the live DOM via refs. But the inline
+ * D-04 VALIDATION notices are derived from React STATE (`name`/`cwd`), so a
+ * tracker-suppressed fill leaves state at the seeded values and the hints NEVER
+ * render — the `edit-modal-validation` capture would show a form with no hints,
+ * a false-negative against the rubric. Driving the field through the native value
+ * setter (`HTMLInputElement.prototype.value`'s setter) defeats the tracker so
+ * onChange fires and the validation state updates — the standard React testing
+ * idiom. Used by every surface; required for the validation surface to be honest.
+ */
 async function setInputByTestId(testid: string, value: string): Promise<void> {
   await browser.execute(
     (tid: string, v: string) => {
       const input = document.querySelector<HTMLInputElement>(
         `[data-testid="${tid}"]`,
       );
-      if (input) {
+      if (!input) return;
+      const setter = Object.getOwnPropertyDescriptor(
+        Object.getPrototypeOf(input) as object,
+        'value',
+      )?.set;
+      if (setter) {
+        setter.call(input, v);
+      } else {
         input.value = v;
-        input.dispatchEvent(new Event('input', { bubbles: true }));
       }
+      input.dispatchEvent(new Event('input', { bubbles: true }));
     },
     testid,
     value,
