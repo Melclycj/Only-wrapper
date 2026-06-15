@@ -6,7 +6,7 @@
 // React/xterm-free helper → runs in the `node` Vitest env (mirrors session-close.test.ts).
 
 import { describe, it, expect } from 'vitest';
-import { resolveRemoveAction } from '../session-lifecycle-actions';
+import { resolveRemoveAction, flipToDormant } from '../session-lifecycle-actions';
 import type { LogicalId, SessionRecord } from '../../shared/types';
 
 function makeSession(
@@ -67,5 +67,31 @@ describe('resolveRemoveAction (IN-02 — confirmClose decision)', () => {
     expect(resolveRemoveAction(null, 'remove')).toEqual({
       kind: 'permanent-close',
     });
+  });
+});
+
+describe('flipToDormant (configured-remove transform)', () => {
+  it('flips the target row to not_started, dropping pid + transient overlays', () => {
+    const rows = [
+      { ...makeSession({ logicalId: 'a' as LogicalId }), errorMessage: 'x', agentState: 'free' },
+      makeSession({ logicalId: 'b' as LogicalId, status: 'running', ptyPid: 2000 }),
+    ];
+    const next = flipToDormant(rows, 'b' as LogicalId);
+    const b = next.find((r) => r.logicalId === ('b' as LogicalId));
+    expect(b?.status).toBe('not_started');
+    expect(b?.ptyPid).toBeUndefined();
+    expect((b as { agentState?: unknown }).agentState).toBeUndefined();
+    expect((b as { errorMessage?: string }).errorMessage).toBeUndefined();
+  });
+
+  it('leaves OTHER rows (incl. their transient overlays) untouched', () => {
+    const rows = [
+      { ...makeSession({ logicalId: 'a' as LogicalId }), errorMessage: 'keep' },
+      makeSession({ logicalId: 'b' as LogicalId }),
+    ];
+    const next = flipToDormant(rows, 'b' as LogicalId);
+    const a = next.find((r) => r.logicalId === ('a' as LogicalId));
+    expect((a as { errorMessage?: string }).errorMessage).toBe('keep');
+    expect(a?.status).toBe('running');
   });
 });

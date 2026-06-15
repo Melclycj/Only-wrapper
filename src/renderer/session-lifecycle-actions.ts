@@ -17,7 +17,7 @@
 //     any PTY AND drops the record (window.api.ptyClose + drop the row). kind:
 //     'permanent-close'.
 
-import type { SessionRecord } from '../shared/types';
+import type { LogicalId, SessionRecord } from '../shared/types';
 
 /** The remove-mode the confirm modal was opened with (D-03/D-06). */
 export type RemoveMode = 'remove' | 'delete';
@@ -53,4 +53,38 @@ export function resolveRemoveAction(
     row.configured === true &&
     row.status !== 'not_started';
   return isConfiguredLive ? { kind: 'configured-remove' } : { kind: 'permanent-close' };
+}
+
+/**
+ * The renderer row carries transient, never-persisted overlays (errorMessage/agentState)
+ * on top of the authoritative SessionRecord. The lifecycle reducers below are generic over
+ * this shape so they preserve those fields while transforming status/ptyPid.
+ */
+type LifecycleRow = SessionRecord & {
+  errorMessage?: string;
+  agentState?: unknown;
+};
+
+/**
+ * REMOVE a configured live session (the `configured-remove` branch): flip `id` to dormant
+ * (not_started) and drop the dead pid + stale overlays so the row lands in the Inactive
+ * List as a clean restartable recipe. activeId is UNCHANGED (the active session stays
+ * selected so the user sees where it went — its SessionView unmounts, the IdleCard takes
+ * over). Pure — the caller issues window.api.ptyStop(id) alongside this.
+ */
+export function flipToDormant<T extends LifecycleRow>(
+  sessions: T[],
+  id: LogicalId,
+): T[] {
+  return sessions.map((r) =>
+    r.logicalId === id
+      ? {
+          ...r,
+          status: 'not_started' as const,
+          ptyPid: undefined,
+          agentState: undefined,
+          errorMessage: undefined,
+        }
+      : r,
+  );
 }
