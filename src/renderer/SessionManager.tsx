@@ -27,6 +27,7 @@ import { ConfirmModal } from './ConfirmModal';
 import { buildConfirmBody } from './confirm-copy';
 import { ContextMenu } from './ContextMenu';
 import { SessionEditModal } from './SessionEditModal';
+import { mergeAuthoritativeProfiles } from './merge-profiles';
 import { PreferencesModal } from './PreferencesModal';
 // clampScrollback is the PURE renderer-side scrollback clamp (07-03, D-04) — used to
 // snap the boot-read + any committed value before it drives the SessionView prop /
@@ -387,21 +388,11 @@ export function SessionManager(): React.JSX.Element {
   // and errorMessage are NOT disturbed (those are owned by the onPtyStatus subscription).
   const rehydrateProfiles = useCallback(async () => {
     const authoritative = await window.api.listSessions();
-    const byId = new Map(authoritative.map((r) => [r.logicalId, r]));
-    setSessions((prev) =>
-      prev.map((row) => {
-        const truth = byId.get(row.logicalId);
-        if (!truth) return row;
-        return {
-          ...row,
-          cwd: truth.cwd,
-          shell: truth.shell,
-          startupCommand: truth.startupCommand,
-          // Carry main's configured truth (D-02 — never downgrade a kept session).
-          configured: truth.configured ?? row.configured,
-        };
-      }),
-    );
+    // The 4-field merge (cwd/shell/startupCommand/configured by logicalId) lives in the
+    // pure, unit-tested mergeAuthoritativeProfiles reducer (12-01) — status and
+    // errorMessage are NOT touched here (owned by the onPtyStatus subscription). No new
+    // bridge key: listSessions is the existing read.
+    setSessions((prev) => mergeAuthoritativeProfiles(prev, authoritative));
   }, []);
 
   const handleSaveProfile = useCallback(
@@ -775,6 +766,12 @@ export function SessionManager(): React.JSX.Element {
       <SessionEditModal
         open={editingSession !== null}
         session={editingSession}
+        // D-04: thread the editing row's main-side rejection notice (from onPtyStatus →
+        // applyStatusEvent) so the CR-01 'Working directory not found' error renders
+        // inline under the cwd field. Read defensively like the IdleCard does — no new
+        // IPC. The IdleCard card (line ~699) stays too: both surfaces fire at different
+        // moments (Open Q2).
+        errorMessage={editingSession?.errorMessage}
         onSaveLive={(name, icon) => {
           if (editingId !== null) handleSaveLive(editingId, name, icon);
         }}
