@@ -217,6 +217,24 @@ export function SessionManager(): React.JSX.Element {
               : row,
           ),
         );
+      } else {
+        // GAP-12-C (12-09): a FAILED respawn (the deleted-after-save / corrupt-store
+        // edge — create() returns pid <= 0 and has ALREADY broadcast 'error' + the
+        // 'Working directory not found' notice over onPtyStatus). Without this branch a
+        // previously-running row kept its optimistic 'running' flip + a now-DEAD ptyPid,
+        // so the SessionView stayed bound to a dead PTY and the broadcast error never
+        // surfaced (the notice is informational in applyStatusEvent by design — that
+        // contract is unchanged). Clear the dead ptyPid HERE so the already-broadcast
+        // error state (→ resolveRowStatus → IdleCard via applyStatusEvent) wins and the
+        // error card + notice surface where the user acted. We do NOT set 'running'
+        // (that would clobber the error); the lifecycle status is owned by the
+        // subscription. Mirrors handleStart's pid<=0 reasoning but makes the dead-pid
+        // clear EXPLICIT (handleStart's row never had a live pid to strand).
+        setSessions((prev) =>
+          prev.map((row) =>
+            row.logicalId === id ? { ...row, ptyPid: undefined } : row,
+          ),
+        );
       }
     })();
   }, []);
