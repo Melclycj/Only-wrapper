@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: milestone
 status: executing
-stopped_at: "Phase 12 planned — 3 plans (12-01 tdd foundation / 12-02 execute / 12-03 gate); plan-checker VERIFICATION PASSED (12/12 dims); ready to execute. SESS-05/06 already-built (Phase 6) → verify-and-finish; headline is UI-04 form polish on the locked chassis. EXPECTED_API_KEYS stays 20."
-last_updated: "2026-06-15T00:48:48.740Z"
-last_activity: 2026-06-15 -- Phase 12 planned (3 plans; plan-checker PASSED; ready to execute)
+stopped_at: Completed 12-01-PLAN.md
+last_updated: "2026-06-15T01:19:41.710Z"
+last_activity: 2026-06-15 -- Phase 12 execution started
 progress:
   total_phases: 6
-  completed_phases: 3
-  total_plans: 19
-  completed_plans: 19
-  percent: 50
+  completed_phases: 1
+  total_plans: 23
+  completed_plans: 20
+  percent: 17
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-10 — v1.1 milestone started)
 
 **Core value:** Real terminal fidelity — `claude --rc`, `codex`, `vim`, `ssh`, REPLs all behave exactly like a native terminal inside the wrapper. v1.1 polish + debt work must not regress it at any point.
-**Current focus:** Phase 12 — Session Form: Polish + Edit UX (UI-04 / SESS-05 / SESS-06) — next to plan
+**Current focus:** Phase 12 — session-form-polish-edit-ux
 
 ## Current Position
 
-Phase: 11 (Terminal Area Polish + Live Start/Restart) — COMPLETE (operator approved SC1 LIVE 2026-06-14; UI-03 + SESS-07 closed). NEXT = Phase 12 (Session Form: Polish + Edit UX).
-Plan: all Phase-11 plans complete (the 11-03 gate + the GAP-11-A re-gate both passed)
+Phase: 12 (session-form-polish-edit-ux) — EXECUTING
+Plan: 2 of 3
 Status: Ready to execute
-Last activity: 2026-06-14 -- Phase 11 CLOSED (GAP-11-A SC1 approved; nyquist TRUE; UI-03 + SESS-07 complete; v2 composer deferred)
+Last activity: 2026-06-15 -- Phase 12 execution started
 
 ### v1.1 Milestone Phases (9–15)
 
@@ -115,6 +115,7 @@ Phase 9 (UI-01 design tokens) gates the per-surface polish phases (10–13). Pha
 | Phase 10 P10-12 | ~18min | 3 tasks | 6 files |
 | Phase 11 P00 | 12min | 3 tasks | 4 files |
 | Phase 11 P01 | ~18min | 2 tasks | 6 files |
+| Phase 12 P01 | ~5 min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -201,6 +202,7 @@ Recent decisions affecting current work:
 - [Phase 11-04 / GAP-11-A — mockup-faithful redesign LANDED]: The operator-rejected 11-02 flush card ("没看出来呼吸感 … 很丑") is redesigned to faithfully match the mockup IDE view (.planning/design/rendered/switchboard-ide-view.png). Renderer-only, tokens-first. **(1) Inset terminal WELL** — a NEW `.terminal-well` wrapper element (SessionManager.tsx) owns the radius/overflow/charcoal-fill so the charcoal terminal is a rounded block INSET inside a white `--surface` card with `--space-5` white padding around it (the surface shows around the well; NOT flush edge-to-edge). The `.viewport-stack` keeps its ORIGINAL relative-flex box model flush inside the well; the `.term-mount` ResizeObserver re-fits to the well's inner box (no manual fit). D-03a fidelity guardrail HELD (grep: no radius/overflow/padding on .viewport-stack/.term-mount/.xterm). **(2) Container/card split** — `.terminal-area` is now a TRANSPARENT flex column on cream holding a top StatusSummary strip + the white `.terminal-card` (so the pills sit on cream above the card, mockup placement). **(3) Warmer cream** — `--bg` tuned across two ui-lab passes to `oklch(0.915 0.032 74)` ≈ #f3e6d6 (var() token). **(4) Breadcrumb header** (IdentityHeader.tsx) — session tab + `local · {name} · {cwdTail}` JetBrains-Mono path (pure `formatCwdTail`) + status + Clear/✕. **(5) Status pills** — NEW `StatusSummary.tsx` + the pure React-free `summarizeStatuses` reducer (status-summary.ts) + a 14-case truth test; pills colored via `presentation()` (no re-derived color); zero groups hidden. **Deviation (Rule 1, test-helper bug):** the narrower resized terminal (34 cols) made the shell prompt + echoed `tput cols` WRAP mid-word, defeating `pty-resize.smoke`'s `colsFromBuffer` `lastIndexOf` (it read a stale wide count for a terminal that DID resize — diagnostic proved cols→34 + tput→34). Fixed the helper to be wrap-tolerant (whitespace-flexible regex matchAll, last match); the SC3 assertion is unchanged. 3 atomic commits f6b4d99/91de57d/96c081f. Full gate GREEN: 415 unit + 15/15 smoke (8 fidelity smokes GREEN); security.guard EXPECTED_API_KEYS 20; restart-session grep 0; src/main byte-untouched; files <800 lines. Fresh packaged proof = tag p11-gapfix-a (terminal-card + terminal-running + status-summary captures, visibly closer to the mockup than the rejected p11-gate). nyquist_compliant stays FALSE — operator approves SC1 LIVE at the 11-05 re-gate.
 - [Phase 11-03]: Wave-3 phase gate Task 1 (automated, packaged) GREEN + committed bf08c48 — `npm run test` 401 unit + 15/15 smoke against the freshly-PACKAGED app (recycle-model startup-command SC3 + dormant Start re-spawn, header-controls menu-Restart-absent, alt-screen-reset, app-restart-restore, pty-resize, search-bar all GREEN); `security.guard` GREEN at EXPECTED_API_KEYS===20 (ptyRestart retained un-surfaced, src/main byte-untouched this phase); tokens-completeness + status-colors GREEN; `grep -rc 'data-testid="restart-session"' src/renderer` → 0; `npm run ui:shots:fresh` exits 0 (tag p11-gate / sha 8e14a12) — terminal-card + terminal-running + agent-busy-confirm captured + scored vs DESIGN-RUBRIC (framed breathing card on cream --bg with gutter + --shadow-pop, identity-header cap attached, NO clipped last row / corner glyph = the D-03a fidelity proof; closes the phase9-baseline Gap #2 unframed-rectangle). idle-card SKIPPED (harness precheck: "context menu has no Stop item: Edit, Remove") = pre-existing harness limitation that itself corroborates SESS-07/D-01, NOT a Phase-11 regression. agent-busy-confirm captured in the Free state = baseline copy; the ESCALATED D-04 branch is unit-proven by confirm-copy.test.ts (not harness-drivable) + is the operator's LIVE D-04 check. 11-HUMAN-UAT.md authored (6 rows: SC1/SC1-CV/SC2/SC3/SC4/D-04, all PENDING). STOPPED at the BLOCKING Task 2 end-of-phase human-verify — `nyquist_compliant` stays FALSE until the operator runs the packaged app and explicitly approves; never auto-approved (human_verify_mode end-of-phase, auto_advance false). Phase NOT marked complete.
 - [Phase 11-02]: UI-03 / D-03 unified session card landed (renderer-CSS-only). NEW src/renderer/terminal-area.css = the terminal-area surface layer EXTRACTED from terminal.css (mirroring the Phase-10 sidebar.css extraction): .terminal-area card frame + .viewport-stack + .session-view* + .term-mount + .xterm* sizing + the .identity-header cluster + .idle-card family + .welcome-state, imported AFTER terminal.css in index.tsx so cascade order is preserved. terminal.css 873 → 494 lines (under the 800 hard rule). The card frame is on .terminal-area DIRECTLY (NOT a new .terminal-card wrapper div — SessionManager.tsx is out of this plan's files_modified; framing the existing container avoids the ResizeObserver re-bind walk read_first warned against): margin: var(--space-4) gutter + background var(--surface) + border 1px var(--line) + border-radius var(--radius) + box-shadow var(--shadow-pop) + overflow:hidden (masks the WRAPPER corners). The cream ground moved up to .ide-layout { background: var(--bg) }. D-03a BLOCKING fidelity guardrail HELD: NO radius/padding/overflow on .viewport-stack/.term-mount/.xterm* (they keep inset:0 / width:100%;height:100%); NO manual fit call added — the existing .term-mount ResizeObserver re-fits to the new framed inner box (O-2 PROVEN GREEN by pty-resize.smoke reporting correct tput cols + alt-screen-reset scroll/exit + app-restart-restore + header-controls + search-bar; 8 fidelity smoke specs GREEN). .idle-card-stage ground flipped --term-bg → transparent (D-03 sibling); .identity-header .row-control-close danger ramp added (D-15 color-mix wash); header .row-name weight 600 → 700 (single identity weight). IdentityHeader.tsx = doc-comment refresh ONLY to the Phase-11 D-01 lifecycle (Clear + Remove; recycle via dormant ▶ go glyph) — no structural/JSX/testid change; identity-header/clear-terminal/header-remove all preserved. color #ffffff → var(--surface) on idle/welcome buttons (value-preserving tokens-first). EXPECTED_API_KEYS stays 20 (renderer-only, src/main untouched). 401 unit GREEN, tsc + eslint clean, tokens-completeness + status-colors GREEN. VISUAL proof (card looks framed, no clipped row) is STRUCTURAL → owned by Plan 11-03's packaged ui:shots:fresh capture, NOT an injection preview.
+- [Phase 12]: 12-01: Two pure renderer reducers extracted RED→GREEN — mergeAuthoritativeProfiles (SESS-05, copies exactly cwd/shell/startupCommand/configured, never the renderer-owned lifecycle fields) + validateSessionForm (D-04, frozen UI-SPEC literals + isAbsolutePathish format-only check). Not yet wired into SessionManager/SessionEditModal (Plan 02). edit-modal-validation ui-lab surface + DESIGN-RUBRIC two-group/blue-Save update added. 413 unit GREEN, tsc clean, EXPECTED_API_KEYS stays 20.
 
 ### Pending Todos
 
@@ -251,9 +253,9 @@ Acknowledged and deferred at v1.0 milestone close on 2026-06-10 (option B — ca
 
 ## Session Continuity
 
-Last session: 2026-06-14T15:29:14.744Z
-Stopped at: Phase 12 UI-SPEC approved
-Resume file: .planning/phases/12-session-form-polish-edit-ux/12-UI-SPEC.md
+Last session: 2026-06-15T01:19:33.121Z
+Stopped at: Completed 12-01-PLAN.md
+Resume file: None
 
 ## Operator Next Steps
 

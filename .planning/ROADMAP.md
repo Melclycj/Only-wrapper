@@ -124,7 +124,7 @@
 **Plans**: 3 plans
 **Wave 1**
 
-- [ ] 12-01-PLAN.md — Wave-0 foundation: extract mergeAuthoritativeProfiles + validateSessionForm pure reducers (RED→GREEN) + add the edit-modal-validation ui-lab surface + DESIGN-RUBRIC update
+- [x] 12-01-PLAN.md — Wave-0 foundation: extract mergeAuthoritativeProfiles + validateSessionForm pure reducers (RED→GREEN) + add the edit-modal-validation ui-lab surface + DESIGN-RUBRIC update
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
