@@ -472,6 +472,61 @@ export class PtyManager {
       // object sidesteps the use-before-assign / prefer-const bind (the closures below
       // reference it before the timers are assigned).
       const timers: { idle?: NodeJS.Timeout; hard?: NodeJS.Timeout } = {};
+      // DIAG GAP-12-B — REMOVE when the real fix lands.
+      // Purely-additive, in-MEMORY observation of the probe timeline. Captures
+      // ONLY sizes + millisecond timings — NEVER the nonce, the marker, the
+      // buffered bytes (`buffer`), or the user's cmd (same redaction discipline as
+      // the standalone instrument). cwd/shell/sessionId are non-secret lifecycle
+      // metadata. Gated ON BY DEFAULT for this diagnostic build; set JW_PROBE_DIAG=0
+      // to disable. The buffered array is flushed to disk ONCE on settle (after the
+      // outcome is already decided), so file I/O cannot perturb the measured window.
+      const DIAG_ON = process.env.JW_PROBE_DIAG !== '0';
+      const diag: {
+        t0: number;
+        timeline: { dtMs: number; size: number }[];
+        firstByteMs: number | null;
+        lastByteMs: number;
+        maxSilentGapMs: number;
+        byteCount: number;
+        chunkCount: number;
+      } = {
+        t0: 0,
+        timeline: [],
+        firstByteMs: null,
+        lastByteMs: 0,
+        maxSilentGapMs: 0,
+        byteCount: 0,
+        chunkCount: 0,
+      };
+      const diagWrite = (
+        outcome: 'match' | 'idle-timeout' | 'hard-timeout',
+        matchMs: number | null,
+      ): void => {
+        if (!DIAG_ON) return;
+        try {
+          fs.appendFileSync(
+            path.join(os.homedir(), 'jw-probe-timeline.jsonl'),
+            JSON.stringify({
+              ts: new Date().toISOString(),
+              sessionId: id,
+              cwd,
+              shell: record.shell,
+              idleBudgetMs: READINESS_IDLE_TIMEOUT_MS,
+              hardBudgetMs: READINESS_HARD_TIMEOUT_MS,
+              firstByteMs: diag.firstByteMs,
+              matchMs,
+              outcome,
+              maxSilentGapMs: diag.maxSilentGapMs,
+              byteCount: diag.byteCount,
+              chunkCount: diag.chunkCount,
+              timeline: diag.timeline,
+            }) + '\n',
+          );
+        } catch {
+          // DIAG best-effort only — a logging failure must NEVER perturb lifecycle.
+        }
+      };
+      // END DIAG GAP-12-B
       const clearTimers = (): void => {
         if (timers.idle) clearTimeout(timers.idle);
         if (timers.hard) clearTimeout(timers.hard);
@@ -519,6 +574,11 @@ export class PtyManager {
         console.log(
           `[pty] readiness probe timed out (session ${id}, ${reason}) — auto-run skipped`,
         );
+        // DIAG GAP-12-B — REMOVE when the real fix lands. Append-on-settle ONLY
+        // (the give-up outcome is already decided above), so file I/O cannot
+        // perturb the measured probe window. matchMs is null on a timeout.
+        diagWrite(reason === 'idle' ? 'idle-timeout' : 'hard-timeout', null);
+        // END DIAG GAP-12-B
       };
       const offProbe = child.onData((data) => {
         // WR-01/IN-01: there is NO post-settle scrub branch. On a successful match the
@@ -529,6 +589,24 @@ export class PtyManager {
         // scrub branch + its probe-echo strip helper were unreachable dead code, removed).
         // Pre-match bytes are BUFFERED and NEVER sent — invisibility (D-02).
         buffer += data;
+        // DIAG GAP-12-B — REMOVE when the real fix lands. In-MEMORY observation
+        // only: record { dtMs, size } per chunk (NO byte contents) + first-byte
+        // time + the longest silent gap between chunks. No control flow, buffer,
+        // timer, or probe behavior is touched — purely additive measurement.
+        if (DIAG_ON) {
+          const dtMs = Date.now() - diag.t0;
+          if (diag.firstByteMs === null) {
+            diag.firstByteMs = dtMs;
+          } else {
+            const gap = dtMs - diag.lastByteMs;
+            if (gap > diag.maxSilentGapMs) diag.maxSilentGapMs = gap;
+          }
+          diag.lastByteMs = dtMs;
+          diag.byteCount += data.length;
+          diag.chunkCount += 1;
+          diag.timeline.push({ dtMs, size: data.length });
+        }
+        // END DIAG GAP-12-B
         // GAP-12-B idle-extend: while the probe is unsettled and the shell keeps
         // PRODUCING bytes (a heavy-but-alive rc init), RESET the idle timer so a
         // slow-but-progressing rc is not guillotined at a fixed wall. The HARD ceiling
@@ -539,6 +617,12 @@ export class PtyManager {
         }
         if (probe.matches(buffer)) {
           settled = true;
+          // DIAG GAP-12-B — REMOVE when the real fix lands. Capture the match time
+          // (relative to the marker-write t0) now that the outcome is decided. The
+          // actual disk append happens at the END of this branch (post-settle), so
+          // file I/O cannot perturb the measured window.
+          const diagMatchMs = DIAG_ON ? Date.now() - diag.t0 : null;
+          // END DIAG GAP-12-B
           // Clear BOTH timers (idle + hard) so neither timeout-flush-and-notice path
           // fires after a successful match (D-04).
           clearTimers();
@@ -552,11 +636,21 @@ export class PtyManager {
           // specifically to PREVENT auto-execute). T-05.1-01: same trust boundary as
           // the user typing their own saved command in their own shell.
           child.write(cmd + '\r');
+          // DIAG GAP-12-B — REMOVE when the real fix lands. Append-on-settle ONLY
+          // (after the inject is already issued, so the disk write cannot perturb
+          // the measured probe→match window). matchMs is the measured match time.
+          diagWrite('match', diagMatchMs);
+          // END DIAG GAP-12-B
         }
       });
       // Send the no-side-effect nonce probe to elicit a readiness round-trip. The
       // marker is `buildPosixProbe`'s ': <nonce>\r' — no user data is interpolated
       // (T-05.1-02), changes no shell state (D-01).
+      // DIAG GAP-12-B — REMOVE when the real fix lands. Capture t0 at the marker
+      // write so every onData dtMs and the match/timeout times are measured from
+      // the exact moment the probe is sent (the true probe→ready window).
+      diag.t0 = Date.now();
+      // END DIAG GAP-12-B
       child.write(probe.marker);
       // GAP-12-B dual-deadline arm (SC4). If the shell does not genuinely process the
       // marker, give up on auto-run via the SHARED giveUpReadiness path (D-04, never
