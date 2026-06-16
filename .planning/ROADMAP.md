@@ -10,7 +10,7 @@
   3. A native "Browse…" folder picker fills the working-directory field with an absolute path, and main still validates the value (the CR-01 path guard still gates it).
   4. Any new IPC bridge surface added for the folder picker is accounted for against the security key budget, and the EXPECTED_API_KEYS guard stays green.
 
-**Plans**: 10 plans (3 original + 4 gap-closure round 1 + 3 gap-closure round 2)
+**Plans**: 13 plans (3 original + 4 gap-closure round 1 + 3 gap-closure round 2 + 3 gap-closure round 3)
 **Wave 1**
 
 - [x] 12-01-PLAN.md — Wave-0 foundation: extract mergeAuthoritativeProfiles + validateSessionForm pure reducers (RED→GREEN) + add the edit-modal-validation ui-lab surface + DESIGN-RUBRIC update
@@ -48,5 +48,16 @@
 *Wave 2 (blocked on 12-08/09)*
 
 - [ ] 12-10-PLAN.md — Re-gate (round 2): full suite + npm run test:integration (DEBT-02 real-timing) + BLOCKING operator human-verify ON THE OPERATOR'S MACHINE covering GAP-12-B/C/E (rc-init latency is machine-specific); nyquist_compliant flips true only on explicit unqualified approval
+
+**Gap-closure round 3 (from the re-gate-2 reopened gaps — APP-SIDE root cause CONFIRMED: GAP-12-B is MARKER-LOSS, not a latency budget — `gap_closure: true`)**
+
+*Wave 1 (parallel — no file overlap: main vs renderer)*
+
+- [ ] 12-11-PLAN.md — Main process: GAP-12-B (marker RE-SEND) — re-write the SAME-nonce `: <nonce>` POSIX no-op while `!settled`, bounded by the EXISTING hard ceiling (a re-sent marker matches the UNCHANGED `\n[^\n]*<nonce>` matcher once the shell reaches a ready prompt; KEEP the idle-extend) + REMOVE the temporary DIAG instrumentation (commit 58bd829) + a DEBT-02 MARKER-LOSS regression (electron-free, opt-in — NOT the spike-005 sleep-heavy driver). Explicitly NOT another timeout-budget change. (req: SESS-05)
+- [ ] 12-12-PLAN.md — Renderer: GAP-12-E (precedence) — move `setRestartPromptId` INTO the async block AFTER the cwd drop-check, gated on `notice === null`; an invalid path BLOCKS Save (inline reminder, modal stays open, restart prompt SUPPRESSED); only a clean save closes + (if live launch fields changed) prompts. No new IPC, EXPECTED_API_KEYS stays 20, SessionManager.tsx < 800 lines. (req: UI-04, SESS-06)
+
+*Wave 2 (blocked on 12-11/12)*
+
+- [ ] 12-13-PLAN.md — Re-gate (round 3): package the fix branch + full suite + both integration regressions + BLOCKING operator human-verify on a COLD Dock launch (`sudo purge` then cold launch — the ONLY condition that reproduces marker-loss) covering GAP-12-B (cold Restart + cold Start auto-run) + GAP-12-C (visible failed-spawn error) + GAP-12-E (invalid path blocks Save). nyquist_compliant flips true ONLY on explicit unqualified approval of all three; automated GREEN is NOT proof (DEBT-02 bit twice). (req: UI-04, SESS-05, SESS-06)
 
 **UI hint**: yes
