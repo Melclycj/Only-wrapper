@@ -277,6 +277,23 @@ Round-1 confirmed the swallow and round-2 (12-09) fixed `handleRestart`'s `pid<=
 
 - **next_action (round 3):** Build the GAP-12-B operator instrument → human-action checkpoint (operator runs it on their machine, pastes the timeline). In parallel, reproduce + fix the GAP-12-C handleStart pid<=0 path locally with a regression test.
 
+## Round 3 — Operator instrument results (2026-06-16) — terminal CANNOT reproduce; cause is app-cold-spawn
+
+Operator ran `operator-probe-timeline.cjs` on their real machine. The standalone instrument RULED OUT every terminal-side cause:
+- **cwd=/Users/jerry (home):** 3/3 MATCH @ ~1005-1336ms; MAX-SILENT-GAP ~1.3s.
+- **cwd=/Users/jerry/Thesis/Thesis-Work** (the operator's named "problem folder"): 3/3 MATCH @ ~1023-1311ms. **NOT folder-specific.** No per-dir init markers in that folder (no .envrc/.nvmrc/conda-meta; 70M, has .git).
+- **Dock-like minimal env** (`env -i HOME USER PATH=/usr/bin:/bin:... zsh -lic exit`): ~1.1s. **NOT a stripped-env effect.**
+- **15× login-shell timing:** rock-stable 1.02-1.44s, ZERO intermittent spikes. **Not an everyday random stall.**
+- **sdkman selfupdate** (`SDKMAN_CANDIDATES_API`, curl 7s-connect/10s-max-time, `sdkman_selfupdate_feature=true`): `~/.sdkman/var/version` mtime = **Sep 29 2023** → the network selfupdate is NOT firing on shell start. Warm component cost: conda hook 0.33s, nvm 0.23s, sdkman 0.03s (≈ the observed 1.0-1.3s total).
+
+**Conclusion:** the terminal/standalone path is fast and reliable everywhere — the readiness timeout is reproducible ONLY inside the packaged app. Remaining live hypothesis: the **cold FIRST `zsh -l` spawn after a Dock launch** (cold disk caches → conda's Python `shell.zsh hook` + cold rc reads take far longer that one time; warm terminal runs never pay this). Secondary: a difference in the app's actual node-pty spawn/lifecycle (stop→SIGTERM→respawn under the full Electron app) not captured by the standalone driver.
+
+**Next decisive tests (cheapest first):**
+1. `sudo purge` (flush OS disk cache) THEN run the instrument on Thesis-Work — a fast proxy for the cold-disk first spawn. If it times out / shows a >8s silent gap, cold-cache is confirmed + we capture the real number.
+2. If purge does NOT reproduce → instrument the APP itself: add gated probe-timeline logging to `pty-manager.ts` create() (write byte arrivals + which deadline trips to a file), `npm run package`, operator reproduces the GAP-12-B failure in the app, read the log. This is the only path that captures the true app-side cold-spawn timeline.
+
+Fix implication either way: if the stall is an unpredictable cold-spawn (not a fixed budget), the fix is NOT another bigger guess — likely a smarter readiness signal and/or making the auto-run resilient to a late-but-eventually-ready shell, decided from the captured number.
+
 ---
 
 ## Round 3 progress (2026-06-16) — GAP-12-C FIXED, GAP-12-B instrument BUILT (awaiting operator)
