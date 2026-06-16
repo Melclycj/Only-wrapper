@@ -1,12 +1,13 @@
 ---
 slug: gap-12-b-restart-probe-timeout
-status: diagnosed
-trigger: "Phase 12 GAP-12-B — 'Restart to apply?' (Restart now) fails LIVE: the new startup command does not auto-run; the session prints 'Startup command didn't auto-run — shell wasn't ready in time.' (READINESS_FAIL_NOTICE). Operator changed cwd to a REAL existing dir, so this is the TERM-05 readiness probe timing out on the in-place restart respawn, NOT a CR-01 cwd rejection."
+status: investigating
+trigger: "Phase 12 GAP-12-B — 'Restart to apply?' (Restart now) fails LIVE: the new startup command does not auto-run; the session prints 'Startup command didn't auto-run — shell wasn't ready in time.' (READINESS_FAIL_NOTICE). Operator changed cwd to a REAL existing dir, so this is the TERM-05 readiness probe timing out on the in-place restart respawn, NOT a CR-01 cwd rejection. ROUND 3 (reopened): the round-2 fix (12-08 dual-deadline 8s idle / 15s ceiling + 12-09 handleRestart else) STILL fails on the operator's real machine — both gaps reopened at the round-2 re-gate."
 created: 2026-06-16
 updated: 2026-06-16
-goal: find_root_cause_only
+goal: find_and_fix
 phase: 12
-gaps: ["GAP-12-B (primary)", "GAP-12-C (secondary — confirm-or-deny)"]
+round: 3
+gaps: ["GAP-12-B (primary — instrument the operator's real machine)", "GAP-12-C (now ACTIVE — handleStart path unfixed)"]
 ---
 
 # Debug — GAP-12-B restart-to-apply readiness-probe timeout
@@ -35,7 +36,7 @@ reasoning_checkpoint:
   fix_rationale: "(direction only) The root cause is an insufficient/fixed latency budget with no headroom or adaptation, NOT a logic bug. Fix targets the budget mechanism (raise/adapt the timeout, or extend-on-progress, or make the bound robust to slow login-shell rc) — addresses the actual wall, not a symptom."
   blind_spots: "Could not measure the OPERATOR'S real rc-init latency (no access to their machine). The dev box rc is fast (~1s); the heavy-init repro (sleep N) MODELS a slow machine deterministically but is synthetic. The exact operator-side init weight (nvm/rvm/oh-my-zsh/p10k/direnv/conda-per-dir) is inferred, not measured."
 
-- **next_action:** Confirm/deny GAP-12-C: read applyStatusEvent + mergeAuthoritativeProfiles, trace whether a bad-cwd restart rejection (create() pid -1 + 'Working directory not found') surfaces visibly on a LIVE→failed-restart session or is swallowed; determine whether updateProfile persisted the bad cwd.
+- **next_action:** ROUND 3 (see "## Round 3" below). (B) Build an OPERATOR-RUN instrument that captures their real machine's probe byte-timeline + where the 8s-idle/15s-hard deadline fires — do NOT guess the budget a third time. (C) Reproduce the dormant→Start (handleStart) bad-cwd failure locally and fix the missing pid<=0 surface on BOTH Start and Restart.
 
 ## Confirmed facts
 
@@ -238,3 +239,39 @@ Reviewed the proposed fix DIRECTION only (no patch applied). Verdict per item:
 **Net for the fix plan:** the timeout fix is NOT a simple "raise + reset-on-byte" — it needs an
 absolute hard ceiling alongside the idle-extension, or the never-times-out regression is
 re-introduced. Item 2 and the GAP-12-C placement are sound as-described.
+
+---
+
+## Round 3 (REOPENED 2026-06-16) — the round-2 fix failed live; measure, don't guess
+
+**What changed since round 1.** The round-1 fix DIRECTION was implemented and shipped:
+- 12-08 implemented the dual deadline: `READINESS_IDLE_TIMEOUT_MS = 8000` (resets on each new probe byte) + `READINESS_HARD_TIMEOUT_MS = 15000` (absolute ceiling), both routing through the shared D-04 flush-and-notice cleanup. Its synthetic `tests/integration/readiness-probe-heavy-init.integration.test.cjs` PASSES (injects @5056ms under a ZDOTDIR-sleep heavy init; never-ready hits the 15003ms ceiling).
+- 12-09 implemented the GAP-12-C fix in `handleRestart`'s `pid<=0` else.
+- The round-2 re-gate (12-10) automated chain was GREEN.
+
+**But the operator's live re-verify (round-2 re-gate, 2026-06-16) STILL FAILED both:**
+- **GAP-12-B:** "the tiem failed, the rest working fine" — the command STILL does not auto-run on the operator's real machine, even with the 8s-idle / 15s-hard budget.
+- **GAP-12-C:** "nothing happend, after i **start** it just returned to home" — the failed spawn surfaces nothing.
+
+This is the round-1 `blind_spots` field coming true verbatim: *"Could not measure the OPERATOR'S real rc-init latency (no access to their machine)."* We have now guessed the B budget TWICE (4000ms → 8000/15000ms) and failed live both times. **The round-3 contract is: MEASURE THE OPERATOR'S REAL TIMELINE BEFORE TOUCHING ANY NUMBER. Do not guess a third time.**
+
+### GAP-12-B round-3 plan — build the operator instrument FIRST
+Open questions only the operator's machine can answer:
+- Does their rc init have a **silent gap > 8000ms** (the shell is working but emits no bytes for >8s — e.g. a network-touching init, a `compinit` rebuild, a conda/nvm/direnv per-dir activation that prints nothing)? → the IDLE timer fires mid-init even though progress is happening. If so, "reset-idle-on-any-byte" is the wrong signal; the fix is a different liveness signal or a much larger idle window.
+- Does their **total** rc init exceed **15000ms**? → the HARD ceiling fires. If so, raise the ceiling (and reconsider whether a 15s+ auto-run is even desirable vs a "press enter to run" affordance).
+- Does the **idle-extend fail to re-arm** on their byte pattern (a bug in the 12-08 timer-reset wiring under real interleaving)?
+
+**Deliverable (the operator's explicit ask — "做诊断版"):** a small, SELF-CONTAINED diagnostic the operator runs ONCE on their own machine (ideally reusing the ported `buildPosixProbe` + the spike-005 driver shape, NOT requiring a full Electron build) that logs, with millisecond timestamps: every probe-byte arrival (size + first/last bytes), the exact moment the `\n…<nonce>` match fires OR each deadline (idle vs hard) trips and which one, and the shell's first-prompt time. It must run against the operator's REAL login shell (`zsh -l` with their actual rc), and ideally in the cwd they were editing into (per-dir init matters). Output a single jsonl/text the operator pastes back. THEN, and only then, tune the budget/mechanism to their measured reality and fold the real numbers into the DEBT-02 regression. This step is a **human-action checkpoint** — the operator runs the instrument; the orchestrator presents it and waits.
+
+### GAP-12-C round-3 plan — the unfixed path is handleStart
+Round-1 confirmed the swallow and round-2 (12-09) fixed `handleRestart`'s `pid<=0` else. **But `handleStart` (SessionManager.tsx:259-278) has NO `pid<=0` branch at all** — its comment claims it clears a stale ptyPid on the error path, but the code only has `if (pid > 0)`. The operator said "after i **START** it just returned to home" → they exercised the dormant→Start path, which the 12-09 fix never touched. Round-3 C is locally reproducible on the dev box (no operator needed):
+1. Create a session, point cwd at a real dir, **delete the dir**, then click **Start** (handleStart) → `create()` returns pid -1 + the "Working directory not found" notice main emits (pty-manager.ts:340-345).
+2. Confirm what the row does (the operator's "returned to home" → likely the active view falls back to the welcome/empty/home state, or the row goes dormant with no visible error).
+3. Fix: give `handleStart` the SAME visible-error treatment as the fixed `handleRestart` (surface the IdleCard + notice where the user acted; do not fall back to home). Verify a genuine bad-cwd **Restart** ALSO surfaces (the 12-09 fix may need a render-path follow-up if "returns to home" affects it too). Add a regression test for BOTH paths.
+
+### Round-3 guardrails (carry into the fix plan)
+- **B:** measure first. No number changes before the operator's instrument data is in hand. Preserve D-02 (no pre-match forwarding) + D-04 (never best-effort inject) on every timeout path. Build the DEBT-02 regression from the operator's REAL measured timing, not another synthetic guess.
+- **C:** fix belongs in the renderer handlers (`handleStart` else + the render fallback), NOT in `applyStatusEvent` (the ITEM-4 notice-informational guard must stay — `apply-status-event.test.ts` GREEN). EXPECTED_API_KEYS stays 20; no new IPC.
+- Branch `gsd/phase-03-multi-session-session-lifecycle` (shared dev). Do NOT flip `nyquist_compliant`. Do not regress the working dormant-Start auto-run / terminal fidelity.
+
+- **next_action (round 3):** Build the GAP-12-B operator instrument → human-action checkpoint (operator runs it on their machine, pastes the timeline). In parallel, reproduce + fix the GAP-12-C handleStart pid<=0 path locally with a regression test.
