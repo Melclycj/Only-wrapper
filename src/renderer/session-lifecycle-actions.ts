@@ -88,3 +88,46 @@ export function flipToDormant<T extends LifecycleRow>(
       : r,
   );
 }
+
+/**
+ * GAP-12-C (12-10 round 3) — the SINGLE source of truth for "a spawn just returned, fold
+ * the {pid} result into the row the user acted on." Both handleStart (dormant ▶ Start) and
+ * handleRestart ("Restart to apply?") call this so the two paths can NEVER diverge again —
+ * the round-2 fix touched only handleRestart and left handleStart's pid<=0 unhandled, which
+ * is the exact gap the operator hit ("after I start it just returned to home").
+ *
+ * Semantics:
+ *   • pid > 0  → a REAL pty: optimistic flip to 'running', clear any stale errorMessage. The
+ *     onPtyStatus subscription then keeps it live (existing behavior).
+ *   • pid <= 0 → a FAILED spawn (a deleted-after-save / corrupt-store cwd reaching create()):
+ *     main has ALREADY broadcast {status:'error', notice:'Working directory not found…'} over
+ *     onPtyStatus. But that broadcast carries a `notice`, so applyStatusEvent's ITEM-4 guard
+ *     keeps the row INFORMATIONAL (status unchanged) — on a dormant row that means it stays
+ *     'not_started' and the IdleCard shows its DORMANT (Start) branch, hiding the captured
+ *     error ("returned to home"). So the HANDLER owns the lifecycle flip here: set status to
+ *     'error' and drop the dead pid. status:'error' makes the row a CARD (activeIsCard) AND
+ *     trips the IdleCard error branch (isError = status==='error') so the captured message is
+ *     SURFACED where the user acted. We do NOT clobber an errorMessage the notice already set
+ *     (the `??` keeps a real "Working directory not found: …" if it landed first); a fallback
+ *     literal covers the case where the pid<=0 reply wins the race against the notice push.
+ *     This does NOT touch applyStatusEvent — the ITEM-4 notice-informational guard stays GREEN.
+ */
+export function resolveSpawnResult<T extends LifecycleRow>(
+  row: T,
+  result: { pid: number },
+): T {
+  if (result.pid > 0) {
+    return { ...row, ptyPid: result.pid, status: 'running' as const, errorMessage: undefined };
+  }
+  // pid <= 0 — failed spawn: flip to a VISIBLE error card, drop the dead pid. Preserve a
+  // notice-supplied errorMessage if one already landed; otherwise a generic literal so the
+  // error card is never blank if the invoke reply beats the onPtyStatus notice push.
+  return {
+    ...row,
+    status: 'error' as const,
+    ptyPid: undefined,
+    errorMessage:
+      row.errorMessage ??
+      "Couldn't start session — check the working directory and shell.",
+  };
+}

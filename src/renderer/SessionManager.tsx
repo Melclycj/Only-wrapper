@@ -48,7 +48,11 @@ import { applyStatusEvent } from './apply-status-event';
 // resolveRemoveAction is the PURE Remove/Delete decision reducer (12-06 IN-02) — extracted
 // from confirmClose's inline isConfiguredLive predicate so the file stays < 800 lines once
 // 12-06 adds the restart-to-apply prompt state/handlers. confirmClose keeps the IPC + setState.
-import { resolveRemoveAction, flipToDormant } from './session-lifecycle-actions';
+import {
+  resolveRemoveAction,
+  flipToDormant,
+  resolveSpawnResult,
+} from './session-lifecycle-actions';
 // restartPromptIdFor is the PURE restart-to-apply decision reducer (12-06 GAP-12-B) —
 // running session + a changed launch field → the id to prompt for (else null).
 import { restartPromptIdFor } from './session-restart-prompt';
@@ -205,28 +209,20 @@ export function SessionManager(): React.JSX.Element {
   // failed respawn → the GAP-12-C dead-pid clear below (the error must NOT be clobbered).
   const handleRestart = useCallback((id: LogicalId) => {
     void (async () => {
-      const { pid } = await window.api.ptyRestart(id);
-      if (pid > 0) {
-        setSessions((prev) =>
-          prev.map((row) =>
-            row.logicalId === id
-              ? { ...row, ptyPid: pid, status: 'running', errorMessage: undefined }
-              : row,
-          ),
-        );
-      } else {
-        // GAP-12-C (12-09): a FAILED respawn (deleted-after-save / corrupt-store edge —
-        // create() returns pid<=0 and has ALREADY broadcast 'error' + notice over
-        // onPtyStatus). Clear the now-DEAD ptyPid so the broadcast error state wins (→
-        // resolveRowStatus → IdleCard) instead of a stale 'running' row stranded on a dead
-        // PTY. We do NOT set 'running' (that clobbers the error); status is the
-        // subscription's. applyStatusEvent's notice-informational contract is unchanged.
-        setSessions((prev) =>
-          prev.map((row) =>
-            row.logicalId === id ? { ...row, ptyPid: undefined } : row,
-          ),
-        );
-      }
+      const result = await window.api.ptyRestart(id);
+      // GAP-12-C (12-10 round 3): route BOTH outcomes through the SHARED resolveSpawnResult
+      // reducer so Restart and Start can never diverge again. pid>0 → optimistic 'running';
+      // pid<=0 (deleted-after-save / corrupt-store cwd) → flip to a VISIBLE 'error' card (the
+      // round-2 fix only cleared the dead pid and RELIED on the broadcast error winning — but
+      // that broadcast carries a notice, which applyStatusEvent's ITEM-4 guard keeps
+      // informational, so the status never flipped and the error stayed unsurfaced on a live
+      // row that "returned to home"). The handler now owns the lifecycle flip where the user
+      // acted; the onPtyStatus notice only enriches errorMessage. applyStatusEvent unchanged.
+      setSessions((prev) =>
+        prev.map((row) =>
+          row.logicalId === id ? resolveSpawnResult(row, result) : row,
+        ),
+      );
     })();
   }, []);
 
@@ -259,21 +255,23 @@ export function SessionManager(): React.JSX.Element {
   const handleStart = useCallback((id: LogicalId) => {
     void (async () => {
       // cols/rows are a sane initial PTY size; SessionView re-fits + ptyResizes on mount.
-      const { pid } = await window.api.ptyCreate({ id, cols: 80, rows: 24 });
-      // A failed spawn returns pid -1 (SC2): main has ALREADY broadcast status 'error'
-      // + the notice over onPtyStatus (captured by the subscription), so do NOT
-      // optimistically flip to 'running' — that would clobber the error card. Only a
-      // real pty (pid > 0) gets the optimistic running flip; the subscription then
-      // keeps it live. On the error path we also clear any stale ptyPid.
-      if (pid > 0) {
-        setSessions((prev) =>
-          prev.map((row) =>
-            row.logicalId === id
-              ? { ...row, ptyPid: pid, status: 'running', errorMessage: undefined }
-              : row,
-          ),
-        );
-      }
+      const result = await window.api.ptyCreate({ id, cols: 80, rows: 24 });
+      // GAP-12-C (12-10 round 3): the dormant ▶ Start path now uses the SAME shared
+      // resolveSpawnResult reducer as handleRestart. The round-2 fix only touched
+      // handleRestart, leaving THIS path's pid<=0 unhandled — so a failed Start (a
+      // deleted-after-save / corrupt-store cwd → create() returns pid -1 + a broadcast
+      // 'error'+notice) was SWALLOWED: applyStatusEvent's ITEM-4 guard keeps the
+      // notice-bearing event informational, so a dormant row stayed 'not_started' showing
+      // the DORMANT IdleCard (Start button) with the captured error invisible — exactly the
+      // operator's "after I start it just returned to home". resolveSpawnResult flips pid<=0
+      // to a VISIBLE 'error' card (status:'error' → activeIsCard + the IdleCard error branch)
+      // so the failure is surfaced where the user acted. pid>0 keeps the optimistic 'running'
+      // flip; the subscription then keeps it live.
+      setSessions((prev) =>
+        prev.map((row) =>
+          row.logicalId === id ? resolveSpawnResult(row, result) : row,
+        ),
+      );
     })();
   }, []);
 
@@ -284,21 +282,20 @@ export function SessionManager(): React.JSX.Element {
   //    ptyCreate bridge shape — no new bridge key (Task 1 made main honor the flag). ──
   const handleStartNoCmd = useCallback((id: LogicalId) => {
     void (async () => {
-      const { pid } = await window.api.ptyCreate({
+      const result = await window.api.ptyCreate({
         id,
         cols: 80,
         rows: 24,
         skipStartupCommand: true,
       });
-      if (pid > 0) {
-        setSessions((prev) =>
-          prev.map((row) =>
-            row.logicalId === id
-              ? { ...row, ptyPid: pid, status: 'running', errorMessage: undefined }
-              : row,
-          ),
-        );
-      }
+      // GAP-12-C (12-10 round 3): same shared resolveSpawnResult reducer as handleStart —
+      // a bad-cwd "Start without command" must surface the error card too, not silently
+      // return to the dormant view.
+      setSessions((prev) =>
+        prev.map((row) =>
+          row.logicalId === id ? resolveSpawnResult(row, result) : row,
+        ),
+      );
     })();
   }, []);
 
