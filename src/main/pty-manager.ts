@@ -124,6 +124,33 @@ export const READINESS_IDLE_TIMEOUT_MS = 8000;
 export const READINESS_HARD_TIMEOUT_MS = 15000;
 
 /**
+ * GAP-12-B round 3 — marker RE-SEND cadence (the CONFIRMED app-side fix).
+ *
+ * ROOT CAUSE (overturns the two prior budget rounds): the one-shot `: <nonce>\r`
+ * readiness marker, typed-ahead before a cold/heavy login-shell rc finishes, is
+ * LOST — zsh does NOT redraw the queued marker onto a matchable `\n…<nonce>` line on
+ * cold zle init, so the `\n[^\n]*<nonce>` match never comes EVEN THOUGH the shell
+ * reaches a ready prompt at ~1.15s (the failing cold samples go QUIET at ~1.15s with
+ * a max silent gap of only ~1.5s — far under the 8s idle window). A bigger timeout
+ * changes nothing. See .planning/debug/gap-12-b-restart-probe-timeout.md
+ * §"Round 3 — APP-SIDE ROOT CAUSE — MARKER-LOSS".
+ *
+ * THE FIX: while `!settled`, RE-SEND the SAME-nonce `: <nonce>\r` marker on this
+ * interval. The marker is a stateless POSIX `:` no-op (D-01), so re-sending is
+ * idempotent — it changes no shell state. Once the shell reaches a ready prompt, a
+ * re-sent marker echoes as `<prompt>… <nonce>` on a `\n`-preceded PRODUCED line → the
+ * UNCHANGED `\n[^\n]*<nonce>` matcher matches cleanly (the typed-ahead redraw is no
+ * longer relied upon). The first `probe.matches()` disposes the listener and injects
+ * once, so extra markers never double-inject (typescript-reviewer item 2).
+ *
+ * ~1300ms: the failing cold samples reach a ready prompt by ~1.15s, so a first re-send
+ * shortly after lands a matchable echo right after readiness. The re-send loop is
+ * BOUNDED by READINESS_HARD_TIMEOUT_MS (which is NEVER reset by a re-send), so the
+ * worst-case re-send count is ⌈hard/interval⌉ ≈ 11 — no retry storm (§6.5 R&C).
+ */
+export const READINESS_RESEND_INTERVAL_MS = 1300;
+
+/**
  * Fixed (V7) ready-fail notice surfaced on timeout. It is a LITERAL string — it
  * interpolates NO startupCommand, nonce, or buffered bytes, so no secret can leak
  * to the renderer/logs (T-05.1-04). It rides the EXISTING onPtyStatus channel as
@@ -471,10 +498,18 @@ export class PtyManager {
       // probe-arm, NEVER reset). Both are cleared on a successful match. A const
       // object sidesteps the use-before-assign / prefer-const bind (the closures below
       // reference it before the timers are assigned).
-      const timers: { idle?: NodeJS.Timeout; hard?: NodeJS.Timeout } = {};
+      const timers: {
+        idle?: NodeJS.Timeout;
+        hard?: NodeJS.Timeout;
+        resend?: NodeJS.Timeout;
+      } = {};
       const clearTimers = (): void => {
         if (timers.idle) clearTimeout(timers.idle);
         if (timers.hard) clearTimeout(timers.hard);
+        // GAP-12-B: stop the marker re-send on match OR give-up so it can never
+        // outlive the probe (a successful match and the D-04 hard/idle give-up both
+        // route through here — §6.5 R&C: the re-send is cleared, no resource runaway).
+        if (timers.resend) clearInterval(timers.resend);
       };
       // The SHARED timeout-flush-and-notice give-up path (D-04). BOTH the idle timer
       // and the hard ceiling call this ONE closure, so the fallback is byte-identical
@@ -570,6 +605,28 @@ export class PtyManager {
       //     LOAD-BEARING). It fires the SAME flush-and-notice path.
       timers.idle = setTimeout(() => giveUpReadiness('idle'), READINESS_IDLE_TIMEOUT_MS);
       timers.hard = setTimeout(() => giveUpReadiness('hard'), READINESS_HARD_TIMEOUT_MS);
+      // GAP-12-B round-3 marker RE-SEND (the CONFIRMED fix). The CONFIRMED root cause is
+      // MARKER-LOSS, not a latency budget: the one-shot typed-ahead `: <nonce>\r` marker
+      // is NOT redrawn onto a matchable `\n…<nonce>` line on cold zle init, so the
+      // matcher never fires even though the shell reaches a ready prompt at ~1.15s. So
+      // while !settled we RE-WRITE the SAME `probe.marker` every READINESS_RESEND_INTERVAL_MS:
+      // the marker is a stateless POSIX ':' no-op (D-01) so re-sending the SAME nonce is
+      // idempotent (no shell-state change, T-12-11-01), and once the shell is at a ready
+      // prompt a re-sent marker echoes on a PRODUCED line → the UNCHANGED matcher fires.
+      // It writes ONLY the marker (no cmd, no new nonce). BOUNDS: the re-send is gated on
+      // !settled AND the stale-timeout guard (this.sessions.get(id)?.pty === child — never
+      // write to a replaced/dead child after a re-Start, T-12-11-04); it is cleared by
+      // clearTimers() on match AND on give-up (so it cannot outlive the probe); and it is
+      // CAPPED by the existing hard ceiling — the re-send NEVER resets READINESS_HARD_TIMEOUT_MS,
+      // so a chatty/never-ready shell still hits the hard wall and takes the UNCHANGED D-04
+      // give-up (§6.5 R&C: max re-sends ≈ ⌈hard/interval⌉, no retry storm). The first
+      // probe.matches() still disposes offProbe + injects exactly once (T-12-11-03).
+      timers.resend = setInterval(() => {
+        if (settled) return;
+        const live = this.sessions.get(id);
+        if (!live || live.pty !== child || !live.alive) return;
+        child.write(probe.marker);
+      }, READINESS_RESEND_INTERVAL_MS);
     }
 
     child.onExit(({ exitCode }) => {
