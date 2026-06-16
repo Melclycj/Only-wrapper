@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: milestone
 status: planning
-stopped_at: Completed 12-08-PLAN.md
-last_updated: "2026-06-16T09:32:06.518Z"
-last_activity: "2026-06-16 -- 12-09 gap-closure round 2 (GAP-12-C + GAP-12-E, renderer) DONE (commits ba1b529/151fea2/4937146): handleRestart pid<=0 clears the dead ptyPid so the broadcast error wins → IdleCard + notice (GAP-12-C, applyStatusEvent contract unchanged); new pure cwd-save-outcome reducer + handleSaveProfile compares submitted-vs-persisted cwd off the existing listSessions re-read and keeps the modal open with an inline drop notice (GAP-12-E, no new IPC, EXPECTED_API_KEYS stays 20); relocated the spike-005 surface diag stub → committed session-restart-error-surface.test.ts. SessionManager.tsx held < 800 (799). 469 unit GREEN (55 files), tsc + eslint(src,tests) clean."
+stopped_at: Completed 12-11-PLAN.md
+last_updated: "2026-06-16T20:30:00.000Z"
+last_activity: "2026-06-16 -- 12-11 gap-closure round 3 (GAP-12-B marker RE-SEND, main process) DONE (commits c541015/382eae5/520d9f7): confirmed root cause is one-shot MARKER-LOSS on cold zle init (NOT a latency budget — budget numbers UNCHANGED). Removed the temporary DIAG instrumentation (58bd829) — 0 DIAG/JW_PROBE_DIAG/jw-probe-timeline residue in src/. Added exported READINESS_RESEND_INTERVAL_MS=1300 + a setInterval in create()'s probe gate that re-writes the SAME-nonce probe.marker while !settled, guarded by the stale-timeout check (sessions.get(id).pty===child), BOUNDED by the EXISTING hard ceiling (never reset → no retry storm) and cleared in clearTimers() on match AND give-up. Matcher/inject-once/D-02/D-04/idle-extend unchanged; EXPECTED_API_KEYS stays 20. New electron-free opt-in DEBT-02 regression tests/integration/readiness-marker-loss.integration.test.cjs (one-shot no-match, re-send match, never-ready hard-ceiling) — NOT the spike-005 sleep driver; test:integration runs both regressions. 474 unit GREEN (55 files), tsc + eslint(src,tests) clean. NEXT: 12-12 (GAP-12-E precedence, renderer) then 12-13 BLOCKING cold-Dock-launch live re-gate (automated GREEN is NOT proof — DEBT-02 bit twice)."
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 24
-  completed_plans: 23
-  percent: 18
+  completed_plans: 24
+  percent: 19
 ---
 
 # Project State
@@ -25,8 +25,8 @@ See: .planning/PROJECT.md (updated 2026-06-10 — v1.1 milestone started)
 
 ## Current Position
 
-Phase: 12 (session-form-polish-edit-ux) — gap-closure round 3 PLANNED (plans 12-11/12-12/12-13 created + plan-checker PASS)
-Plan: round-3 gap-closure plans written — 12-11 (GAP-12-B marker RE-SEND) + 12-12 (GAP-12-E precedence) + 12-13 (BLOCKING cold-Dock-launch re-gate); next is /gsd-execute-phase 12 --gaps-only
+Phase: 12 (session-form-polish-edit-ux) — gap-closure round 3 IN PROGRESS (12-11 GAP-12-B marker RE-SEND DONE; 12-12 + 12-13 remain)
+Plan: 12-11 (GAP-12-B marker RE-SEND, main process) EXECUTED + committed (c541015/382eae5/520d9f7); next is 12-12 (GAP-12-E precedence, renderer) then the BLOCKING 12-13 cold-Dock-launch live re-gate
 Status: Phase 12 round-3 gap closure — GAP-12-B ROOT CAUSE FOUND (app-side data, 2026-06-16). /gsd-debug round 3 captured 5 in-app cold-Dock-launch samples (operator sudo purge → cold launch: first session restart failed 3×, second worked) via a temporary DIAG build (commit 58bd829). DECISIVE: GAP-12-B is NOT a latency budget — the failures go QUIET at ~1.15s at an already-ready prompt (max silent gap ~1.5s, far under the 8s idle) and the \n…<nonce> match never comes. The one-shot readiness marker, typed-ahead before a cold/heavy rc finishes, is LOST (zsh doesn't redraw it onto a matchable line on cold zle init); warm spawns redraw + match. Two prior rounds tuned the WRONG failure mode (synthetic slow-but-matching rc). FIX = marker RE-SEND (re-write the same-nonce ':' no-op while unsettled, bounded by the hard ceiling; a re-send to a ready prompt matches cleanly) + KEEP idle-extend; DEBT-02 regression from a MARKER-LOSS repro (not the sleep driver); remove the DIAG (58bd829) when the fix lands. Full record: .planning/debug/gap-12-b-restart-probe-timeout.md §"Round 3 — APP-SIDE ROOT CAUSE" + .planning/spikes/005-restart-probe-timeout/app-side-timeline-2026-06-16.jsonl. GAP-12-C already FIXED (ba70f8f, resolveSpawnResult). GAP-12-E (precedence, SessionManager.tsx:416) pending. nyquist STILL false. DONE: /gsd-plan-phase 12 --gaps wrote 12-11 (marker RE-SEND, bounded by the existing hard ceiling, reuse the unchanged \n…<nonce> matcher, KEEP idle-extend, REMOVE the DIAG, marker-LOSS regression NOT the sleep driver) + 12-12 (handleSaveProfile precedence — setRestartPromptId moved into the async block after the drop-check, gated on notice===null, invalid path BLOCKS Save) + 12-13 (round-3 re-gate); plan-checker PASS (0 blockers; 1 warning fixed = 12-12 verify command security.guard path was src/main→src/shared + dropped an always-false EXPECTED_API_KEYS grep, commit c32c7c5); plans committed 51bbf02. NEXT: /gsd-execute-phase 12 --gaps-only (12-11 + 12-12 parallel Wave 1; 12-13 = BLOCKING cold-Dock-launch human-verify, sudo purge → cold launch, covers B+C+E, nyquist flips ONLY on unqualified operator approval). 12-07 + 12-10 are spent round-1/2 re-gates. Last GSD step: /gsd-plan-phase 12 --gaps (round-3 plans created + verified).
 Last activity: 2026-06-16 -- 12-09 gap-closure round 2 (GAP-12-C + GAP-12-E, renderer) DONE (commits ba1b529/151fea2/4937146): handleRestart pid<=0 clears the dead ptyPid so the broadcast error wins → IdleCard + notice (GAP-12-C, applyStatusEvent contract unchanged); new pure cwd-save-outcome reducer + handleSaveProfile compares submitted-vs-persisted cwd off the existing listSessions re-read and keeps the modal open with an inline drop notice (GAP-12-E, no new IPC, EXPECTED_API_KEYS stays 20); relocated the spike-005 surface diag stub → committed session-restart-error-surface.test.ts. SessionManager.tsx held < 800 (799). 469 unit GREEN (55 files), tsc + eslint(src,tests) clean.
 
@@ -120,6 +120,7 @@ Phase 9 (UI-01 design tokens) gates the per-surface polish phases (10–13). Pha
 | Phase 12 P06 | ~12 min | 3 tasks | 7 files |
 | Phase 12 P08 | ~10 min | 3 tasks | 9 files |
 | Phase 12 P09 | ~25 min | 3 tasks | 5 files |
+| Phase 12 P11 | ~15 min | 3 tasks | 3 files |
 
 ## Accumulated Context
 

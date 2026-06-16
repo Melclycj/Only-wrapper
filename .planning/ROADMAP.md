@@ -53,7 +53,7 @@
 
 *Wave 1 (parallel — no file overlap: main vs renderer)*
 
-- [ ] 12-11-PLAN.md — Main process: GAP-12-B (marker RE-SEND) — re-write the SAME-nonce `: <nonce>` POSIX no-op while `!settled`, bounded by the EXISTING hard ceiling (a re-sent marker matches the UNCHANGED `\n[^\n]*<nonce>` matcher once the shell reaches a ready prompt; KEEP the idle-extend) + REMOVE the temporary DIAG instrumentation (commit 58bd829) + a DEBT-02 MARKER-LOSS regression (electron-free, opt-in — NOT the spike-005 sleep-heavy driver). Explicitly NOT another timeout-budget change. (req: SESS-05)
+- [x] 12-11-PLAN.md — Main process: GAP-12-B (marker RE-SEND) — re-write the SAME-nonce `: <nonce>` POSIX no-op while `!settled`, bounded by the EXISTING hard ceiling (a re-sent marker matches the UNCHANGED `\n[^\n]*<nonce>` matcher once the shell reaches a ready prompt; KEEP the idle-extend) + REMOVE the temporary DIAG instrumentation (commit 58bd829) + a DEBT-02 MARKER-LOSS regression (electron-free, opt-in — NOT the spike-005 sleep-heavy driver). Explicitly NOT another timeout-budget change. (req: SESS-05) — DONE 2026-06-16 (c541015/382eae5/520d9f7; READINESS_RESEND_INTERVAL_MS=1300; DIAG residue 0 in src/; 474 unit GREEN; EXPECTED_API_KEYS=20; awaiting 12-13 BLOCKING live re-gate)
 - [ ] 12-12-PLAN.md — Renderer: GAP-12-E (precedence) — move `setRestartPromptId` INTO the async block AFTER the cwd drop-check, gated on `notice === null`; an invalid path BLOCKS Save (inline reminder, modal stays open, restart prompt SUPPRESSED); only a clean save closes + (if live launch fields changed) prompts. No new IPC, EXPECTED_API_KEYS stays 20, SessionManager.tsx < 800 lines. (req: UI-04, SESS-06)
 
 *Wave 2 (blocked on 12-11/12)*
