@@ -1,6 +1,6 @@
 ---
 slug: gap-12-b-restart-probe-timeout
-status: awaiting_human_verify
+status: diagnosed
 trigger: "Phase 12 GAP-12-B — 'Restart to apply?' (Restart now) fails LIVE: the new startup command does not auto-run; the session prints 'Startup command didn't auto-run — shell wasn't ready in time.' (READINESS_FAIL_NOTICE). Operator changed cwd to a REAL existing dir, so this is the TERM-05 readiness probe timing out on the in-place restart respawn, NOT a CR-01 cwd rejection. ROUND 3 (reopened): the round-2 fix (12-08 dual-deadline 8s idle / 15s ceiling + 12-09 handleRestart else) STILL fails on the operator's real machine — both gaps reopened at the round-2 re-gate."
 created: 2026-06-16
 updated: 2026-06-16
@@ -22,7 +22,7 @@ gaps: ["GAP-12-B (primary — instrument the operator's real machine)", "GAP-12-
 
 ## Current Focus
 
-ROUND 3 — IN-APP INSTRUMENT BUILT (the standalone node-pty instrument RULED OUT every terminal-side cause; the timeout reproduces ONLY inside the PACKAGED app, lead = cold FIRST `zsh -l` after a Dock launch). This cycle instrumented `pty-manager.ts` create()'s probe block with gated (JW_PROBE_DIAG !== '0', ON by default), purely-additive, in-MEMORY probe-timeline capture that appends ONE secret-free JSON line to `~/jw-probe-timeline.jsonl` on SETTLE ONLY (match branch + giveUpReadiness). The probe behavior is UNCHANGED (timers, idle-extend, buffer forwarding, probe.matches, D-02, D-04, stale-timeout guard all untouched). `npx tsc --noEmit` = 0; `npm run package` = SUCCESS (out/Just-Wrapper-darwin-arm64/Just-Wrapper.app, arm64, 17:02 today); DIAG confirmed bundled inside app.asar. HUMAN-ACTION checkpoint: the operator cold-launches the packaged app from Finder/Dock, reproduces GAP-12-B a few times, and pastes back `~/jw-probe-timeline.jsonl`. The REAL fix is tuned to that measured app-side timeline — NO budget number / probe behavior changed this cycle. (GAP-12-C FIXED in the prior cycle — resolveSpawnResult reducer; both Start + Restart paths surface a failed spawn; regression-tested; suite GREEN. Round-1/2 root cause + evidence below remain valid.)
+ROUND 3 — **ROOT CAUSE FOUND (app-side data, overturns the budget theory).** The in-app DIAG instrument captured 5 real cold-app samples in `~/jw-probe-timeline.jsonl` (operator `sudo purge` then cold Dock launch): first session restart FAILED 3×, second session matched. **GAP-12-B is NOT a latency-budget defect — it is a one-shot MARKER-LOSS on cold/heavy rc init.** See "## Round 3 — APP-SIDE ROOT CAUSE" below. The fix is marker RE-SEND (retry), not a bigger timeout. (GAP-12-C FIXED in the prior cycle — resolveSpawnResult reducer; regression-tested; suite GREEN.) The DIAG instrumentation (commit 58bd829) is TEMPORARY and must be removed when the real fix lands.
 
 reasoning_checkpoint:
   hypothesis: "The READINESS_FAIL_NOTICE on Restart-now is the D-04 readiness-probe timeout firing because the login-shell rc init latency exceeded the FIXED 4000ms READINESS_TIMEOUT_MS budget. The probe match time ≈ rc-init time (the queued ':' marker only matches once the shell finishes rc and re-prompts onto a produced `\\n…<nonce>` line). It is NOT restart-specific; restart and dormant Start cross the same 4000ms wall at the same init latency."
@@ -335,3 +335,34 @@ reasoning_checkpoint:
 - **NO budget number changed.** Per the round-3 contract, the budget/mechanism is tuned ONLY after the operator's measured timeline is in hand. This is the human-action checkpoint.
 
 - **next_action (round 3, post-checkpoint):** WAIT for the operator's pasted `~/jw-probe-timeline.jsonl` (the IN-APP timeline from a few cold-Dock-launch GAP-12-B repro attempts on the packaged /Users/jerry/Project/Just-wrapper/out/Just-Wrapper-darwin-arm64/Just-Wrapper.app). Then disambiguate from the REAL app-side outcomes: idle-timeout w/ a silent gap >8000ms → reset-on-byte is the wrong liveness signal (larger idle window or a different signal); hard-timeout (total >15000ms) → raise the ceiling (and weigh a 'press Enter to run' affordance); a `match` outcome in-app but the command still didn't run → a DIFFERENT app-side spawn/lifecycle factor (inspect ptyPid/respawn ordering, not the budget); no log line at all → the probe path was not reached (re-check the repro). Tune the budget/mechanism to that measured reality (NOT another guess), REMOVE the 5 DIAG blocks, fold the real numbers into the DEBT-02 regression, re-verify live; nyquist flips only at the round-3 re-gate.
+
+## Round 3 — APP-SIDE ROOT CAUSE (2026-06-16) — MARKER-LOSS, not a latency budget
+
+The operator ran the DIAG build (`sudo purge` → cold Dock launch → repro). `~/jw-probe-timeline.jsonl`, 5 samples, cwd=~/Thesis/Thesis-Work, idle=8000/hard=15000:
+
+| # | outcome | match | firstByte | MAX-SILENT-GAP | bytes | chunks |
+|---|---------|-------|-----------|----------------|-------|--------|
+| 1 | match | 1354ms | 2ms | 1352ms | 279 | 3 |
+| 2 | **idle-timeout** | none | 0ms | **1152ms** | 406 | 5 |
+| 3 | **idle-timeout** | none | 2ms | **1488ms** | 406 | 5 |
+| 4 | **idle-timeout** | none | 2ms | **1382ms** | 406 | 5 |
+| 5 | match | 1138ms | 1ms | 1136ms | 279 | 3 |
+
+Operator note: first session restart FAILED 3× (cold), second session WORKED (warm). Matches the data (#2/3/4 cold-fail, #1/5 warm-match — #1 is a warm-ish bare control / #5 the second session).
+
+**Decisive read — the failures are NOT a long stall:**
+- Every failed run's MAX-SILENT-GAP is only ~1.1-1.5s, FAR under the 8000ms idle window. The idle timer did NOT fire from a long mid-init stall. It fired because the shell produced ~406 bytes, **went QUIET at ~1.15s (lastByte@1153ms) at an already-ready prompt**, and the `\n…<nonce>` match NEVER came → idle expired 8s after that final silence. **A bigger idle/hard budget changes nothing — the shell is idle at a ready prompt with no pending output.**
+- Per-chunk: BOTH match and fail start with chunk1 = 33 bytes @ ~0ms = the tty raw-echo of the typed-ahead marker `: <nonce>\r`. So the marker IS delivered + echoed immediately, both cold and warm.
+  - WARM/MATCH (#1,#5): 3 chunks — chunk1 (marker echo, 33b) then at ~1.15-1.35s two chunks (130+116b) that include the shell REDRAWING the queued marker onto a produced `\n…<nonce>` line → match.
+  - COLD/FAIL (#2,#3,#4): 5 chunks — chunk1 (marker echo, 33b) then at ~1.15s FOUR chunks (89+123+89+72=373b) of cold rc output, but NO `\n…<nonce>` redraw line → no match, ever.
+
+**ROOT CAUSE (corrected):** The readiness probe writes its marker `: <nonce>\r` ONCE at t≈0, typed-AHEAD before the login shell's rc finishes. The match relies on zsh's zle, once it initializes, REDRAWING that queued input onto a produced `\n…<nonce>` line. On a WARM/fast rc the redraw happens → match. On a COLD/heavy rc init the queued marker is NOT redrawn onto a matchable line (consumed/discarded/interleaved during the cold zle init) → the one-shot marker is LOST → no match → idle-timeout at a shell that's actually ready. This is a MARKER-DELIVERY ROBUSTNESS defect, NOT a latency budget. The round-1/round-2 budget work (4000ms → 8000/15000ms idle+hard) fixed the SYNTHETIC failure mode (sleep-heavy rc where the marker DOES eventually redraw, just late) — which is why every synthetic test + the warm smoke pass — but never touched the REAL cold marker-loss.
+
+**FIX DIRECTION (for /gsd-plan-phase 12 --gaps — validate with a real repro, do not hand-wave):**
+- RE-SEND the marker while `!settled`: re-write `: <nonce>\r` (SAME nonce — any matching echo is success) on a short interval (e.g. every ~1200-1500ms) and/or on a "shell went quiet after producing output" signal, bounded by the existing hard ceiling. Once the shell reaches a ready prompt, a re-sent marker echoes as `<prompt>… <nonce>` on a line preceded by `\n` → `\n[^\n]*<nonce>` MATCHES cleanly (the typed-ahead redraw is no longer relied upon). The specialist's round-1 "retry the marker once" (LOOKS_GOOD) is, per this data, THE fix, not defense-in-depth.
+- Safety: each re-send is a stateless `:` no-op (D-01); pre-match bytes stay buffered + unforwarded (D-02); the FIRST match disposes the listener so exactly one inject (D-04 preserved). Keep the dual-deadline as the bounded give-up safety net.
+- KEEP idle-extend (it correctly waits out a genuinely slow-but-progressing rc) AND add the re-send (fixes marker-loss). Both are needed.
+- DEBT-02 regression: build a repro of MARKER-LOSS (e.g. a fake shell / wrapper that swallows or fails to redraw the FIRST typed-ahead marker, then a re-send recovers) — NOT the spike-005 sleep-heavy driver (that models the already-fixed slow-but-matching mode). Then a mandatory live re-verify on the operator's machine (cold Dock launch).
+- REMOVE the 5 DIAG blocks (commit 58bd829) when the fix lands; the standalone instrument + `operator-probe-timeline.cjs` stay as references.
+
+status: root cause CONFIRMED with app-side evidence; fix DIRECTION set; implementation routed to /gsd-plan-phase 12 --gaps (with GAP-12-E). nyquist stays false until the round-3 re-gate.
