@@ -382,6 +382,7 @@ export function SessionManager(): React.JSX.Element {
     ) => {
       // GAP-12-B (12-06): decide the restart-to-apply prompt from the PRE-save row,
       // SYNCHRONOUSLY, BEFORE ptyUpdateProfile/rehydrate overwrite the launch fields.
+      // The SET is deferred behind the drop-check below (GAP-12-E precedence).
       const promptId = restartPromptIdFor(
         sessions.find((s) => s.logicalId === id) ?? null,
         fields,
@@ -400,17 +401,19 @@ export function SessionManager(): React.JSX.Element {
         // existing listSessions re-read so the drop compare runs against main's
         // POST-validation persisted cwd, not the optimistic local guess (no new bridge key).
         const authoritative = await rehydrateProfiles();
-        // GAP-12-E: main DROPPED the cwd (CR-01 kept the prior dir) → keep the modal OPEN
-        // with the inline notice; a valid save (or no cwd change) clears it and closes. The
-        // renderer adds NO existence check — cwdDropNoticeFor only REPORTS main's outcome.
+        // GAP-12-E precedence: decide the cwd-drop BEFORE the restart prompt. A DROP
+        // (CR-01 kept the prior dir) keeps the modal OPEN with the inline notice and
+        // SUPPRESSES the restart prompt (never respawn against a path main rejected). Only
+        // a CLEAN save (notice === null) closes the modal AND applies the deferred prompt
+        // (if a live session's launch fields changed). cwdDropNoticeFor only REPORTS main's
+        // outcome — the renderer adds NO existence check.
         const notice = cwdDropNoticeFor(id, fields.cwd, authoritative);
         setCwdDropNotice(notice);
-        if (notice === null) cancelEdit();
+        if (notice === null) {
+          cancelEdit();
+          if (promptId !== null) setRestartPromptId(promptId);
+        }
       })();
-      // GAP-12-B: open the prompt AFTER the save persists (so main already holds the new
-      // values when the user clicks Restart now). null promptId → nothing prompts. A
-      // dropped cwd keeps the modal open; the prompt (if any) still queues behind it.
-      if (promptId !== null) setRestartPromptId(promptId);
     },
     [rehydrateProfiles, sessions, cancelEdit],
   );
