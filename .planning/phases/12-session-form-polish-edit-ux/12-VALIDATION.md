@@ -231,6 +231,15 @@ round-2 fixes. Cleared to present to the operator (T-10-10-01: never present a k
 app). **`nyquist_compliant` NOT flipped — awaiting the BLOCKING operator human-verify (Task 2)
 on the operator's own machine.**
 
-**Verdict (Task 2/3): PENDING** — the BLOCKING operator human-verify of GAP-12-B / GAP-12-C /
-GAP-12-E on the operator's OWN machine has not yet been run. `nyquist_compliant` stays `false`
-until the operator's explicit, unqualified "approved".
+**Verdict (Task 2/3) — 2026-06-16: QUALIFIED FAIL.** Operator ran the BLOCKING human-verify on
+their own machine. All 3 round-2 gaps reopened: GAP-12-B timing STILL fails live ("the tiem
+failed, the rest working fine") — the 8s-idle/15s-ceiling budget is insufficient on the real
+rc-init, confirming the round-1 blind spot (synthetic `test:integration` does not reproduce it);
+GAP-12-C a failed restart surfaces nothing ("nothing happend, after i start it just returned to
+home") — `handleStart`'s pid<=0 path has no error surfacing, unlike the fixed `handleRestart`;
+GAP-12-E wrong logic — the "Restart to apply?" prompt pops before the async drop-check resolves
+(precedence bug at SessionManager.tsx:416), operator wants an invalid path to BLOCK Save with the
+inline reminder. **`nyquist_compliant` stays `false`.** Per-item words + code-confirmed root
+causes + round-3 fix directions recorded in `12-VERIFICATION.md §"Re-Gate 2 Result"`. Route:
+`/gsd-debug` (B live byte-timeline on the operator's machine + C Start-vs-Restart surfacing) →
+`/gsd-plan-phase 12 --gaps` (E precedence fix plannable now) → re-execute → round-3 re-gate.
