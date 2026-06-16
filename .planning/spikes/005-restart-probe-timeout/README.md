@@ -34,6 +34,30 @@ Run: `node .planning/spikes/005-restart-probe-timeout/drive-restart-probe.cjs`
 The heavy-init (ZDOTDIR-sleep) scenario in driver 2 is the DETERMINISTIC repro the DEBT-02
 fix-plan test should fold in (it makes the timeout fire on demand without needing a slow host).
 
+## Round 3 (2026-06-16) — OPERATOR instrument (measure, don't guess a 3rd budget)
+
+`operator-probe-timeline.cjs` — a SELF-CONTAINED diagnostic the OPERATOR runs ONCE on
+their real machine. The round-1 (4000ms) and round-2 (8000ms-idle / 15000ms-hard) budgets
+BOTH failed live because the operator's real rc-init timeline was never measured. This
+instrument ports `buildPosixProbe` VERBATIM and mirrors the SHIPPED dual-deadline EXACTLY
+(`READINESS_IDLE_TIMEOUT_MS=8000` reset-on-byte + `READINESS_HARD_TIMEOUT_MS=15000`
+absolute), then logs with ms timestamps: every probe-byte arrival (size + head/tail peek,
+no secrets), the `\n…<nonce>` match OR which deadline trips (idle vs hard) + why, the
+longest SILENT gap between output bytes, and a bare first-prompt control. It runs against
+the operator's real `zsh -l` + actual rc, in the cwd they pass (per-dir init matters),
+3 runs to show jitter. Output: a pasteable human summary + `operator-timeline.jsonl`.
+
+Run (from the repo root, pointing at the cwd that failed):
+
+    node .planning/spikes/005-restart-probe-timeout/operator-probe-timeline.cjs "/the/cwd/you/edited/into"
+
+Validated on the dev box across all three outcomes before hand-off: MATCH (~1031-1427ms
+fast rc), IDLE-TIMEOUT (a silent >8s rc gap → "reset-on-byte is the wrong signal"), and
+HARD-TIMEOUT (chatty-but-never-ready rc, total >15s → "raise the ceiling"). Whichever the
+operator hits, the summary disambiguates the three round-3 hypotheses. The budget/mechanism
+is tuned to their MEASURED numbers (NOT another synthetic guess) and folded into the DEBT-02
+regression only after their timeline is in hand.
+
 ## GAP-12-C diagnosis tests (kept as .txt — outside the vitest glob)
 
 - `gap-12-c-bad-cwd-restart.diag.test.ts.txt` (main; 3 pass when run as a .test.ts): updateProfile

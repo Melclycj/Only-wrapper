@@ -1,6 +1,6 @@
 ---
 slug: gap-12-b-restart-probe-timeout
-status: investigating
+status: awaiting_human_verify
 trigger: "Phase 12 GAP-12-B — 'Restart to apply?' (Restart now) fails LIVE: the new startup command does not auto-run; the session prints 'Startup command didn't auto-run — shell wasn't ready in time.' (READINESS_FAIL_NOTICE). Operator changed cwd to a REAL existing dir, so this is the TERM-05 readiness probe timing out on the in-place restart respawn, NOT a CR-01 cwd rejection. ROUND 3 (reopened): the round-2 fix (12-08 dual-deadline 8s idle / 15s ceiling + 12-09 handleRestart else) STILL fails on the operator's real machine — both gaps reopened at the round-2 re-gate."
 created: 2026-06-16
 updated: 2026-06-16
@@ -22,7 +22,7 @@ gaps: ["GAP-12-B (primary — instrument the operator's real machine)", "GAP-12-
 
 ## Current Focus
 
-GAP-12-B root cause CONFIRMED (see Resolution + Evidence). Now confirming/denying GAP-12-C.
+ROUND 3. GAP-12-C FIXED (renderer handlers — resolveSpawnResult reducer; both Start + Restart paths surface a failed spawn; regression-tested; suite GREEN). GAP-12-B operator instrument BUILT + validated (all 3 outcomes) — HUMAN-ACTION checkpoint: the operator runs it on their machine and pastes the real probe timeline back; only then is the budget/mechanism tuned to their measured reality. NO budget number changed this cycle. (Round-1/2 root cause + evidence below remain valid.)
 
 reasoning_checkpoint:
   hypothesis: "The READINESS_FAIL_NOTICE on Restart-now is the D-04 readiness-probe timeout firing because the login-shell rc init latency exceeded the FIXED 4000ms READINESS_TIMEOUT_MS budget. The probe match time ≈ rc-init time (the queued ':' marker only matches once the shell finishes rc and re-prompts onto a produced `\\n…<nonce>` line). It is NOT restart-specific; restart and dormant Start cross the same 4000ms wall at the same init latency."
@@ -197,12 +197,13 @@ verification: |
       the rejection is SWALLOWED for the deleted-dir edge case; a bare error without a notice
       DOES flip an identity row to the Inactive List.
 
-files_changed: []  # diagnose-only — NO production code changed. Diagnosis artifacts created:
-  # - .planning/spikes/005-restart-probe-timeout/drive-restart-probe.cjs (throwaway driver)
-  # - .planning/spikes/005-restart-probe-timeout/drive-restart-probe-2.cjs (throwaway driver)
-  # - .planning/spikes/005-restart-probe-timeout/capture-restart-probe*.jsonl (forensic logs)
-  # - src/main/__tests__/gap-12-c-bad-cwd-restart.diag.test.ts (diagnosis test — REMOVE/relocate in fix plan)
-  # - src/renderer/__tests__/gap-12-c-surface.diag.test.ts (diagnosis test — REMOVE/relocate in fix plan)
+files_changed:  # ROUND 3 — GAP-12-C production fix applied (renderer handlers only). GAP-12-B is instrument-only (no prod change until the operator's data is in hand).
+  - src/renderer/session-lifecycle-actions.ts          # NEW pure reducer resolveSpawnResult(row,{pid}) — single source of truth for both Start + Restart
+  - src/renderer/SessionManager.tsx                     # handleStart / handleStartNoCmd / handleRestart all route pid<=0 through resolveSpawnResult → visible error card
+  - src/renderer/__tests__/session-restart-error-surface.test.ts  # round-3 regression: BOTH Start (dormant) + Restart (live) paths surface a failed spawn; ITEM-4 guard stays GREEN
+  - .planning/spikes/005-restart-probe-timeout/operator-probe-timeline.cjs  # NEW GAP-12-B operator instrument (plain node + node-pty, mirrors the shipped dual-deadline)
+  - .planning/spikes/005-restart-probe-timeout/README.md  # documents the operator instrument + run instructions
+  # Round-1 diagnosis artifacts (unchanged): drive-restart-probe.cjs / drive-restart-probe-2.cjs / capture-restart-probe*.jsonl
 
 ## Specialist Review (typescript-reviewer, 2026-06-16 — fix-direction sanity check, diagnose-only)
 
@@ -275,3 +276,36 @@ Round-1 confirmed the swallow and round-2 (12-09) fixed `handleRestart`'s `pid<=
 - Branch `gsd/phase-03-multi-session-session-lifecycle` (shared dev). Do NOT flip `nyquist_compliant`. Do not regress the working dormant-Start auto-run / terminal fidelity.
 
 - **next_action (round 3):** Build the GAP-12-B operator instrument → human-action checkpoint (operator runs it on their machine, pastes the timeline). In parallel, reproduce + fix the GAP-12-C handleStart pid<=0 path locally with a regression test.
+
+---
+
+## Round 3 progress (2026-06-16) — GAP-12-C FIXED, GAP-12-B instrument BUILT (awaiting operator)
+
+### Round-3 reasoning checkpoint (GAP-12-C — the fixable workstream)
+
+reasoning_checkpoint:
+  hypothesis: "The operator's 'after I start it just returned to home' is the dormant→Start (handleStart) path's UNFIXED pid<=0 swallow. handleStart had only `if (pid > 0)`; on a failed spawn (pid -1) it did NOTHING, and main's broadcast error carries a `notice` so applyStatusEvent's ITEM-4 guard keeps the row INFORMATIONAL (status stays not_started). Net: the row stays on the DORMANT IdleCard (the Start button), and the IdleCard error branch (isError = status==='error') never shows the captured message — it looks like nothing happened ('returned to home')."
+  confirming_evidence:
+    - "Code read: handleStart (SessionManager.tsx:259-278) had NO else on pid<=0 — only the pid>0 optimistic-running flip; the 12-09 fix touched handleRestart ONLY."
+    - "applyStatusEvent (apply-status-event.ts:61-66): an event WITH a `notice` returns `{...row, errorMessage}` and NEVER changes status (ITEM-4 guard). So the broadcast error+notice cannot flip a dormant row to 'error' on its own."
+    - "IdleCard.tsx:49 + 111 + 128: the error branch is gated on `isError = session.status === 'error'`; a not_started row renders the DORMANT Start branch, hiding errorMessage."
+    - "REPRODUCED: a focused test modelling the current handleStart no-op on pid<=0 → status stays 'not_started', errorMessage captured but the error branch is NOT shown (isError=false). The swallow is real on the Start path."
+  falsification_test: "If handleStart had ALREADY flipped pid<=0 to 'error' (like handleRestart's fix was assumed to do for both), the repro would have shown status='error'. It showed status='not_started' — the swallow is confirmed for the Start path specifically."
+  fix_rationale: "Extract a SINGLE pure reducer resolveSpawnResult(row, {pid}) used by BOTH handleStart and handleRestart so the two paths can never diverge again. pid<=0 → flip to status:'error' + drop the dead pid + preserve any notice-supplied errorMessage (fallback literal if the invoke reply beats the notice push). status:'error' makes the row a CARD (activeIsCard) AND trips the IdleCard error branch → the failure surfaces where the user acted. Fix is in the renderer handlers, NOT applyStatusEvent — the ITEM-4 guard stays GREEN."
+  blind_spots: "GAP-12-C's reachable trigger is a deleted-after-save / corrupt-store cwd reaching create() (updateProfile rejects a bad cwd at save, keeping the prior valid one — round 1 finding). The normal edit→Start with a freshly-typed bad cwd is NOT the pid<=0 path (main drops it at save). The fix is still correct + necessary for the deleted-dir edge AND hardens BOTH paths uniformly; the operator should verify by deleting a session's cwd dir on disk, then Start (and Restart)."
+
+### GAP-12-C — FIXED (this cycle, locally reproduced + regression-tested)
+
+- **Reproduced:** modelled the current handleStart pid<=0 no-op composed with applyStatusEvent's notice-guard → the dormant row stays not_started with the error invisible (the operator's "returned to home"). RED confirmed before the fix.
+- **Fixed:** added a pure `resolveSpawnResult(row, {pid})` reducer in `src/renderer/session-lifecycle-actions.ts` (the existing home for renderer lifecycle reducers, alongside resolveRemoveAction/flipToDormant). Wired `handleStart`, `handleStartNoCmd`, AND `handleRestart` through it (SessionManager.tsx). pid<=0 now flips to a VISIBLE 'error' card on EVERY spawn path; pid>0 keeps the optimistic running flip. The render-path follow-up is intrinsic: status:'error' → activeIsCard + IdleCard isError branch, so a bad-cwd RESTART surfaces too (not just Start).
+- **NOT in applyStatusEvent:** the ITEM-4 notice-informational guard is untouched (`apply-status-event.test.ts` GREEN). EXPECTED_API_KEYS stays 20; no new IPC.
+- **Regression test:** extended `src/renderer/__tests__/session-restart-error-surface.test.ts` with round-3 blocks covering BOTH Start (dormant) and Restart (live) paths: pid<=0 → status='error' + dead pid dropped + isCard true + error branch shown; notice-supplied errorMessage preserved (no clobber) when it lands first; pid>0 → running + stale error cleared.
+- **Suite:** tsc 0 · scoped lint clean · unit 474 passed (was 469; +5 round-3 assertions) · the ITEM-4 guard + 12-09 handleRestart contracts still GREEN.
+
+### GAP-12-B — instrument BUILT, validated, ready for the operator (HUMAN-ACTION checkpoint)
+
+- Built `.planning/spikes/005-restart-probe-timeout/operator-probe-timeline.cjs`: a self-contained plain-node + node-pty diagnostic (NO Electron build). Ports `buildPosixProbe` VERBATIM and mirrors the SHIPPED dual-deadline EXACTLY (idle=8000 reset-on-byte + hard=15000 absolute). Logs, with ms timestamps: every probe-byte arrival (size + head/tail peek, no secrets), the `\n…<nonce>` match OR which deadline trips (idle vs hard) + why, the longest SILENT gap between bytes, and a bare first-prompt control. Runs against the operator's real `zsh -l` + actual rc in a cwd they pass, 3 runs for jitter. Output: a pasteable human summary + `operator-timeline.jsonl`.
+- **Validated on the dev box across ALL THREE outcomes** before hand-off: MATCH (~1031-1427ms fast rc), IDLE-TIMEOUT (a deterministic silent >8s rc gap → confirms the "reset-on-byte is the wrong signal" hypothesis is detectable), HARD-TIMEOUT (chatty-every-2s never-ready rc, total >15s → confirms the "raise the ceiling" hypothesis is detectable). jsonl validated as well-formed + secret-free (only sizes + short peeks).
+- **NO budget number changed.** Per the round-3 contract, the budget/mechanism is tuned ONLY after the operator's measured timeline is in hand. This is the human-action checkpoint.
+
+- **next_action (round 3, post-checkpoint):** WAIT for the operator's pasted timeline + operator-timeline.jsonl. Then disambiguate: idle-timeout w/ silent gap >8s → larger idle window or a different liveness signal; hard-timeout → raise the ceiling (and weigh a 'press Enter to run' affordance); match-on-this-cwd but app still fails → the failing cwd has heavier per-dir init, ask them to re-run pointing at the exact folder. Fold the REAL numbers into the DEBT-02 regression; re-verify live; nyquist flips only at the round-3 re-gate.
