@@ -239,6 +239,7 @@ The 5 v1.1 todo items (3 SESS UX + 2 code-review debt) are now formal requiremen
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260605-ki7 | Phase-4 sidebar UI polish: collapsed add-button shows only "+"; row controls become edit/delete (+conditional restart) icon buttons | 2026-06-05 | 0ea3d68 | [260605-ki7-phase-4-sidebar-ui-polish-collapsed-add-](./quick/260605-ki7-phase-4-sidebar-ui-polish-collapsed-add-/) |
+| 260621-dw1 | Design-audit Wave 1 (of 4): WCAG-AA contrast pass (--color-accent 0.62→0.55, --ink-faint 0.66→0.55); wrote missing .status-badge/.status-dot CSS so the status pill renders in IdentityHeader + IdleCard (was colorless text); decoupled --accent-running from the interactive accent. CSS-only, 480/480 tests pass, ui-lab before/after captured. Awaiting human visual sign-off before Wave 2. Source: design/DESIGN-AUDIT-2026-06-21.md | 2026-06-21 | d2b4562 | [260621-dw1-design-wave1-token-contrast-status-badge](./quick/260621-dw1-design-wave1-token-contrast-status-badge/) |
 
 ## Deferred Items
 
