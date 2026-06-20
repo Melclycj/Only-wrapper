@@ -58,6 +58,6 @@
 
 *Wave 2 (blocked on 12-11/12)*
 
-- [ ] 12-13-PLAN.md — Re-gate (round 3): package the fix branch + full suite + both integration regressions + BLOCKING operator human-verify on a COLD Dock launch (`sudo purge` then cold launch — the ONLY condition that reproduces marker-loss) covering GAP-12-B (cold Restart + cold Start auto-run) + GAP-12-C (visible failed-spawn error) + GAP-12-E (invalid path blocks Save). nyquist_compliant flips true ONLY on explicit unqualified approval of all three; automated GREEN is NOT proof (DEBT-02 bit twice). (req: UI-04, SESS-05, SESS-06)
+- [x] 12-13-PLAN.md — Re-gate (round 3): package the fix branch + full suite + both integration regressions + BLOCKING operator human-verify on a COLD Dock launch (`sudo purge` then cold launch — the ONLY condition that reproduces marker-loss) covering GAP-12-B (cold Restart + cold Start auto-run) + GAP-12-C (visible failed-spawn error) + GAP-12-E (invalid path blocks Save). nyquist_compliant flips true ONLY on explicit unqualified approval of all three; automated GREEN is NOT proof (DEBT-02 bit twice). (req: UI-04, SESS-05, SESS-06)
 
 **UI hint**: yes

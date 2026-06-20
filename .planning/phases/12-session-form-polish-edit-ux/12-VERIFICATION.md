@@ -113,3 +113,29 @@ Round-2 fixes landed (12-08 dual-deadline readiness budget; 12-09 renderer GAP-1
 - **GAP-12-C — FIXED** (commit `ba70f8f`): the unfixed `handleStart` pid<=0 path. A shared `resolveSpawnResult` reducer now surfaces a failed spawn on Start AND Restart; regression-tested; suite GREEN (474 unit). Live re-verify rides the round-3 re-gate.
 - **GAP-12-B — ROOT CAUSE CORRECTED: it is NOT a latency budget.** An in-app DIAG build captured 5 cold-Dock-launch samples: the failures go QUIET at ~1.15s at an already-ready prompt with a max silent gap of only ~1.5s (far under the 8s idle), and the `\n…<nonce>` match never comes — a bigger timeout changes nothing. The one-shot readiness marker (`: <nonce>\r`), typed-ahead before a cold/heavy rc finishes, is LOST (zsh doesn't redraw it onto a matchable line on the cold zle init); warm spawns redraw it and match. The two prior rounds tuned the wrong failure mode (synthetic slow-but-matching rc). **Fix = marker RE-SEND** (re-write the same-nonce `:` no-op while unsettled, bounded by the hard ceiling; once the shell is at a ready prompt a re-send matches cleanly) + KEEP idle-extend; build the DEBT-02 regression from a MARKER-LOSS repro, not the sleep-heavy driver; remove the DIAG (commit `58bd829`) when the fix lands.
 - **Remaining for `/gsd-plan-phase 12 --gaps`:** GAP-12-B (marker re-send) + GAP-12-E (precedence) → execute → round-3 re-gate (BLOCKING operator human-verify, cold Dock launch). `nyquist_compliant` stays `false`.
+
+---
+
+## RE-GATE 3 VERDICT (2026-06-20, BLOCKING cold-Dock-launch human-verify — plan 12-13): QUALIFIED FAIL
+
+`nyquist_compliant` stays **false**; Phase 12 does NOT ship; routes to round 4.
+
+Round-3 fixes landed (12-11 marker RE-SEND + DIAG removal + marker-loss regression; 12-12 GAP-12-E precedence) and the automated floor was GREEN (tsc 0 / scoped lint clean / unit 56 files–480 tests / marker-loss regression `(a) one-shot fail · (b) re-send match@48ms · (c) never-ready hard@302ms` / heavy-init regression GREEN / `npm run package` PACKAGED-CLEAN — DIAG absent from the bundled `app.asar`). Operator ran the BLOCKING cold-Dock-launch human-verify (`sudo purge` → cold Dock launch). Verdict: **QUALIFIED FAIL** — GAP-12-B's core works live but leaks the probe marker; GAP-12-C passes; GAP-12-E needs a redesign. The hardest root cause (cold marker-LOSS) is now CONFIRMED FIXED live — the auto-run works cold.
+
+### Operator verdict (verbatim)
+
+| Item | Verdict | Operator's words |
+|------|---------|------------------|
+| 1 · GAP-12-B (restart/start auto-runs the new command, cold) | ⚠️ PASS-core + NEW visual defect | "11, yes it worked, but there are two line printed echo Hello … `: __JW_READY_41f631b67097a7bd__` (printed ×2) … echo Hello   that was not expected." |
+| 2 · GAP-12-C (failed spawn surfaces visibly) | ✅ PASS + design-Q answered | "2, work, but when the repo is alive but folder was removed, what should be done" |
+| 3 · GAP-12-E (invalid path blocks Save) | ❌ FAIL (redesign) | "3, not working ideally, use inline live detection, this revert the previous design decision, but is considered the better option" |
+
+### Round-4 scope (reopened / new / closed)
+
+| Gap | Status | Sev | Finding | Fix direction |
+|-----|--------|-----|---------|---------------|
+| GAP-12-B-2 (marker echo leak) | **NEW** | high | The marker RE-SEND fixed the cold auto-run (GAP-12-B core CONFIRMED working live), but the re-sent `: <nonce>` markers are now VISIBLE: the cold shell, once awake, echoes every queued marker and the probe's withhold/scrub-until-match only suppressed the matching line, leaking the rest (operator saw `: __JW_READY_41f631b67097a7bd__` ×2 before the command ran). Violates the invisible-probe contract (V7). NOT a security leak (random nonce, no sensitive data) — a fidelity/cleanliness defect. | Scrub ALL nonce-bearing echo lines from the withheld buffer before flush (not just up to the first match) so no `__JW_READY_*` line ever reaches the terminal, on cold OR warm spawns. Re-verify on a cold Dock launch. |
+| GAP-12-C | **CLOSED — PASS + decision** | — | Failed spawn now surfaces visibly on Start AND Restart (operator confirmed live). Operator's design question — "live session, working folder removed from disk under it" — **DECIDED 2026-06-20: leave it to the shell (no special handling)**, matching the real-terminal-fidelity Core Value; the GAP-12-C boundary (surface spawn-time failures) is the right scope. | No code. Decision recorded; do NOT add a live-session cwd monitor/watcher. |
+| GAP-12-E-2 (live inline cwd detection) | **REOPENED — redesign** | high | The 12-12 precedence fix (block Save on a save-time drop, inline reminder after click) works but the operator judges it not ideal: an invalid path should be flagged LIVE as the user types, not only after clicking Save. **Operator directive 2026-06-20 — intentional reversal of the prior "main is sole validator / renderer format-only / no live existence check / EXPECTED_API_KEYS stays 20" decision, endorsed as the better option.** | Add a read-only main IPC (e.g. `pathExists(path)`) → **EXPECTED_API_KEYS 20 → 21** (security.guard updated in lockstep); renderer debounced live-check while typing the cwd → red inline reminder + disable Save when the absolute path does not exist. main stays validator of record (new IPC is read-only; CR-01 `isValidCwd` at spawn unchanged). The 12-12 precedence/block-on-drop stays as the fallback. |
+
+**Route:** `/gsd-plan-phase 12 --gaps` (round 4 — GAP-12-B-2 marker-echo scrub + GAP-12-E-2 live cwd detection w/ new read-only bridge key; GAP-12-C closed) → execute → **round-4 re-gate** (BLOCKING cold-Dock-launch human-verify, supersedes 12-13). `nyquist_compliant` stays `false`.
