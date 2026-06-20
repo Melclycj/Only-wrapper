@@ -24,7 +24,7 @@
   --bg-sunk: oklch(0.955 0.01 85);
   --ink: oklch(0.32 0.012 70);
   --ink-soft: oklch(0.5 0.012 70);
-  --ink-faint: oklch(0.66 0.01 75);
+  --ink-faint: oklch(0.55 0.012 75); /* DESIGN-AUDIT wave-1: 0.66→0.55 for WCAG AA on white (3.11→~4.85) — was sub-AA for breadcrumb/helper/form-hint text */
   --line: oklch(0.91 0.008 80);
   --line-soft: oklch(0.94 0.006 80);
 
@@ -37,13 +37,13 @@
   --scrim: oklch(0.255 0.018 264 / 0.45); /* modal overlay */
 
   /* Brand colors */
-  --color-accent: oklch(0.62 0.14 248); /* the 28× solid blue */
-  --color-accent-strong: oklch(0.58 0.14 248); /* hover */
+  --color-accent: oklch(0.55 0.15 248); /* DESIGN-AUDIT wave-1: darkened 0.62→0.55 so white-on-accent hits WCAG AA (3.62→4.83). INTERACTIVE blue only — running-status blue is --accent-running (decoupled below) */
+  --color-accent-strong: oklch(0.51 0.15 248); /* hover (kept ~0.04 darker than accent) */
   --color-danger: oklch(0.58 0.16 25); /* the error red */
   --color-danger-strong: oklch(0.54 0.16 25); /* destructive hover */
 
   /* Status accents — consumed by status-colors.ts via var() (D-03). */
-  --accent-running: var(--color-accent); /* blue */
+  --accent-running: oklch(0.62 0.14 248); /* DESIGN-AUDIT wave-1 P0-C: decoupled from --color-accent (was var()) so 'running' (bright blue) ≠ 'clickable' (now-darker --color-accent). Re-hue to cyan is a Wave-4 option */
   --accent-finished: oklch(0.6 0.13 150); /* green */
   --accent-idle: oklch(0.64 0.02 260); /* slate (stopped + not_started) */
   --accent-error: var(--color-danger); /* red */

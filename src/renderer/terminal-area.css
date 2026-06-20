@@ -239,6 +239,38 @@
   justify-self: end;
 }
 
+/* ── Status badge (DESIGN-AUDIT wave-1 P0-A) — the shared status pill rendered by BOTH the
+ *    IdentityHeader cap (IdentityHeader.tsx) and the IdleCard (IdleCard.tsx) as
+ *    `.status-badge > .status-dot + label`, carrying an inline `--accent` (the status color
+ *    from status-colors.ts). Before this rule NEITHER class was styled outside the sidebar's
+ *    scoped `.sidebar-row .row-secondary .status-dot`, so the badge rendered as colorless
+ *    run-in text with a zero-size dot — the whole status ramp died at the card. SCOPED to the
+ *    two real consumers so the sidebar's own .status-dot / .collapsed-status-dot stay untouched. */
+.identity-header .status-badge,
+.idle-card-identity .status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1_5);
+  padding: var(--space-0_5) var(--space-2);
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--accent) 12%, var(--surface));
+  color: var(--ink-soft);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.identity-header .status-dot,
+.idle-card-identity .status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+
 /* ── Header control cluster (D-01/D-06 — Clear + Remove ONLY) ────────────────────
  * Sits after the badge inside .header-right; gap var(--space-1) (4px). Unlike the Sidebar
  * cluster these controls are ALWAYS visible (the header is the always-present active-session
