@@ -91,6 +91,9 @@ body {
   font-size: 12px;
   font-weight: 700;
   line-height: 1.3;
+  /* tabular-nums (DESIGN-AUDIT P1 #11): equal-width digits so the "{i} of {n}" cluster
+   * width does not jitter while paging through matches. */
+  font-variant-numeric: tabular-nums;
   color: var(--ink-soft);
   white-space: nowrap;
 }
@@ -120,9 +123,17 @@ body {
   cursor: pointer;
 }
 
-.search-control:hover {
+.search-control:hover:not(:disabled) {
   background: var(--bg-sunk);
   color: var(--ink);
+}
+
+/* P0-E: prev/next at 0 matches read as inert — dimmed, no pointer, no hover (the controls
+ * carry disabled at count===0 so they no longer look live while silently no-op'ing). */
+.search-control:disabled {
+  opacity: 0.4;
+  cursor: default;
+  pointer-events: none;
 }
 
 .search-control:focus-visible {

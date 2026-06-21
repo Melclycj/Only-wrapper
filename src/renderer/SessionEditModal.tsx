@@ -19,6 +19,7 @@ import type { DiscoveredShell } from '../main/shell-discovery';
 import { IconPicker } from './IconPicker';
 import { splitEdit } from './session-edit';
 import { validateSessionForm } from './validate-session-form';
+import { useFocusTrap } from './use-focus-trap';
 
 export interface SessionEditModalProps {
   open: boolean;
@@ -63,6 +64,9 @@ export function SessionEditModal({
   onCancel,
 }: SessionEditModalProps): React.JSX.Element | null {
   const titleId = useId();
+  // P0-D: trap Tab inside the dialog + restore focus to the opener on close. Declared
+  // BEFORE the focus effect below so the modal's deliberate first-field (name) focus wins.
+  const dialogRef = useFocusTrap(open);
   const nameRef = useRef<HTMLInputElement>(null);
   const cwdRef = useRef<HTMLInputElement>(null);
   const shellRef = useRef<HTMLSelectElement>(null);
@@ -185,6 +189,12 @@ export function SessionEditModal({
       : cwdRejected
         ? { tone: 'error' as const, message: 'Working directory not found' }
         : notices.cwd;
+  // P0-D / DESIGN-AUDIT cwd-aria: tie whatever notice is active to the cwd input. The
+  // input is aria-invalid only on the error ramp (a drop/CR-01 rejection), but ANY active
+  // notice (error OR the neutral format hint) is announced as its description. The notice
+  // carries role="alert" only when it is an error so the neutral hint is not made assertive.
+  const cwdNoticeId = `${titleId}-cwd-notice`;
+  const cwdHasError = cwdNotice?.tone === 'error';
 
   return (
     <div
@@ -196,11 +206,13 @@ export function SessionEditModal({
       onClick={(e) => {
         // GAP-12-D: close only when the gesture BOTH started and ended on the overlay
         // (a real backdrop click), never on a selection-drag overshoot ending here.
-        if (overlayMouseDownRef.current && e.target === e.currentTarget) onCancel();
+        if (overlayMouseDownRef.current && e.target === e.currentTarget)
+          onCancel();
         overlayMouseDownRef.current = false;
       }}
     >
       <div
+        ref={dialogRef}
         className="modal-dialog modal-dialog-edit"
         role="dialog"
         aria-modal="true"
@@ -251,7 +263,10 @@ export function SessionEditModal({
         {/* Group B — LAUNCH (persists to main, applies on the NEXT restart — D-02).
             The existing restart-hint testid/copy is REUSED as this group's subhead. */}
         <div className="edit-restart-group">
-          <p className="applies-on-restart-hint" data-testid="applies-on-restart">
+          <p
+            className="applies-on-restart-hint"
+            data-testid="applies-on-restart"
+          >
             Launch · Applies on restart
           </p>
 
@@ -271,6 +286,8 @@ export function SessionEditModal({
                 className="edit-input"
                 data-testid="edit-cwd"
                 value={cwd}
+                aria-invalid={cwdHasError || undefined}
+                aria-describedby={cwdNotice ? cwdNoticeId : undefined}
                 onChange={(e) => {
                   setCwd(e.target.value);
                   // GAP-12-E: editing the cwd dismisses a stale save-time drop notice so
@@ -296,7 +313,9 @@ export function SessionEditModal({
                 hint. Calm by default; red only on a genuine rejection. */}
             {cwdNotice && (
               <span
+                id={cwdNoticeId}
                 className={`edit-field-notice edit-field-notice--${cwdNotice.tone}`}
+                {...(cwdHasError ? { role: 'alert' } : {})}
               >
                 {cwdNotice.message}
               </span>

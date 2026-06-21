@@ -16,7 +16,14 @@
 //
 // Regex / whole-word are DEFERRED (D-01) — only case-sensitivity (Aa) ships here.
 
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import type { ISearchOptions, SearchAddon } from '@xterm/addon-search';
 import { decideCaseToggle } from './search-recompute';
 
@@ -270,18 +277,23 @@ export function SearchBar({
       />
       <span
         id={countId}
-        className={countMuted ? 'search-count search-count-empty' : 'search-count'}
+        className={
+          countMuted ? 'search-count search-count-empty' : 'search-count'
+        }
         data-testid="search-count"
         aria-live="polite"
       >
         {countText}
       </span>
+      {/* P0-E: prev/next are disabled at 0 matches so they no longer look live while
+          silently no-op'ing (the case/Aa + close controls stay enabled). */}
       <button
         type="button"
         className="search-control"
         data-testid="search-prev"
         aria-label="Previous match"
         title="Previous match (Shift+Enter)"
+        disabled={matchState.count === 0}
         onClick={handlePrev}
       >
         <span aria-hidden="true">{'‹'}</span>
@@ -292,6 +304,7 @@ export function SearchBar({
         data-testid="search-next"
         aria-label="Next match"
         title="Next match (Enter)"
+        disabled={matchState.count === 0}
         onClick={handleNext}
       >
         <span aria-hidden="true">{'›'}</span>

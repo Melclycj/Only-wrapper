@@ -19,6 +19,7 @@
 
 import { useEffect, useId, useRef } from 'react';
 import { clampScrollback, SCROLLBACK_DEFAULT } from './scrollback-clamp';
+import { useFocusTrap } from './use-focus-trap';
 
 export interface PreferencesModalProps {
   /** Whether the Preferences modal is open (controlled by SessionManager). */
@@ -46,6 +47,11 @@ export function PreferencesModal({
   // Focus the scrollback input when the modal opens (mirrors SessionEditModal's
   // focus-on-open). The field is the primary affordance, so it takes initial focus.
   const inputRef = useRef<HTMLInputElement>(null);
+  // P0-D: trap Tab inside the dialog + restore focus to the opener (the ⚙ gear) on close.
+  const dialogRef = useFocusTrap(open);
+  // DESIGN-AUDIT wave-2 #7: only a genuine backdrop click (mousedown AND click both on the
+  // overlay) dismisses, so a selection-drag overshoot ending on the scrim does not close.
+  const overlayMouseDownRef = useRef(false);
 
   useEffect(() => {
     if (!open) return;
@@ -71,8 +77,20 @@ export function PreferencesModal({
   };
 
   return (
-    <div className="modal-overlay" data-testid="preferences-modal" onClick={onClose}>
+    <div
+      className="modal-overlay"
+      data-testid="preferences-modal"
+      onMouseDown={(e) => {
+        overlayMouseDownRef.current = e.target === e.currentTarget;
+      }}
+      onClick={(e) => {
+        if (overlayMouseDownRef.current && e.target === e.currentTarget)
+          onClose();
+        overlayMouseDownRef.current = false;
+      }}
+    >
       <div
+        ref={dialogRef}
         className="modal-dialog"
         role="dialog"
         aria-modal="true"
@@ -113,7 +131,8 @@ export function PreferencesModal({
               }}
             />
             <p id={helpId} className="idle-card-helper">
-              How many lines of history each terminal keeps. Between 1,000 and 50,000.
+              How many lines of history each terminal keeps. Between 1,000 and
+              50,000.
               <br />
               Changes apply right away — to open terminals and new ones.
             </p>

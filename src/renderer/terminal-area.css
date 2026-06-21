@@ -110,6 +110,18 @@
   padding: var(--space-3);
 }
 
+/* P0-D (DESIGN-AUDIT wave-2): a focus affordance on the terminal WELL — the primary
+ * text-input target (the xterm <textarea> lives inside, so :focus-within fires when the
+ * terminal has focus). A subtle INSET accent ring reads as "this terminal is focused"
+ * without fighting the charcoal --term-bg. FIDELITY-SAFE (D-03a): a box-shadow on this
+ * WRAPPER does NOT change the xterm cell-grid geometry — it adds no padding/border to
+ * .viewport-stack / .term-mount / .xterm; the inset keeps the ring clear of the rounded,
+ * overflow:hidden corner. */
+.terminal-well:focus-within {
+  box-shadow: inset 0 0 0 2px
+    color-mix(in oklch, var(--color-accent) 55%, transparent);
+}
+
 /* The viewport stack — a relative flex child of the well (its ORIGINAL box model, restored
  * from the pre-GAP-11-A flush layout): flex:1 1 auto fills the well height, min-width/height:0
  * lets it shrink on resize, position:relative anchors the absolute SessionView panes (inset:0).

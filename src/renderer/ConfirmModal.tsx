@@ -11,6 +11,7 @@
 // React state of its own — it is a controlled component (open + callbacks as props).
 
 import { useEffect, useId, useRef } from 'react';
+import { useFocusTrap } from './use-focus-trap';
 
 export interface ConfirmModalProps {
   open: boolean;
@@ -31,6 +32,14 @@ export function ConfirmModal({
 }: ConfirmModalProps): React.JSX.Element | null {
   const titleId = useId();
   const confirmRef = useRef<HTMLButtonElement>(null);
+  // P0-D: trap Tab inside the dialog + restore focus to the opener on close. Declared
+  // BEFORE the focus effect below so the hook's first-focusable focus runs first and the
+  // modal's deliberate confirm-button focus (a destructive-action safety choice) wins.
+  const dialogRef = useFocusTrap(open);
+  // GAP-12-D parity (DESIGN-AUDIT wave-2 #7): only a genuine backdrop click — mousedown
+  // AND click both on the overlay itself — cancels, so a text-selection drag that starts
+  // inside the dialog and ends on the scrim no longer dismisses (matches SessionEditModal).
+  const overlayMouseDownRef = useRef(false);
 
   // Focus the (destructive) confirm button when the modal opens, and wire Esc=cancel.
   useEffect(() => {
@@ -52,10 +61,19 @@ export function ConfirmModal({
     <div
       className="modal-overlay"
       data-testid="confirm-modal"
-      // Overlay (scrim) click = cancel; clicks inside the dialog must not bubble here.
-      onClick={onCancel}
+      // Overlay (scrim) click = cancel, guarded by the mousedown-origin check below so a
+      // selection-drag overshoot ending on the scrim does not dismiss (DESIGN-AUDIT #7).
+      onMouseDown={(e) => {
+        overlayMouseDownRef.current = e.target === e.currentTarget;
+      }}
+      onClick={(e) => {
+        if (overlayMouseDownRef.current && e.target === e.currentTarget)
+          onCancel();
+        overlayMouseDownRef.current = false;
+      }}
     >
       <div
+        ref={dialogRef}
         className="modal-dialog"
         role="dialog"
         aria-modal="true"
