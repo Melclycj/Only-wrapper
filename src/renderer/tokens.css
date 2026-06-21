@@ -55,7 +55,7 @@
   --radius-md: 8px; /* inputs, emoji-cell, context-menu-item, swatches */
   --radius-lg: 10px; /* rows, modal-btn, search-bar */
   --radius-xl: 12px; /* context-menu, edit-restart-group, idle-card-config */
-  --radius: 18px; /* KEEP existing alias (cards: modal-dialog, idle-card, rail-tooltip) — D-04 Discretion */
+  --radius-card: 18px; /* card radius (modal-dialog, terminal-card/well, idle-card, rail-tooltip) — D-04 Discretion. Renamed from --radius (DESIGN-AUDIT wave-3 P2): a named top step, not a competing system. */
   /* Note: 999px pills (status-dot, chips) stay literal — fully round, not a scale step. */
 
   /* Elevation — the 3 distinct shadows in use. */
@@ -77,6 +77,19 @@
    * (Latin) identity; generic monospace remains the final fallback. */
   --font-ui: 'Nunito', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', 'PingFang SC', 'Microsoft YaHei', monospace;
+
+  /* Type scale — named TEXT sizes (DESIGN-AUDIT wave-3 P1 #12 / D-AUDIT type-sprawl).
+   * Absorbs the 5 distinct TEXT sizes (12/13/14/17/20) with the LEAST movement:
+   * 4 are value-preserving; only --text-lg snaps the lone 17px title up to 18px.
+   * GLYPH/EMOJI/icon-button font-sizes (10/11/15/16/18/28/48) are NOT type — they
+   * stay literals (an emoji/glyph isn't a typographic step; tokenizing them as
+   * --icon-* is a separate wave). The 13↔14 body pair is kept as two steps here
+   * (value-preserving); folding it to one is a flagged follow-up, not a silent change. */
+  --text-xs: 12px; /* caption / label / secondary (section-label, status-badge, hints, .modal-body) */
+  --text-sm: 13px; /* secondary body (idle-card body, context-menu-item, add-session, welcome-body) */
+  --text-base: 14px; /* body / inputs / buttons (rows, .edit-input, .modal-btn, search-input) */
+  --text-lg: 18px; /* title (.modal-title — SNAPPED from 17px, value-changing) */
+  --text-xl: 20px; /* heading (.idle-card-name, .welcome-heading) */
 
   /* Spacing scale — DEFINED ONLY this phase (D-01). NOT applied to existing
    * padding/gap/margin; Phases 10–13 consume it during per-surface polish.

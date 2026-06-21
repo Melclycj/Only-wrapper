@@ -68,7 +68,7 @@
   box-sizing: border-box;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--radius);
+  border-radius: var(--radius-card);
   box-shadow: var(--shadow-pop);
 }
 
@@ -97,7 +97,7 @@
   min-width: 0;
   min-height: 0;
   background: var(--term-bg);
-  border-radius: var(--radius);
+  border-radius: var(--radius-card);
   overflow: hidden;
   /* GAP-11-A round 2 ("还有别的要改"): inner charcoal padding so the xterm content BREATHES
    * inside the well instead of jamming into the rounded corners (round-1 miss — the first
@@ -216,7 +216,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--text-xs);
   font-weight: 400;
   line-height: 1.4;
   color: var(--ink-faint);
@@ -268,7 +268,7 @@
   background: color-mix(in oklch, var(--accent) 12%, var(--surface));
   color: var(--ink-soft);
   font-family: var(--font-ui);
-  font-size: 12px;
+  font-size: var(--text-xs);
   font-weight: 700;
   line-height: 1;
   white-space: nowrap;
@@ -304,7 +304,7 @@
   background: transparent;
   color: var(--ink-soft);
   font-family: inherit;
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 700;
   line-height: 1;
   cursor: pointer;
@@ -335,7 +335,7 @@
   background: transparent;
   color: var(--ink-soft);
   font-family: inherit;
-  font-size: 14px;
+  font-size: var(--text-base);
   line-height: 1;
   cursor: pointer;
 }
@@ -391,13 +391,13 @@
 .idle-card {
   width: min(440px, calc(100% - 48px));
   box-sizing: border-box;
-  padding: 24px;
+  padding: var(--space-6);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--radius);
+  border-radius: var(--radius-card);
   box-shadow: var(--shadow-dialog);
   font-family: var(--font-ui);
   color: var(--ink);
@@ -407,16 +407,16 @@
 .idle-card-identity {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .idle-card-identity .row-icon {
-  font-size: 28px;
+  font-size: 28px; /* emoji glyph — not a --text-* step (icon size) */
   line-height: 1;
 }
 
 .idle-card-name {
-  font-size: 20px;
+  font-size: var(--text-xl);
   font-weight: 700;
   line-height: 1.2;
   color: var(--ink);
@@ -426,27 +426,27 @@
 .idle-card-config {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 16px;
-  border-radius: 12px;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-xl);
   background: var(--bg-sunk);
 }
 
 .idle-card-row {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .idle-card-label {
-  font-size: 12px;
+  font-size: var(--text-xs);
   font-weight: 700;
   color: var(--ink-soft);
 }
 
 .idle-card-value {
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 400;
   line-height: 1.5;
   color: var(--ink);
@@ -460,7 +460,7 @@
 
 /* "Saved for reference — not run automatically…" helper under the startup command. */
 .idle-card-helper {
-  font-size: 12px;
+  font-size: var(--text-xs);
   font-weight: 400;
   line-height: 1.5;
   color: var(--ink-faint);
@@ -475,7 +475,7 @@
 /* Error-after-start inline line (red ramp — matches the error status accent). */
 .idle-card-error {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 400;
   line-height: 1.5;
   color: var(--color-danger);
@@ -484,13 +484,13 @@
 /* In-card Start button: blue outline/text → fills blue on hover ("go live"). */
 .idle-start-button {
   align-self: stretch;
-  padding: 8px 16px;
-  border-radius: 10px;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-lg);
   border: 1px solid var(--color-accent);
   background: var(--surface);
   color: var(--color-accent);
   font-family: inherit;
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 700;
   cursor: pointer;
 }
@@ -508,7 +508,7 @@
 /* SC2 error-card action row (D-04): Edit (neutral) + Retry (primary blue), gap 8px. */
 .idle-card-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .idle-card-actions .idle-start-button {
@@ -520,13 +520,13 @@
  * warms toward --bg-sunk on hover. Not the primary "go" affordance (that is Retry). */
 .idle-card-edit-button {
   flex: 1 1 0;
-  padding: 8px 16px;
-  border-radius: 10px;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-lg);
   border: 1px solid var(--line);
   background: var(--surface);
   color: var(--ink-soft);
   font-family: inherit;
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 700;
   cursor: pointer;
 }
@@ -552,8 +552,8 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 32px;
-  padding: 48px;
+  gap: var(--space-8);
+  padding: var(--space-12);
   box-sizing: border-box;
   background: var(--bg-sunk);
   font-family: var(--font-ui);
@@ -561,13 +561,13 @@
 }
 
 .welcome-glyph {
-  font-size: 48px;
+  font-size: 48px; /* emoji glyph — not a --text-* step (icon size) */
   line-height: 1;
 }
 
 .welcome-heading {
   margin: 0;
-  font-size: 20px;
+  font-size: var(--text-xl);
   font-weight: 700;
   line-height: 1.2;
   color: var(--ink);
@@ -576,7 +576,7 @@
 .welcome-body {
   margin: 0;
   max-width: 360px;
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 400;
   line-height: 1.5;
   color: var(--ink-soft);
@@ -584,13 +584,13 @@
 
 /* The single high-emphasis action in this state: a filled blue primary CTA. */
 .welcome-cta {
-  padding: 10px 20px;
-  border-radius: 10px;
+  padding: var(--space-2_5) var(--space-5);
+  border-radius: var(--radius-lg);
   border: none;
   background: var(--color-accent);
   color: var(--surface);
   font-family: inherit;
-  font-size: 14px;
+  font-size: var(--text-base);
   font-weight: 700;
   cursor: pointer;
 }

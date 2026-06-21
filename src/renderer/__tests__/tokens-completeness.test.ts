@@ -20,22 +20,10 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-const tokensCss = readFileSync(
-  resolve(__dirname, '../tokens.css'),
-  'utf8',
-);
-const terminalCss = readFileSync(
-  resolve(__dirname, '../terminal.css'),
-  'utf8',
-);
-const sidebarCss = readFileSync(
-  resolve(__dirname, '../sidebar.css'),
-  'utf8',
-);
-const formCss = readFileSync(
-  resolve(__dirname, '../form.css'),
-  'utf8',
-);
+const tokensCss = readFileSync(resolve(__dirname, '../tokens.css'), 'utf8');
+const terminalCss = readFileSync(resolve(__dirname, '../terminal.css'), 'utf8');
+const sidebarCss = readFileSync(resolve(__dirname, '../sidebar.css'), 'utf8');
+const formCss = readFileSync(resolve(__dirname, '../form.css'), 'utf8');
 const terminalAreaCss = readFileSync(
   resolve(__dirname, '../terminal-area.css'),
   'utf8',
@@ -66,9 +54,7 @@ const INLINE_RUNTIME_PROPS = new Set<string>(['--accent']);
 /** Strip `//` line comments and `/* *​/` block comments so doc-glob artifacts like
  *  `var(--accent-*)` in prose never count as real token references. */
 function stripComments(source: string): string {
-  return source
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/^\s*\/\/.*$/gm, '');
+  return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 }
 
 /** Collect every `--name` referenced inside a `var(--name ...)` expression. */
@@ -95,6 +81,21 @@ describe('tokens.css single source of truth (SC2/SC3)', () => {
     expect(defined.has('--shadow-pop')).toBe(true);
     expect(defined.has('--font-ui')).toBe(true);
     expect(defined.has('--duration-fast')).toBe(true);
+  });
+
+  it('defines the named --text-* type scale and the --radius-card token (DESIGN-AUDIT wave-3)', () => {
+    // The type-sprawl pass (P1 #12) introduced a named text scale; the legacy --radius
+    // card alias was renamed --radius-card (P2). Floor-check both so a future removal /
+    // re-rename fails loudly here (the reference-completeness checks below already catch
+    // a consumer left pointing at the OLD bare --radius — it would be undefined).
+    expect(defined.has('--text-xs')).toBe(true);
+    expect(defined.has('--text-sm')).toBe(true);
+    expect(defined.has('--text-base')).toBe(true);
+    expect(defined.has('--text-lg')).toBe(true);
+    expect(defined.has('--text-xl')).toBe(true);
+    expect(defined.has('--radius-card')).toBe(true);
+    // The bare legacy --radius alias must be fully gone (renamed, not duplicated).
+    expect(defined.has('--radius')).toBe(false);
   });
 
   it('every var(--token) in terminal.css is defined in tokens.css', () => {
@@ -125,9 +126,10 @@ describe('tokens.css single source of truth (SC2/SC3)', () => {
 
   it('every var(--token) in terminal-area.css is defined in tokens.css', () => {
     // terminal-area.css was added in Phase 11 (UI-03), imported in index.tsx:25.
-    // 77 var(--token) references — a future token rename or removal in tokens.css
-    // would silently break terminal-area.css at runtime without this guard
-    // (RESEARCH Reliability lens — "fails loudly" contract).
+    // A future token rename or removal in tokens.css would silently break
+    // terminal-area.css at runtime without this guard (RESEARCH Reliability lens —
+    // "fails loudly" contract). This is what caught the --radius -> --radius-card
+    // rename: every consumer had to move in lockstep or this fails.
     const referenced = referencedTokens(terminalAreaCss);
     const undefinedRefs = [...referenced].filter((t) => !defined.has(t));
     expect(undefinedRefs).toEqual([]);
