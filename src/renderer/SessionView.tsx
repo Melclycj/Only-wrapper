@@ -49,12 +49,36 @@ import { SearchBar } from './SearchBar';
 import '@xterm/xterm/css/xterm.css';
 import './terminal.css';
 
-// Terminal theme from DESIGN.md §"Terminal palette" (oklch → hex) — identical to
-// TerminalPane (the container theme; programs drive their own ANSI/truecolor — SC4).
+// Terminal theme — bg/fg from DESIGN.md §"Terminal palette" PLUS a full, coordinated
+// 16-color ANSI palette (DESIGN-AUDIT wave-4 P1 #2). Before, only bg/fg/cursor were set,
+// so any program emitting ANSI colors (ls, git, vim, grep) fell back to xterm's DEFAULT
+// 16 colors — uncoordinated with the app. This palette is hue-aligned to the brand
+// (red≈--color-danger 25, blue≈--color-accent 248, green≈finished 150, yellow≈amber),
+// every chromatic color verified ≥4.4:1 on the #1e232c bg, and the default foreground is
+// the UNCHANGED shipped #d8dfe6 (value-preserving). Generated/verified by
+// .planning/design/ansi-palette.mjs — re-run it to re-derive. Truecolor programs still
+// drive their own colors (SC4); this only fixes the 16-color ANSI fallback.
 const TERMINAL_THEME = {
   background: '#1e232c',
   foreground: '#d8dfe6',
   cursor: '#d8dfe6',
+  cursorAccent: '#1e232c',
+  black: '#4a4d54',
+  brightBlack: '#71757c',
+  red: '#d8625c',
+  brightRed: '#f47b74',
+  green: '#5cb572',
+  brightGreen: '#76cf8a',
+  yellow: '#d7aa42',
+  brightYellow: '#eec469',
+  blue: '#4391d7',
+  brightBlue: '#5cabf2',
+  magenta: '#ae75d6',
+  brightMagenta: '#c690ec',
+  cyan: '#4ab6c7',
+  brightCyan: '#66cfe1',
+  white: '#d4d9dd',
+  brightWhite: '#eff2f5',
 } as const;
 
 const RESIZE_DEBOUNCE_MS = 100;

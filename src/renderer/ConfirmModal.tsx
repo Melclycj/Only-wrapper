@@ -18,6 +18,9 @@ export interface ConfirmModalProps {
   title: string;
   body: string;
   confirmLabel: string;
+  /** DESIGN-AUDIT wave-4 (P1 #6): 'danger-strong' makes the PERMANENT Delete one notch
+   * heavier than the reversible Remove (default 'danger'). Purely presentational. */
+  confirmVariant?: 'danger' | 'danger-strong';
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -27,6 +30,7 @@ export function ConfirmModal({
   title,
   body,
   confirmLabel,
+  confirmVariant = 'danger',
   onConfirm,
   onCancel,
 }: ConfirmModalProps): React.JSX.Element | null {
@@ -96,7 +100,12 @@ export function ConfirmModal({
           <button
             ref={confirmRef}
             type="button"
-            className="modal-btn modal-btn-confirm"
+            className={
+              'modal-btn modal-btn-confirm' +
+              (confirmVariant === 'danger-strong'
+                ? ' modal-btn-confirm-strong'
+                : '')
+            }
             data-testid="confirm-close"
             onClick={onConfirm}
           >

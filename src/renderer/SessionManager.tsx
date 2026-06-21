@@ -710,6 +710,9 @@ export function SessionManager(): React.JSX.Element {
             ?.agentState,
         })}
         confirmLabel={removeMode === 'delete' ? 'Delete' : 'Remove'}
+        // DESIGN-AUDIT wave-4 (P1 #6): the permanent Delete reads one notch heavier than
+        // the reversible Remove (Remove keeps the recipe → Inactive List).
+        confirmVariant={removeMode === 'delete' ? 'danger-strong' : 'danger'}
         onConfirm={confirmClose}
         onCancel={cancelClose}
       />

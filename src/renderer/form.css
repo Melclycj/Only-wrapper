@@ -14,6 +14,28 @@
 
 /* ── Confirm modal (D-03a destructive Close) — DESIGN.md tokens ──────────────── */
 
+/* Modal enter motion (DESIGN-AUDIT wave-4): the scrim fades, the card fades + rises +
+ * settles from a hair below full size. Compositor-friendly (opacity/transform only);
+ * neutralized by the prefers-reduced-motion guard in terminal.css. */
+@keyframes modal-scrim-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes modal-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 /* Scrim: dims the whole app; click = cancel (ConfirmModal wires the handler). */
 .modal-overlay {
   position: fixed;
@@ -24,6 +46,7 @@
   justify-content: center;
   /* Warm-dark scrim — not pure black, in keeping with the cozy aesthetic. */
   background: var(--scrim);
+  animation: modal-scrim-in var(--duration-fast) var(--ease-standard);
 }
 
 /* The card: warm --surface, generous --radius-card (18px), --line border, Nunito. */
@@ -37,6 +60,7 @@
   box-shadow: var(--shadow-dialog);
   font-family: var(--font-ui);
   color: var(--ink);
+  animation: modal-card-in var(--duration-medium) var(--ease-standard);
 }
 
 .modal-title {
@@ -98,6 +122,20 @@
 .modal-btn-confirm:focus-visible {
   outline: 2px solid var(--color-danger);
   outline-offset: 2px;
+}
+
+/* DESIGN-AUDIT wave-4 (P1 #6): the PERMANENT Delete is one notch heavier than the
+ * reversible Remove — both filled red, but Delete uses the deeper danger-strong base so
+ * the irreversible action reads as the weightier one (severity, not just copy). Applied
+ * only when ConfirmModal gets confirmVariant="danger-strong" (Delete); Remove is unchanged. */
+.modal-btn-confirm-strong {
+  background: var(--color-danger-strong);
+  border-color: var(--color-danger-strong);
+}
+
+.modal-btn-confirm-strong:hover {
+  background: var(--color-danger);
+  border-color: var(--color-danger);
 }
 
 /* Save (D-04 — Pitfall 1, REQUIRED) — the CONSTRUCTIVE accent-blue primary, distinct
@@ -171,6 +209,15 @@
 .context-menu-item-danger:focus-visible {
   background: color-mix(in oklch, var(--color-danger) 8%, transparent);
   color: var(--color-danger);
+}
+
+/* DESIGN-AUDIT wave-4 (P1 #10): a hairline divider before the destructive item(s) so a
+ * permanent Remove/Delete is visually set apart from the safe actions above it (cheap
+ * insurance against a mis-click). Rendered by ContextMenu before the first danger item. */
+.context-menu-sep {
+  height: 1px;
+  margin: var(--space-1) var(--space-1_5);
+  background: var(--line-soft);
 }
 
 /* ── Icon picker (D-07/D-08/D-09) — curated grid + free-text + color swatches ────

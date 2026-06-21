@@ -11,7 +11,7 @@
 // with arrow-key roving focus. Styled from DESIGN.md tokens (warm --surface card,
 // --line border, Nunito) in terminal.css.
 
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { clampToViewport } from './viewport-clamp';
 
 /** A single menu entry: a visible label + the action to run when chosen. */
@@ -116,22 +116,28 @@ export function ContextMenu({
       style={{ left: pos.left, top: pos.top }}
       onKeyDown={onKeyDown}
     >
-      {items.map((it) => (
-        <button
-          key={it.label}
-          type="button"
-          role="menuitem"
-          className={
-            'context-menu-item' +
-            (it.danger ? ' context-menu-item-danger' : '')
-          }
-          onClick={() => {
-            it.onSelect();
-            onClose();
-          }}
-        >
-          {it.label}
-        </button>
+      {items.map((it, i) => (
+        <Fragment key={it.label}>
+          {/* DESIGN-AUDIT wave-4 (P1 #10): a divider before the FIRST destructive item
+              sets the permanent Remove/Delete apart from the safe actions above it. */}
+          {it.danger && i > 0 && !items[i - 1].danger && (
+            <div className="context-menu-sep" role="separator" />
+          )}
+          <button
+            type="button"
+            role="menuitem"
+            className={
+              'context-menu-item' +
+              (it.danger ? ' context-menu-item-danger' : '')
+            }
+            onClick={() => {
+              it.onSelect();
+              onClose();
+            }}
+          >
+            {it.label}
+          </button>
+        </Fragment>
       ))}
     </div>
   );

@@ -1,0 +1,30 @@
+<!doctype html><meta charset=utf8><title>ANSI swatch — Just-Wrapper Wave 4</title>
+<style>
+ body{background:#171b22;color:#d8dfe6;font:14px/1.6 -apple-system,system-ui,sans-serif;margin:0;padding:32px}
+ h1{font-size:16px;font-weight:700} h2{font-size:13px;color:#9aa4b2;margin-top:28px;text-transform:uppercase;letter-spacing:.04em}
+ .term{background:#1e232c;border-radius:12px;padding:20px 24px;font:14px/1.7 'JetBrains Mono',ui-monospace,monospace;margin:12px 0}
+ .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 32px;max-width:760px}
+ .cell{display:flex;align-items:center;gap:10px;font:13px 'JetBrains Mono',monospace}
+ .sw{width:22px;height:22px;border-radius:6px;flex:0 0 auto}
+ code{color:#c2cad6} .hex{color:#7d8794} .r{color:#5f6b7a;margin-left:auto}
+</style>
+<h1>Just-Wrapper — proposed terminal ANSI palette <span style="color:#7d8794">(bg #1e232c)</span></h1>
+<h2>Colors as terminal text (real usage)</h2>
+<div class="term">
+<span style="color:#4a4d54">black    the quick brown fox 0123</span><br><span style="color:#d8625c">red      the quick brown fox 0123</span><br><span style="color:#5cb572">green    the quick brown fox 0123</span><br><span style="color:#d7aa42">yellow   the quick brown fox 0123</span><br><span style="color:#4391d7">blue     the quick brown fox 0123</span><br><span style="color:#ae75d6">magenta  the quick brown fox 0123</span><br><span style="color:#4ab6c7">cyan     the quick brown fox 0123</span><br><span style="color:#d4d9dd">white    the quick brown fox 0123</span>
+<br><span style="color:#71757c">brightblack the quick brown fox 0123</span><br><span style="color:#f47b74">brightred the quick brown fox 0123</span><br><span style="color:#76cf8a">brightgreen the quick brown fox 0123</span><br><span style="color:#eec469">brightyellow the quick brown fox 0123</span><br><span style="color:#5cabf2">brightblue the quick brown fox 0123</span><br><span style="color:#c690ec">brightmagenta the quick brown fox 0123</span><br><span style="color:#66cfe1">brightcyan the quick brown fox 0123</span><br><span style="color:#eff2f5">brightwhite the quick brown fox 0123</span>
+</div>
+<h2>Simulated git / ls output</h2>
+<div class="term">
+<span style="color:#d8dfe6">$ git status</span><br>
+<span style="color:#76cf8a">On branch </span><span style="color:#4391d7">main</span><br>
+<span style="color:#d8625c">  modified:   src/renderer/tokens.css</span><br>
+<span style="color:#5cb572">  new file:   src/renderer/use-focus-trap.ts</span><br>
+<span style="color:#d8dfe6">$ ls</span><br>
+<span style="color:#5cabf2">src/</span>  <span style="color:#4ab6c7">README.md</span>  <span style="color:#d7aa42">package.json</span>  <span style="color:#ae75d6">node_modules/</span>
+</div>
+<h2>Swatches + contrast vs bg</h2>
+<div class="grid">
+<div class="cell"><span class="sw" style="background:#4a4d54"></span><code>black</code><code class="hex">#4a4d54</code><code class="r">1.86:1</code></div><div class="cell"><span class="sw" style="background:#d8625c"></span><code>red</code><code class="hex">#d8625c</code><code class="r">4.37:1</code></div><div class="cell"><span class="sw" style="background:#5cb572"></span><code>green</code><code class="hex">#5cb572</code><code class="r">6.23:1</code></div><div class="cell"><span class="sw" style="background:#d7aa42"></span><code>yellow</code><code class="hex">#d7aa42</code><code class="r">7.29:1</code></div><div class="cell"><span class="sw" style="background:#4391d7"></span><code>blue</code><code class="hex">#4391d7</code><code class="r">4.72:1</code></div><div class="cell"><span class="sw" style="background:#ae75d6"></span><code>magenta</code><code class="hex">#ae75d6</code><code class="r">4.76:1</code></div><div class="cell"><span class="sw" style="background:#4ab6c7"></span><code>cyan</code><code class="hex">#4ab6c7</code><code class="r">6.59:1</code></div><div class="cell"><span class="sw" style="background:#d4d9dd"></span><code>white</code><code class="hex">#d4d9dd</code><code class="r">11.08:1</code></div>
+<div class="cell"><span class="sw" style="background:#71757c"></span><code>brightblack</code><code class="hex">#71757c</code><code class="r">3.39:1</code></div><div class="cell"><span class="sw" style="background:#f47b74"></span><code>brightred</code><code class="hex">#f47b74</code><code class="r">5.96:1</code></div><div class="cell"><span class="sw" style="background:#76cf8a"></span><code>brightgreen</code><code class="hex">#76cf8a</code><code class="r">8.28:1</code></div><div class="cell"><span class="sw" style="background:#eec469"></span><code>brightyellow</code><code class="hex">#eec469</code><code class="r">9.60:1</code></div><div class="cell"><span class="sw" style="background:#5cabf2"></span><code>brightblue</code><code class="hex">#5cabf2</code><code class="r">6.41:1</code></div><div class="cell"><span class="sw" style="background:#c690ec"></span><code>brightmagenta</code><code class="hex">#c690ec</code><code class="r">6.48:1</code></div><div class="cell"><span class="sw" style="background:#66cfe1"></span><code>brightcyan</code><code class="hex">#66cfe1</code><code class="r">8.73:1</code></div><div class="cell"><span class="sw" style="background:#eff2f5"></span><code>brightwhite</code><code class="hex">#eff2f5</code><code class="r">14.05:1</code></div>
+</div>

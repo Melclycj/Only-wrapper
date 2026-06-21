@@ -20,6 +20,22 @@ body {
   overflow: hidden;
 }
 
+/* Reduced-motion guard (DESIGN-AUDIT wave-4 / WCAG 2.3.3) — honor the OS "reduce
+ * motion" setting by collapsing every animation/transition to ~instant. Placed in
+ * this early-imported global stylesheet so it covers all surfaces. The terminal's own
+ * scroll stays user-driven; this only neutralizes decorative motion (modal enter,
+ * status-tint eases, hover fades). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* ── IDE layout: sidebar (left rail) + viewport stack (terminals) ───────────── */
 
 .ide-layout {

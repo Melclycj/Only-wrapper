@@ -28,12 +28,12 @@
   --line: oklch(0.91 0.008 80);
   --line-soft: oklch(0.94 0.006 80);
 
-  /* Terminal palette — CSS gutter only. The xterm JS theme (TERMINAL_THEME in
-   * SessionView.tsx) is a SEPARATE hex mirror; --term-text/--term-faint are NOT
-   * routed into it (D-03, RESEARCH Pitfall 5). */
-  --term-bg: #1e232c; /* = oklch(0.255 0.018 264) */
-  --term-text: oklch(0.9 0.012 250); /* ADD (D-03) */
-  --term-faint: oklch(0.66 0.02 255); /* ADD (D-03) */
+  /* Terminal palette — CSS gutter only (--term-bg). The xterm JS theme
+   * (TERMINAL_THEME in SessionView.tsx) is a SEPARATE hex mirror and now owns the
+   * FULL 16-color ANSI palette (DESIGN-AUDIT wave-4). The speculative
+   * --term-text/--term-faint tokens were removed here (0 consumers — the terminal
+   * fg is owned by TERMINAL_THEME, D-03 / RESEARCH Pitfall 5). */
+  --term-bg: #1e232c; /* = oklch(0.255 0.018 264) — the inset-well gutter color */
   --scrim: oklch(0.255 0.018 264 / 0.45); /* modal overlay */
 
   /* Brand colors */
@@ -65,8 +65,12 @@
   /* Note: the .collapsed-status-dot ring `0 0 0 2px var(--surface)` is a ring, not
    * an elevation shadow — Plan 02 leaves it literal (no token here). */
 
-  /* Motion — value-preserving (existing 0.12s ease). Compositor-friendly only. */
+  /* Motion — value-preserving (existing 0.12s ease). Compositor-friendly only.
+   * --duration-medium (DESIGN-AUDIT wave-4) is the slightly-longer beat for modal
+   * enter (card fade+scale); all motion is killed under prefers-reduced-motion
+   * (the global guard in terminal.css). */
   --duration-fast: 120ms;
+  --duration-medium: 180ms;
   --ease-standard: ease;
 
   /* Type stacks — the now-real fonts (loaded via @fontsource in index.tsx).
